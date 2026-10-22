@@ -26,7 +26,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     if (!canOpenPath(user, path)) {
       content = <AppShell><h1 className="text-xl font-semibold">Access nahi hai</h1><p className="mt-3 text-sm text-muted-foreground">Is module ki permission ke liye apne branch admin se baat karein.</p><a className="mt-4 inline-block underline" href="/guide">Apni Guide Book kholein</a></AppShell>;
     } else if (!isPersistedPath(path)) {
-      content = <AppShell activeHref={path}><h1 className="text-xl font-semibold">Is module ka DB integration pending hai</h1><p className="mt-3 max-w-2xl text-sm text-muted-foreground">Branch/user management aur Inventory ab real database par hain. Yeh module abhi purane demo-data stage mein hai; branch isolation complete hone tak yahan doosri branches ka demo data nahi dikhaya jaayega.</p><a className="mt-4 inline-block underline" href="/guide">Guide Book kholein</a></AppShell>;
+      // CLIENT DEMO MODE: render the module's real (working, interactive)
+      // UI on top of its seeded mock-data.ts rows instead of a hard block —
+      // user explicitly asked to show every module working for a client
+      // walkthrough and will clear this demo data before go-live. A visible
+      // banner keeps this honest instead of silently passing it off as real
+      // branch-isolated data. Flip back to the hard "pending" block (see git
+      // history on this file) once each module gets its own DB migration.
+      content = (
+        <>
+          <div className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-xs font-medium text-amber-700 dark:text-amber-300">
+            Demo Data — client demo ke liye seeded hai, abhi real database se connected nahi. Go-live se pehle hata diya jaayega.
+          </div>
+          {children}
+        </>
+      );
     }
   }
   return <html lang="en"><body className="min-h-screen antialiased">{content}</body></html>;

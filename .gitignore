@@ -7,3 +7,6 @@ node_modules/
 .local/
 coverage/
 *.log
+
+.vercel
+.env*

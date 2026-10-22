@@ -76,7 +76,68 @@ moduleAccess array still sees every live module.
 - No VPS changes made — still local-only Docker Postgres, per user's
   explicit "abhi local rakho, baad mein VPS shift karenge" instruction.
 
-## STATUS SUMMARY (historical — current checkpoint above takes precedence)
+## LIVE DEPLOYMENT — Neon + Vercel (for client demo)
+
+User asked to deploy for client demo: Neon (managed Postgres) + Vercel hosting.
+
+- **GitHub**: pushed to `github.com/Mking697/Restaurant-ERP` (currently PUBLIC —
+  user created this repo themselves; flagged that it's public since the repo
+  contains full business logic/schema, offered to make it private, user
+  hasn't responded yet — revisit before sharing the repo link anywhere).
+- **Neon Postgres**: project `restaurant-erp` (id `wild-glade-34334923`),
+  org `org-sparkling-dream-15526287` (account nantultiwari697@gmail.com,
+  authenticated via `neonctl auth` device flow — NOT the Claimable/no-signup
+  path, so this is a permanent project, no 72h expiry). Region
+  `aws-ap-southeast-1`. Schema migrated with `drizzle-kit migrate` against
+  the DIRECT (non-pooler) host — 41 tables, verified via
+  `information_schema.tables` count. Fresh/empty database — no business
+  records, `/api/setup` correctly reports `setupRequired: true`.
+- **`drizzle.config.ts` / `src/db/client.ts`** — both gained a `PGSSLMODE`
+  env var (`"require"` → `ssl: true`/`{rejectUnauthorized:true}` for Neon,
+  default `"disable"` → `ssl:false` for local Docker Postgres). Keep this
+  pattern in sync between the two files, same as the existing PG*-split
+  convention (never a composed `scheme://user:pass@host` literal written to
+  any file — still true for Neon credentials, same Windows AV/DLP redaction
+  risk as local).
+- **Vercel**: project `restaurant-erp` under team
+  `manojs-projects-30be2a32`, auto-connected to the GitHub repo at link time
+  (future pushes to `main` will auto-deploy — confirm this is desired before
+  merging anything experimental to `main`). Production env vars set via
+  `vercel env add ... production`: `PGHOST`, `PGPORT`, `PGUSER`,
+  `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE=require` (all marked Secret/hidden
+  in `vercel env ls`, never printed to chat). `APP_ORIGIN` NOT set — Vercel's
+  edge correctly reflects the public hostname in `request.url` (unlike the
+  self-hosted-behind-nginx case this project's other skill warns about), so
+  the CSRF same-origin check's `new URL(request.url).origin` fallback is
+  accurate here; revisit only if a custom domain + proxy layer gets added.
+- **Deployment Protection**: Vercel's default `ssoProtection` ("all except
+  custom domains") was blocking anonymous/client access behind a Vercel
+  login wall — disabled via a direct `PATCH
+  https://api.vercel.com/v9/projects/restaurant-erp` call (`ssoProtection:
+  null`) using the CLI's own stored token (never printed). This is the
+  single most important step for a client-facing demo link; if the project
+  is ever relinked/recreated, re-check `vercel.com → project → Settings →
+  Deployment Protection` is off, or the client will just see a Vercel login
+  wall instead of the app.
+- **Live URL**: `https://restaurant-erp-tau.vercel.app` — verified via
+  `curl` (`/api/setup` → `200 {"setupRequired":true}`, `/login` → `200`) AND
+  a real `browser_exec` screenshot showing the "Create the first owner"
+  setup screen. No owner account created on production yet — that's the
+  client's/user's first action once they're ready to demo.
+- **Local dev untouched**: local Docker Postgres (`restaurant-erp-local-db`,
+  port 5436) and its `.env` are completely separate from this Neon database
+  — local dev work does not affect the live demo, and vice versa, until
+  someone explicitly re-runs migrations against Neon.
+
+### Resume checklist for next deployment-related session
+1. Ask whether the GitHub repo should go private.
+2. Decide the first production Owner credential path the same way local did
+   (never type a password yourself — user sets it themselves on the live
+   `/setup` page, same vault-safe flow as the local walkthrough).
+3. If a custom domain gets added later, re-verify the CSRF `APP_ORIGIN`
+   assumption above still holds.
+4. Every push to `main` now auto-deploys to this same Vercel project —
+   be deliberate about what lands on `main` from here on.
 
 - Phase 1 (Archify architecture diagram): DONE, verified, all gates passed.
 - Phase 2 (DB schema): DONE — rewritten in Drizzle (was Prisma), VALIDATED via
