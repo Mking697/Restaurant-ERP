@@ -102,17 +102,49 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
     }
   },
   "/accounts": {
-    en: {
-      scenario: "Record a sample ₹500 cleaning-supplies expense in the petty cash book.",
-      steps: ["Open Accounts → Petty Cash Book and note the displayed balance for the branch.", "Click Petty Cash Entry. Choose OUT, Branch: Connaught Place, Amount: ₹500, Description: Cleaning supplies.", "Click Log Entry and inspect the new OUT row and updated page balance.", "Open Profit & Loss and Balance Sheet to understand their sample layout; this demo expense does not post into those reports."],
-      result: "The page-local petty cash balance decreases by ₹500 for the example. No real ledger, payment, P&L or balance-sheet posting is saved; reload restores the demo."
-    },
-    hinglish: {
-      scenario: "Petty cash book mein safai ke samaan ka sample ₹500 expense daalo.",
-      steps: ["Accounts → Petty Cash Book kholo aur branch ka displayed balance note karo.", "Petty Cash Entry dabao. OUT, Branch: Connaught Place, Amount: ₹500, Description: Cleaning supplies chuno/bharo.", "Log Entry dabakar nayi OUT row aur updated page balance dekho.", "Profit & Loss aur Balance Sheet tabs ka sample layout dekho; yeh demo expense un reports mein post nahi hota."],
-      result: "Example mein page-local petty cash balance ₹500 kam hota hai. Real ledger, payment, P&L ya balance-sheet posting save nahi hoti; reload par demo wapas aata hai."
-    }
+  "en": {
+    "scenario": "Enter a real ₹5,000 branch rent expense and inspect its month total. Practice only in a test branch.",
+    "steps": [
+      "Open Accounts, select a test branch and the intended month, then choose Expenses.",
+      "Add expense: category RENT, date within that month, amount ₹5,000, description Test branch rent, and your bill/reference.",
+      "Save, reload and find the posted record. Open P&L for the same branch/month and check Rent.",
+      "If this was a practice mistake, Void the expense with a reason; retain its history rather than entering an offsetting duplicate."
+    ],
+    "result": "A real database expense increases Rent by ₹5,000 and a void excludes it from totals. Finalized payroll contributes Labor Cost separately. Revenue/COGS and gross/net profit remain unavailable until sales/stock posting are connected; no sample profit is mixed in."
   },
+  "hinglish": {
+    "scenario": "Real ₹5,000 branch rent daalo aur month total dekho. Practice sirf test branch mein karo.",
+    "steps": [
+      "Accounts kholo, test branch aur sahi month chuno, phir Expenses kholo.",
+      "Expense add karo: category RENT, us month ki date, amount ₹5,000, description Test branch rent aur bill/reference.",
+      "Save, reload aur posted record dekho. Same branch/month ka P&L kholkar Rent check karo.",
+      "Practice mein galti hui ho to reason dekar Void karo; duplicate offset entry mat daalo, history rakho."
+    ],
+    "result": "Real DB expense se Rent ₹5,000 badhta hai; Void par total se exclude hota hai. Finalized payroll ki Labor Cost alag aati hai. Sales/stock posting connect hone tak Revenue/COGS aur gross/net profit unavailable hain; sample profit mix nahi hota."
+  }
+},
+  "/workforce": {
+  "en": {
+    "scenario": "Calculate September salary for one monthly employee and one daily-wage employee in a test branch. Prerequisites: link employee A to a same-branch login with LEAVE_SELF; the attendance marker needs ATTENDANCE, and a DIFFERENT reviewer needs LEAVE_APPROVAL. Neither the linked employee nor the request submitter may review, including Owner.",
+    "steps": [
+      "With PAYROLL access, create ON_ROLL employee A at ₹30,000 per month and OFF_ROLL employee B at ₹800 per day, joined on September 1. Use a completed September, not a future month.",
+      "Mark A Present for 29 days; A applies one day leave and a different authorized manager approves it as PAID. No Weekly Off is assumed.",
+      "For B, mark 20 full Present days and one Half Day; mark the other eligible days Absent or cover them with approved unpaid leave. Resolve every missing date.",
+      "Preview September: A ₹30,000 and B ₹16,400. Finalize the test branch only after checking amounts; repeated finalization must not duplicate salary."
+    ],
+    "result": "The finalized database snapshots total ₹46,400 and supply P&L Labor Cost once. They do not send bank payments. Final attendance/leave cannot be rewritten; rate changes require a future month effective date. Pending/rejected leave gives no pay credit."
+  },
+  "hinglish": {
+    "scenario": "Test branch mein ek monthly aur ek daily-wage employee ki September salary nikalo. Pehle A ko same-branch login se link karo aur LEAVE_SELF do; attendance mark karne wale ke paas ATTENDANCE aur ALAG reviewer ke paas LEAVE_APPROVAL ho. Linked employee ya request submitter khud review nahi kar sakte, Owner bhi nahi.",
+    "steps": [
+      "PAYROLL access se A ko ON_ROLL ₹30,000 monthly aur B ko OFF_ROLL ₹800 daily par September 1 se banao. Completed September use karo, future month nahi.",
+      "A ke 29 Present mark karo; A ek din leave apply kare aur doosra authorized manager PAID approve kare. Weekly Off assume nahi hoga.",
+      "B ke 20 full Present aur ek Half Day mark karo; baaki eligible din Absent ya approved unpaid leave se cover karo. Har missing date resolve karo.",
+      "September preview mein A ₹30,000 aur B ₹16,400 check karo. Amounts dekhkar sirf test branch finalize karo; repeat finalization salary duplicate nahi karegi."
+    ],
+    "result": "Real finalized snapshots ka total ₹46,400 hai aur P&L Labor Cost mein ek baar aata hai. Bank payment send nahi hoti. Final attendance/leave rewrite nahi hoti; rate change future month se hota hai. Pending/rejected leave se pay credit nahi milta."
+  }
+},
   "/admin/users": {
     en: {
       scenario: "Give a new cashier access only to POS and Cash Drop in a test branch.",

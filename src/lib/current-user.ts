@@ -94,11 +94,45 @@ export function useCurrentUser(): CurrentUser {
 export function hasCurrentModule(user: CurrentUser, ...keys: string[]) {
   return user.ready && user.authenticated && (user.role === "SUPER_ADMIN" || keys.some(key => user.moduleAccess.includes(key as ModuleKey)));
 }
+export class RequestJsonError extends Error {
+  constructor(message: string, public readonly outcome: "rejected" | "unknown", public readonly status?: number) {
+    super(message);
+    this.name = "RequestJsonError";
+  }
+}
+/** One bounded attempt, including body decoding. Never automatically retry a write. */
 export async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, cache: "no-store", credentials: "same-origin", headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
-  const data = await response.json().catch(() => ({}));
-  if (response.status === 401) clearCurrentUser();
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
-  return data as T;
+  const controller = new AbortController();
+  const writing = !["GET", "HEAD"].includes((init?.method ?? "GET").toUpperCase());
+  const uncertain = writing ? " The change may already be saved. Check saved records before retrying." : " Please retry loading records.";
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      new Promise<never>((_, reject) => {
+        cancel = () => { reject(new RequestJsonError("Request cancelled." + uncertain, "unknown")); controller.abort(); };
+        if (init?.signal?.aborted) { cancel(); return; }
+        init?.signal?.addEventListener("abort", cancel, { once: true });
+        timer = setTimeout(() => { reject(new RequestJsonError("Request timed out." + uncertain, "unknown")); controller.abort(); }, 15000);
+      }),
+      (async () => {
+        if (controller.signal.aborted) throw new RequestJsonError("Request cancelled." + uncertain, "unknown");
+        const response = await fetch(url, { ...init, signal: controller.signal, cache: "no-store", credentials: "same-origin", headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
+        if (response.status === 401) clearCurrentUser();
+        const data = await response.json();
+        if (!response.ok) {
+          const rejected = [400, 401, 403, 404, 405, 409, 413, 422].includes(response.status);
+          throw new RequestJsonError((data?.error || `Request failed (${response.status})`) + (!rejected ? uncertain : ""), rejected ? "rejected" : "unknown", response.status);
+        }
+        return data as T;
+      })(),
+    ]);
+  } catch (error) {
+    if (error instanceof RequestJsonError) throw error;
+    throw new RequestJsonError("Could not confirm the request." + uncertain, "unknown");
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    if (cancel) init?.signal?.removeEventListener("abort", cancel);
+  }
 }
 

@@ -20,7 +20,8 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
-    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON"],
+    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL"],
+    "/workforce": ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"],
   };
   return hasCurrentModule(user, ...(groups[href] ?? [module]));
 }
@@ -28,7 +29,7 @@ function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN",
-  "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
+  "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
   "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/guide": "Guide Book",
 };
 function NavList({ user, activeHref, onNavigate }: { user: CurrentUser; activeHref?: string; onNavigate?: () => void }) {

@@ -7,8 +7,12 @@ const {Pool} = require('pg');
 const {randomUUID,randomBytes} = require('node:crypto');
 const assert = require('node:assert/strict');
 const {hashPassword} = require('../src/lib/server/password.ts');
+const target = new URL(process.env.BASE_URL || 'http://localhost:3000');
+assert.ok(['localhost','127.0.0.1'].includes(target.hostname) && target.protocol === 'http:' && target.pathname === '/' && !target.username && !target.password && !target.search && !target.hash, 'Only plain loopback HTTP allowed');
+assert.equal(process.env.PGHOST,'127.0.0.1'); assert.equal(process.env.PGPORT,'5436');
+assert.match(process.env.PGDATABASE || '', /^(restaurant_erp_local|restaurant_erp_workforce_qa_\d{8})$/);
 const pool = new Pool({host:process.env.PGHOST,port:Number(process.env.PGPORT),user:process.env.PGUSER,password:process.env.PGPASSWORD,database:process.env.PGDATABASE,ssl:false});
-const origin = 'http://localhost:3000';
+const origin = target.origin;
 const run = randomUUID();
 const fixtureIds = [], branchIds = [], materialIds = [];
 let count=0;
@@ -21,7 +25,6 @@ async function request(path, cookie='', method='GET', input, expected=200){
 }
 async function login(user,password){return (await request('/api/auth/login','','POST',{phoneE164:user.phoneE164,password})).cookie;}
 (async()=>{
- assert.equal(process.env.PGHOST,'127.0.0.1'); assert.equal(process.env.PGPORT,'5436'); assert.equal(process.env.PGDATABASE,'restaurant_erp_local');
  const ownerId=randomUUID(), pass=randomBytes(24).toString('hex'); fixtureIds.push(ownerId);
  const phone='+918'+String(Date.now()).slice(-9);
  try {

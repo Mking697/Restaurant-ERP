@@ -1,0 +1,9 @@
+export type EmploymentType = "ON_ROLL" | "OFF_ROLL";
+export type Compensation = { effectiveFrom: string; rate: string; employmentType: EmploymentType };
+export type Employee = { id: string; branchId: string; userId: string | null; name: string; employmentType: EmploymentType; rate: string; joinedOn: string; leftOn: string | null; rateEffectiveFrom: string; compensationHistory?: Compensation[] };
+export type EmployeeList = { employees: Employee[]; users?: {id:string;name:string}[] };
+export type Leave = { id: string; employeeId: string; employeeName: string; branchId: string; startDate: string; endDate: string; reason: string; status: "PENDING" | "APPROVED" | "REJECTED"; payType: "PAID" | "UNPAID" | null; reviewNote: string | null; requestedById: string; employeeUserId?: string | null; canReview?: boolean; employmentType?: EmploymentType; paidLeaveAllowed?: boolean };
+export type Leaves = { leaves: Leave[]; employees: {id:string;name:string}[] };
+export type Attendance = { employees: Pick<Employee,"id"|"name"|"userId"|"joinedOn"|"leftOn">[]; attendance: {id:string;employeeId:string;date:string;status:"PRESENT"|"HALF_DAY"|"ABSENT"}[]; leaves: {employeeId:string;payType?:"PAID"|"UNPAID";status?:string}[] };
+export type PayrollRow = { employeeId:string;employeeName:string;branchId:string;employmentType:EmploymentType;rate:string;calendarDays:number;presentDays:number;halfDays:number;paidLeaveDays:number;unpaidDays:number;missingDates:string[];payableUnits:string|number;amount:string;status:"DRAFT"|"FINAL";rateSegments?:{effectiveFrom:string;rate:string;employmentType:EmploymentType;payableHalfUnits:number}[] };
+export type Payroll = {month:string;rows:PayrollRow[];total:string;finalized:boolean};

@@ -32,7 +32,7 @@ export default function GuideBookPage() {
       <section className="mb-6 space-y-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
         <h2 className="font-semibold text-foreground">{t("Language, theme and demo status", "Language, theme aur demo status")}</h2>
         <p>{t("English is the default. Switch to Hinglish with the Language selector. Choose Amber (light), Dark, Blue or Emerald with the Theme selector. Sign in with your 10-digit mobile number, without +91. Preferences are remembered in this browser and do not change permissions or business records.", "English default hai. Language selector se Hinglish chuno. Theme selector mein Amber (light), Dark, Blue ya Emerald chuno. Login mein sirf 10-digit mobile number bharo, +91 nahi. Preferences isi browser mein yaad rehti hain; permissions ya business records nahi badalte.")}</p>
-        <p>{t("Four modules use the real database: Inventory, Users & Access, Branches and WhatsApp Settings. Eight are interactive demos: Dashboard, Reports, MIS, Tasks, Purchase, POS, Cash Drop and Accounts. Demo data is illustrative; page-local changes reset on reload and do not post to the database. Automated reminders, approvals and stock/refund postings remain pending.", "Chaar modules real database use karte hain: Inventory, Users & Access, Branches aur WhatsApp Settings. Aath interactive demos hain: Dashboard, Reports, MIS, Tasks, Purchase, POS, Cash Drop aur Accounts. Demo data sample hai; reload par local changes reset hote hain aur database mein post nahi hote. Auto reminders, approvals aur stock/refund posting pending hain.")}</p>
+        <p>{t("Inventory, Users, Branches, provider/restaurant settings and Staff/Attendance/Leave/Payroll use the database. Accounts Expenses and payroll costs are real; sales/COGS and full profit reporting remain unconnected. Other labelled accounting areas and Dashboard, Reports, MIS, Tasks, Purchase, POS and Cash Drop remain demos. Demo records are not real financial postings.", "Inventory, Users, Branches, provider/restaurant settings aur Staff/Attendance/Leave/Payroll DB-backed hain. Accounts Expenses aur payroll costs real hain; sales/COGS aur full profit reporting abhi connected nahi. Baaki labelled accounting areas aur Dashboard, Reports, MIS, Tasks, Purchase, POS, Cash Drop demo hain. Demo records real financial posting nahi hain.")}</p>
       </section>
       {user.role === "SUPER_ADMIN" && <section className="mb-6 space-y-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
         <h2 className="font-semibold text-foreground">{t("Example: set your restaurant name and logo", "Example: restaurant ka naam aur logo set karo")}</h2>
@@ -70,7 +70,7 @@ export default function GuideBookPage() {
                     : "bg-amber-500/15 text-amber-600"
                 }`}
               >
-                {m.status === "live" ? uiText("Live DB") : t("Demo · not saved", "Demo · save nahi hota")}
+                {m.status === "live" ? uiText("Live DB") : m.status === "mixed" ? t("Partly live", "Kuch hissa real") : t("Demo · not saved", "Demo · save nahi hota")}
               </span>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">{m.short}</p>

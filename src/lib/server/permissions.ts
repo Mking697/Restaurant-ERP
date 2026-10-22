@@ -1,5 +1,5 @@
 import { MODULE_KEYS, type ModuleKey } from "../moduleAccess";
-export type Role = "SUPER_ADMIN" | "CENTRAL_STORE_MGR" | "BRANCH_MANAGER" | "CASHIER" | "KITCHEN_STAFF";
+export type Role = "SUPER_ADMIN" | "CENTRAL_STORE_MGR" | "BRANCH_MANAGER" | "CASHIER" | "KITCHEN_STAFF" | "ACCOUNTANT";
 export interface Identity { id: string; name: string; phoneE164: string; role: Role; branchId: string | null; moduleAccess: string[]; status: "Active" | "Inactive"; }
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function assertOwner(user: Identity) { if (user.role !== "SUPER_ADMIN") throw new HttpError(403, "Owner access required"); }
@@ -23,7 +23,7 @@ export function assertDelegation(actor: Identity, target: Pick<Identity, "id" | 
   if (actor.role === "SUPER_ADMIN") return;
   if (target.id === actor.id) throw new HttpError(403, "Branch admins cannot edit themselves");
   branchScope(actor, target.branchId);
-  if (!target.branchId || !["BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF"].includes(target.role)) throw new HttpError(403, "Cannot manage HQ roles");
+  if (!target.branchId || !["BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF", "ACCOUNTANT"].includes(target.role)) throw new HttpError(403, "Cannot manage HQ roles");
   if (target.moduleAccess.some(key => !actor.moduleAccess.includes(key))) throw new HttpError(403, "Cannot delegate unheld grants");
 }
 export function safeUser(user: Identity & { createdAt?: Date; reportingManagerId?: string }) {
