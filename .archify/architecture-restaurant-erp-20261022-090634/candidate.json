@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Multi-Branch Restaurant ERP + WhatsApp Automation",
+    "subtitle": "Tier 1 HQ -> Tier 2 WhatsApp Hub -> Tier 3 Branch Ops (B1-B6+) -> Tier 4 Finance & MIS",
+    "output": "restaurant-erp-archify.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "all", "label": "All Flows", "focus": ["master_bom","vendor_rates","clone_wizard","hq_dashboard","wh_webhook","staff_frontend","owner_approval","vendor_po","coffee_summary","fms_tasks","delegation","anticheat","indents_grn","inventory","pos_billing","three_way_match","petty_cash","aggregator_recon","mis_leaderboard"], "note": "Poora system: HQ se Branch tak, WhatsApp automation ke saath" },
+      { "id": "task_loop", "label": "Task & Delegation Loop", "focus": ["fms_tasks","delegation","anticheat","wh_webhook","hq_dashboard"], "note": "Staff ko task milta, selfie+GPS se proof, overdue par red alert" },
+      { "id": "inventory_loop", "label": "Inventory & Purchase Loop", "focus": ["indents_grn","vendor_po","three_way_match","inventory","owner_approval"], "note": "Indent se PO, GRN match, night variance aur chori ka alert" },
+      { "id": "cashier_loop", "label": "Cashier & Accounts Loop", "focus": ["pos_billing","petty_cash","aggregator_recon","mis_leaderboard","coffee_summary"], "note": "Blind cash drop, petty cash photo log, Swiggy/Zomato milaan, MIS score" },
+      { "id": "whatsapp_loop", "label": "WhatsApp Bot Loop", "focus": ["wh_webhook","staff_frontend","owner_approval","vendor_po","coffee_summary"], "note": "Sab kuch WhatsApp par: buttons, approvals, PO, roz 8AM report" }
+    ]
+  },
+  "components": [
+    { "id": "master_bom", "type": "database", "label": "Master BOM Recipes", "sublabel": "HQ Locked", "pos": [40, 40], "size": [140, 64] },
+    { "id": "vendor_rates", "type": "security", "label": "Locked Vendor Rates", "sublabel": "HQ Price Master", "pos": [270, 40], "size": [140, 64] },
+    { "id": "clone_wizard", "type": "backend", "label": "Clone Branch Wizard", "sublabel": "1-Click New Branch", "pos": [500, 40], "size": [140, 64] },
+    { "id": "hq_dashboard", "type": "frontend", "label": "HQ Owner Dashboard", "sublabel": "Compiled + Drill-Down", "pos": [730, 40], "size": [140, 64] },
+
+    { "id": "staff_frontend", "type": "frontend", "label": "Zero-Login Staff UI", "sublabel": "WhatsApp Deep Link", "pos": [40, 240], "size": [140, 64] },
+    { "id": "wh_webhook", "type": "messagebus", "label": "WhatsApp Webhook", "sublabel": "2-Way Interactive", "pos": [270, 240], "size": [140, 64] },
+    { "id": "owner_approval", "type": "security", "label": "1-Tap Owner Approval", "sublabel": "Interactive Buttons", "pos": [500, 240], "size": [140, 64] },
+    { "id": "vendor_po", "type": "backend", "label": "Auto Vendor PDF PO", "sublabel": "Sent on WhatsApp", "pos": [730, 240], "size": [140, 64] },
+    { "id": "coffee_summary", "type": "cloud", "label": "8AM Coffee Summary", "sublabel": "Daily Cron Report", "pos": [40, 394], "size": [140, 64] },
+
+    { "id": "fms_tasks", "type": "frontend", "label": "Recurring Tasks FMS", "sublabel": "Shift Checklists", "pos": [40, 574], "size": [140, 64] },
+    { "id": "anticheat", "type": "security", "label": "Live Cam + 50m GPS", "sublabel": "Anti-Cheat Proof", "pos": [270, 574], "size": [140, 64] },
+    { "id": "delegation", "type": "frontend", "label": "One-Time Delegation", "sublabel": "Voice/Text Task", "pos": [500, 574], "size": [140, 64] },
+    { "id": "indents_grn", "type": "backend", "label": "Purchase Indent & GRN", "sublabel": "Branch Request + Receive", "pos": [40, 708], "size": [140, 64] },
+    { "id": "inventory", "type": "database", "label": "Smart Inventory", "sublabel": "BOM Deduction + Variance", "pos": [270, 708], "size": [140, 64] },
+    { "id": "pos_billing", "type": "frontend", "label": "POS + Blind Cash Drop", "sublabel": "Billing & Shift Close", "pos": [500, 708], "size": [140, 64] },
+
+    { "id": "aggregator_recon", "type": "cloud", "label": "Swiggy/Zomato Recon", "sublabel": "Payout vs Order Value", "pos": [40, 872], "size": [140, 64] },
+    { "id": "three_way_match", "type": "security", "label": "3-Way Match Lock", "sublabel": "PO = GRN = Invoice", "pos": [270, 872], "size": [140, 64] },
+    { "id": "petty_cash", "type": "database", "label": "Petty Cash Ledger", "sublabel": "WhatsApp Photo Log", "pos": [500, 872], "size": [140, 64] },
+    { "id": "mis_leaderboard", "type": "backend", "label": "100-Point MIS Engine", "sublabel": "Weekly Leaderboard", "pos": [730, 872], "size": [140, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Tier 1: Super Admin & HQ Master Control", "wraps": ["master_bom","vendor_rates","clone_wizard","hq_dashboard"], "pad": 20 },
+    { "kind": "region", "label": "Tier 2: Official WhatsApp Cloud API Hub", "wraps": ["staff_frontend","wh_webhook","owner_approval","vendor_po","coffee_summary"], "pad": 20 },
+    { "kind": "security-group", "label": "Tier 3: Branch Operations (branch_id scoped B1-B6+)", "wraps": ["fms_tasks","anticheat","delegation","indents_grn","inventory","pos_billing"], "pad": 20 },
+    { "kind": "region", "label": "Tier 4: Finance, 3-Way Match & MIS Engine", "wraps": ["aggregator_recon","three_way_match","petty_cash","mis_leaderboard"], "pad": 20 }
+  ],
+  "connections": [
+    { "id": "hq-to-clone", "from": "hq_dashboard", "to": "clone_wizard" },
+    { "id": "hq-to-po", "from": "hq_dashboard", "to": "vendor_po", "label": "PO view", "fromSide": "bottom", "toSide": "top" },
+    { "id": "staff-to-webhook", "from": "staff_frontend", "to": "wh_webhook" },
+    { "id": "webhook-to-approval", "from": "wh_webhook", "to": "owner_approval", "variant": "emphasis" },
+    { "id": "approval-to-po", "from": "owner_approval", "to": "vendor_po" },
+    { "id": "anticheat-to-webhook", "from": "anticheat", "to": "wh_webhook", "label": "alert", "variant": "security", "fromSide": "top", "toSide": "bottom" },
+    { "id": "fms-to-anticheat", "from": "fms_tasks", "to": "anticheat" },
+    { "id": "delegation-to-anticheat", "from": "delegation", "to": "anticheat" },
+    { "id": "pos-to-inventory", "from": "pos_billing", "to": "inventory", "variant": "emphasis" },
+    { "id": "inventory-to-match", "from": "inventory", "to": "three_way_match", "label": "variance", "fromSide": "bottom", "toSide": "top" },
+    { "id": "pos-to-petty", "from": "pos_billing", "to": "petty_cash", "label": "cash log", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Tier 1 - HQ Master Control", "items": ["Master BOM recipe sab branch me locked, koi edit nahi kar sakta", "Vendor rate HQ fix karta, branch sirf PO raise karta", "Clone Wizard: naya Branch 7+ ek click me menu+BOM+checklist copy karke ready"] },
+    { "dot": "emerald", "title": "Tier 2 - WhatsApp Hub (sample previews)", "items": ["Bot: Freezer temp check karo [Done] [Skip]", "Owner: Indent 25% spike. [Approve] [Edit] [Reject]", "Vendor: PO#102 attached. [Mark Dispatched]", "Owner 8AM: Kal sales 4.2L, Branch 3 top, B5 cash short"] },
+    { "dot": "cyan", "title": "Tier 3 - Branch Operations", "items": ["Recurring FMS: shift-wise daily/weekly checklist (9AM freezer check)", "Live camera + 50m geofence se gallery-upload cheating block", "Night variance: top 20 item ka theoretical vs physical stock, loss amount WhatsApp par", "Indent -> PO -> Vendor dispatch -> GRN weight+photo entry"] },
+    { "dot": "rose", "title": "Tier 4 - Finance & MIS", "items": ["3-Way Match: PO rate = GRN qty = Invoice, tab hi payment release", "Petty cash WhatsApp photo se log, daily cap Rs 2000/branch", "Swiggy/Zomato payout vs order value, commission/refund dikhta", "MIS Score = 40% task + 30% delegation + 20% variance + 10% cashier accuracy"] }
+  ]
+}

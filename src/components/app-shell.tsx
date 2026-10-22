@@ -1,0 +1,81 @@
+"use client";
+import * as React from "react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, UtensilsCrossed, Menu, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { NAV_ITEMS } from "@/lib/nav";
+import { Sheet, SheetContent, SheetCloseButton } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { clearCurrentUser, hasCurrentModule, refreshCurrentUser, requestJson, useCurrentUser, type CurrentUser } from "@/lib/current-user";
+import { useBranches, useSelectedBranchId, setSelectedBranchId } from "@/lib/current-branch";
+const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck };
+export function canNavigate(user: CurrentUser, href: string, module: string) {
+  if (!user.ready || !user.authenticated) return false;
+  if (href === "/admin/users" || href === "/admin/branches") return ["SUPER_ADMIN", "BRANCH_MANAGER"].includes(user.role);
+  if (href === "/admin/settings/whatsapp") return user.role === "SUPER_ADMIN";
+  const groups: Record<string, string[]> = {
+    "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
+    "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
+    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON"],
+  };
+  return hasCurrentModule(user, ...(groups[href] ?? [module]));
+}
+function Logo() { return <div className="flex items-center gap-2"><UtensilsCrossed className="size-7 text-primary" /><div className="text-sm font-semibold">Restaurant HQ<div className="text-xs font-normal text-muted-foreground">ERP + WhatsApp</div></div></div>; }
+function NavList({ user, activeHref, onNavigate }: { user: CurrentUser; activeHref?: string; onNavigate?: () => void }) {
+  const items = [...NAV_ITEMS.filter(item => canNavigate(user, item.href, item.module)), { href: "/guide", label: "Guide Book", icon: "BookOpenCheck" }];
+  return <nav className="flex-1 overflow-y-auto p-2">{items.map(item => {
+    const Icon = ICONS[item.icon];
+    return <a key={item.href} href={item.href} onClick={onNavigate} className={cn("mb-1 flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium", activeHref === item.href ? "bg-primary text-primary-foreground" : "hover:bg-accent")}><Icon className="size-4 shrink-0" />{item.label}</a>;
+  })}</nav>;
+}
+export function AppShell({ children, activeHref }: { children: React.ReactNode; activeHref?: string }) {
+  const router = useRouter();
+  const user = useCurrentUser();
+  const selected = useSelectedBranchId();
+  const { branches, loading, error: branchError } = useBranches();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [loggingOut, setLoggingOut] = React.useState(false);
+  const [retry, setRetry] = React.useState(0);
+  React.useEffect(() => {
+    if (!user.ready || user.authenticated || user.error) return;
+    let active = true;
+    requestJson<{ setupRequired: boolean }>("/api/setup").then(data => {
+      if (active) router.replace(data.setupRequired ? "/setup" : "/login");
+    }).catch(err => { if (active) setError(err.message); });
+    return () => { active = false; };
+  }, [user.ready, user.authenticated, user.error, router, retry]);
+  React.useEffect(() => {
+    if (user.role === "SUPER_ADMIN" && !loading && !branchError && selected !== "all" && !branches.some(branch => branch.id === selected)) setSelectedBranchId("all");
+  }, [user.role, branches, loading, branchError, selected]);
+  async function logout() {
+    setLoggingOut(true); setError("");
+    try { await requestJson("/api/auth/logout", { method: "POST" }); clearCurrentUser(); router.replace("/login"); router.refresh(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Logout failed"); }
+    finally { setLoggingOut(false); }
+  }
+  if (!user.ready || !user.authenticated) return <main className="p-6" aria-busy={!user.ready}>
+    <p>{user.error || error || (user.ready ? "Checking account setup…" : "Verifying session…")}</p>
+    {(user.error || error) && <Button className="mt-3" onClick={() => { setError(""); setRetry(value => value + 1); void refreshCurrentUser(); }}>Retry</Button>}
+  </main>;
+  const owner = user.role === "SUPER_ADMIN";
+  return <div className="flex min-h-screen">
+    <aside className="hidden w-64 flex-col border-r bg-card md:flex"><div className="flex h-14 items-center border-b px-4"><Logo /></div><NavList user={user} activeHref={activeHref} /></aside>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}><SheetContent><div className="flex h-14 items-center justify-between border-b px-4"><Logo /><SheetCloseButton /></div><NavList user={user} activeHref={activeHref} onNavigate={() => setMobileOpen(false)} /></SheetContent></Sheet>
+    <div className="flex min-w-0 flex-1 flex-col">
+      <header className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b bg-card px-3 py-2 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2"><button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)} className="p-2 md:hidden"><Menu className="size-5" /></button>
+          <select aria-label="Branch" value={selected} disabled={!owner || loading || !!branchError} onChange={event => setSelectedBranchId(event.target.value)} className="max-w-52 rounded-md border bg-card p-2 text-sm disabled:opacity-70">
+            {owner && <option value="all">All branches (compiled)</option>}
+            {branches.map(branch => <option key={branch.id} value={branch.id}>{branch.code} — {branch.name}</option>)}
+            {!owner && !branches.length && <option value={selected}>{loading ? "Loading branch…" : user.branchId ? "Own branch" : "No branch assigned"}</option>}
+          </select>
+        </div>
+        <div className="flex items-center gap-3 text-sm"><span className="hidden sm:inline">{user.name}</span><a href="/guide" className="flex items-center gap-1"><BookOpenCheck className="size-4" />Guide</a><Button variant="outline" size="sm" disabled={loggingOut} onClick={logout}>Log out</Button></div>
+      </header>
+      {(error || branchError) && <p role="alert" className="p-3 text-sm text-destructive">{error || branchError}</p>}
+      <main className="flex-1 overflow-x-hidden bg-background p-3 sm:p-4 md:p-6">{children}</main>
+    </div>
+  </div>;
+}
+

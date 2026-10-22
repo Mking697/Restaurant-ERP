@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant HQ ERP — Pura System Samjho (Interactive Guide)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #020617;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', 'Noto Sans Devanagari', system-ui, sans-serif;
+    background-image: linear-gradient(#1e293b 0.5px, transparent 0.5px), linear-gradient(90deg, #1e293b 0.5px, transparent 0.5px);
+    background-size: 40px 40px;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 48px 20px 28px;
+  }
+  header .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #fb923c;
+    box-shadow: 0 0 10px #fb923c;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  header p { color: #94a3b8; margin-top: 10px; font-size: 15px; max-width: 760px; margin-left: auto; margin-right: auto; line-height: 1.7; }
+
+  .flow {
+    max-width: 1100px;
+    margin: 0 auto 40px;
+    padding: 0 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+  }
+  .flow .step {
+    background: rgba(30,41,59,0.6);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 12.5px;
+    color: #cbd5e1;
+    white-space: nowrap;
+  }
+  .flow .arrow { color: #475569; font-size: 16px; }
+
+  .legend {
+    max-width: 1100px;
+    margin: 0 auto 10px;
+    padding: 0 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    font-size: 11.5px;
+    color: #94a3b8;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .grid {
+    max-width: 1200px;
+    margin: 24px auto 60px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    border-radius: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .card .num {
+    position: absolute; top: 10px; right: 14px;
+    font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 700;
+  }
+  .card h3 { font-size: 15.5px; margin-bottom: 6px; }
+  .card p { font-size: 12.5px; color: #cbd5e1; line-height: 1.5; }
+  .card .tap { margin-top: 12px; font-size: 10.5px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 4px; }
+
+  .c-frontend { background: rgba(8,51,68,0.4); border: 1.5px solid #22d3ee; }
+  .c-backend  { background: rgba(6,78,59,0.4); border: 1.5px solid #34d399; }
+  .c-finance  { background: rgba(76,29,149,0.4); border: 1.5px solid #a78bfa; }
+  .c-admin    { background: rgba(120,53,15,0.3); border: 1.5px solid #fbbf24; }
+  .c-whatsapp { background: rgba(136,19,55,0.4); border: 1.5px solid #fb7185; }
+
+  /* Modal */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(2px);
+    z-index: 100;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+    position: relative;
+  }
+  .modal .close {
+    position: absolute; top: 18px; right: 20px;
+    background: none; border: none; color: #94a3b8;
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .modal .close:hover { color: #fff; }
+  .modal .badge-route {
+    display: inline-block;
+    font-family: monospace;
+    font-size: 11.5px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid #334155;
+    padding: 3px 9px;
+    border-radius: 6px;
+    color: #67e8f9;
+    margin-bottom: 14px;
+  }
+  .modal h2 { font-size: 21px; margin-bottom: 4px; }
+  .modal .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #fb923c;
+    font-weight: 700;
+    margin: 20px 0 8px;
+  }
+  .modal p, .modal li { font-size: 14px; line-height: 1.75; color: #d1d5db; }
+  .modal ul { padding-left: 20px; margin-bottom: 4px; }
+  .modal li { margin-bottom: 6px; }
+  .modal .example {
+    background: rgba(52,211,153,0.08);
+    border: 1px solid rgba(52,211,153,0.3);
+    border-left: 3px solid #34d399;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 6px;
+    font-size: 13.5px;
+    color: #bbf7d0;
+    line-height: 1.7;
+  }
+  .modal .example b { color: #fff; }
+
+  footer {
+    text-align: center;
+    padding: 30px 20px 50px;
+    color: #475569;
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div><span class="dot"></span><span style="color:#94a3b8;font-size:12px;letter-spacing:1px;">LIVE SYSTEM GUIDE</span></div>
+  <h1>🍽️ Restaurant HQ — ERP + WhatsApp Automation</h1>
+  <p>
+    Neeche har box ek <b style="color:#fff;">module</b> hai — jo ERP ke andar ek screen/feature represent karta hai.
+    <b style="color:#fff;">Kisi bhi box par click karo</b> — wahan uska pura explanation khulega: wo kya karta hai,
+    kaise use hota hai, aur ek real example ke saath. Isse koi bhi layman — jisko coding/ERP ka kuch pata nahi —
+    pura system samajh sakta hai.
+  </p>
+  <p style="margin-top:14px; font-size:13px;">
+    <span style="background:rgba(52,211,153,0.18);color:#34d399;font-weight:700;padding:2px 8px;border-radius:999px;font-size:10px;text-transform:uppercase;">Live DB</span>
+    = real login + real Postgres database + branch isolation ab actually kaam karta hai (Owner sabhi branches, Branch Admin sirf apni, user sirf apna module access).
+    <span style="background:rgba(251,191,36,0.18);color:#fbbf24;font-weight:700;padding:2px 8px;border-radius:999px;font-size:10px;text-transform:uppercase;margin-left:10px;">Pending</span>
+    = abhi demo/placeholder data hai, apni asli DB integration ka wait kar raha hai — app mein login karne par yeh modules ek saaf "DB integration pending" panel dikhate hain, kabhi purana demo data branch-filtered dikha kar confuse nahi karte.
+  </p>
+</header>
+
+<div class="flow">
+  <div class="step">📱 Staff ka WhatsApp</div>
+  <div class="arrow">→</div>
+  <div class="step">ChatXFlow (WhatsApp API)</div>
+  <div class="arrow">→</div>
+  <div class="step">Restaurant HQ ERP (yeh system)</div>
+  <div class="arrow">→</div>
+  <div class="step">Postgres Database</div>
+  <div class="arrow">→</div>
+  <div class="step">👑 Owner Dashboard (saari branches ek jagah)</div>
+</div>
+
+<div class="legend">
+  <span><i style="background:#22d3ee"></i> Daily Operations (jo har din use hota hai)</span>
+  <span><i style="background:#a78bfa"></i> Paisa / Finance</span>
+  <span><i style="background:#34d399"></i> Khareedna / Stock</span>
+  <span><i style="background:#fbbf24"></i> Admin / Setup</span>
+  <span><i style="background:#fb7185"></i> WhatsApp Connection</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<footer>
+  Restaurant HQ ERP — 6 branches, 1 WhatsApp number, 1 Owner view. Yeh page khud-se self-contained hai, offline bhi khulta hai.
+</footer>
+
+<script>
+const MODULES = [
+  {
+    id: "dashboard", cat: "frontend", status: "pending", route: "/dashboard", icon: "📊",
+    title: "Owner Dashboard",
+    short: "Pehli screen jo owner kholta hai — sabhi 6 branches ka business health ek nazar mein.",
+    what: "Yeh poore restaurant chain ka 'control room' hai. Owner yahan dekh sakta hai: aaj kitna total sale hua (saari branches milakar), total inventory ki value kitni hai, average prime cost % (kitna paisa food+labor mein ja raha hai), kitne tasks overdue hain, aur kaunsi branch sabse achha perform kar rahi hai (MIS score).",
+    how: [
+      "Top-left mein branch selector hai — 'All 6 Branches' ya ek specific branch choose kar sakte ho.",
+      "5 KPI cards sabse upar: Total Sales, Total Inventory Value, Avg Prime Cost %, Overdue Tasks, Top MIS Branch.",
+      "Charts: Revenue trend (14 din ka graph), order channel split (Dine-in/Takeaway/Swiggy/Zomato), branch-wise revenue bar chart.",
+      "'Pilferage watch' card — jin branches mein cash variance ya chori ka shaq hai wahan red flag dikhta hai.",
+      "Sabse neeche: har branch ka pura drill-down table — ek click mein sab kuch compare kar sakte ho."
+    ],
+    example: "Owner subah dashboard kholta hai. Dekhta hai Connaught Place ne kal ₹1,42,500 ka sale kiya (achha), lekin Noida branch mein 4 tasks overdue hain aur prime cost 63.4% hai (target 60% se zyada). Owner turant Noida manager ko WhatsApp/call karta hai — bina branch jaaye hi pata chal gaya kahan dhyan dena hai."
+  },
+  {
+    id: "reports", cat: "frontend", status: "pending", route: "/reports", icon: "📑",
+    title: "Reports",
+    short: "6 alag-alag detailed reports — Sales, MIS, Food Cost, Inventory, Cash, Aggregator.",
+    what: "Dashboard sirf summary deta hai; Reports mein deep-dive karne ka option hai. Har report apna chart + table leke aata hai, aur 'Export CSV' button se Excel mein download bhi kar sakte ho.",
+    how: [
+      "Sales Trend — revenue aur prime cost % ka 14-din graph.",
+      "MIS Scorecard — har employee ka on-time/delay/not-done breakdown.",
+      "Food Cost & Menu Margin — har dish ka selling price vs ingredient cost vs margin.",
+      "Inventory Variance — jo stock hona chahiye tha (theoretical) vs jo actually mila (physical).",
+      "Cash Reconciliation — har cashier ka shortage/excess.",
+      "Aggregator Recon — Swiggy/Zomato se kitna order aaya vs actually kitna paisa mila."
+    ],
+    example: "Owner 'Food Cost' report kholta hai. Dekhta hai Butter Chicken ₹420 mein bikta hai, lekin uske ingredients (chicken, cream, spices — BOM Recipe se calculate) sirf ₹138 ke hain. Matlab 33% food cost — yeh healthy range mein hai (industry standard ~30-35%)."
+  },
+  {
+    id: "performance", cat: "frontend", status: "pending", route: "/performance", icon: "🏆",
+    title: "MIS Leaderboard",
+    short: "Har employee/branch ka performance score — kaun best kaam kar raha hai.",
+    what: "MIS (Management Information System) Score ek number hai (0-100%) jo batata hai koi employee apna kaam time pe karta hai ya nahi. Formula: 40% weight tasks par, 30% delegation par, 20% inventory variance control par, 10% cashier accuracy par.",
+    how: [
+      "Table mein har person ka naam, role, branch, On-Time count, Delay count, Not-Done count dikhta hai.",
+      "Sabse right mein final MIS Score % — green (85%+) achha, orange (70-85%) theek-thaak, red (<70%) chinta ki baat.",
+      "Bar chart se sabka score visually compare kar sakte ho."
+    ],
+    example: "Rahul Sharma (Gurugram manager) ne 42 tasks on-time kiye, sirf 2 late, 0 miss — uska score 93.1% hai, No.1 position. Noida team ka score sirf 61.8% hai (22 on-time, 14 late, 8 miss) — owner ko pata chal jaata hai Noida mein training/supervision badhani hai."
+  },
+  {
+    id: "tasks", cat: "frontend", status: "pending", route: "/tasks", icon: "✅",
+    title: "Tasks & Checklists",
+    short: "Recurring checklist (daily/weekly/...) + One-time delegation — dono ek jagah.",
+    what: "Yeh module do tarah ke kaam manage karta hai: (1) Recurring/Checklist — jaise roz subah fridge temperature check karna, hafte mein ek baar deep clean — ek baar set karo, system khud frequency ke hisaab se naya task bana deta rehta hai. (2) Delegation — one-time special kaam, jaise 'exhaust fan repair karao', jisme priority hoti hai (High/Medium/Low).",
+    how: [
+      "'New Recurring / Checklist' button — Task title, Branch, Doer (kiska kaam hai), Frequency (Daily/Weekly/Every-15-days/Monthly/Quarterly/Half-Yearly/Yearly) choose karo.",
+      "'Delegate Task' button — One-time kaam, Priority (High/Medium/Low) set karo.",
+      "Doer apne dashboard se 'Mark Done' button dabata hai.",
+      "IMPORTANT FARAQ: Recurring/Checklist mein evidence photo attach karna OPTIONAL hai. Delegation (one-time) mein evidence attach karna ZAROORI hai — bina photo ke system Done hi nahi hone dega."
+    ],
+    example: "Priya Nair (Connaught Place manager) ke liye 'Walk-in fridge temp log' daily checklist set hai — roz 9:00 AM naya task auto-ban jaata hai, Priya photo attach kiye bina bhi Done kar sakti hai. Dusri taraf, Noida mein 'Exhaust fan repair' ek HIGH priority one-time delegation hai — maintenance vendor ko tab tak Done karne nahi diya jaayega jab tak wo repair ki photo attach na kare."
+  },
+  {
+    id: "inventory", cat: "backend", status: "live", route: "/inventory", icon: "📦",
+    title: "Inventory",
+    short: "Har branch ka stock — UOM, low-stock aur overstock alerts ke saath.",
+    what: "Yahan har raw material (Paneer, Chicken, Rice, etc.) ka current stock dikhta hai, uska UOM (Unit of Measure — kg/ltr/pcs), aur do alert levels: Minimum (kam ho gaya to red alert) aur Maximum (zyada ho gaya to overstock warning — jagah waste + expiry risk).",
+    how: [
+      "'Add Item' button se naya raw material register karo — naam, branch, UOM, opening quantity, min/max stock level.",
+      "Table mein har item ka qty on hand, min/max range, nearest expiry date dikhta hai.",
+      "Agar stock minimum se neeche gaya to red 'Low Stock' badge, agar maximum se upar gaya to orange 'Overstock' badge automatically dikhta hai.",
+      "'Raise Indent' shortcut — seedha yahan se Purchase module mein indent bhej sakte ho."
+    ],
+    example: "Gurugram branch mein Chicken (boneless) sirf 9kg bacha hai, lekin minimum level 20kg set hai — table mein turant red 'Low Stock' badge dikh jaata hai. Manager ise dekh kar turant Purchase & GRN module se indent raise kar deta hai."
+  },
+  {
+    id: "purchase", cat: "backend", status: "pending", route: "/purchase", icon: "🛒",
+    title: "Purchase & GRN",
+    short: "Indent → Manager Approval → 3-Step Purchase → Quality Check → Inventory.",
+    what: "Yeh poora 'kuch khareedna hai' ka process manage karta hai, shuru se lekar stock mein aane tak. 3 tabs hain: Indents, Purchase Orders, GRN/Quality.",
+    how: [
+      "STEP 1 — Indent: Manager/staff hand se Indent raise karta hai (kya chahiye, kitna). 'Submit for Approval' dabate hi senior manager ko Approve/Reject karna hota hai.",
+      "STEP 2 — Purchase Order (3 sub-steps): (a) Buy — order confirm karo vendor se, (b) Bill Upload — OPTIONAL, bill ki photo/PDF upload, (c) Material Receive — jab saman branch mein pahunch jaaye to mark karo.",
+      "STEP 3 — GRN Quality Check: Store incharge saman check karta hai. PASS = poora stock Inventory mein chala jaata hai. FAIL ya PARTIAL = jitna kharab mila utni quantity vendor ko wapas, aur uska paisa Accounts mein refund entry ban jaata hai.",
+      "GENERAL PURCHASE: Agar koi cheez store/raw-material se related nahi hai (jaise office chair repair), to bina Indent ke seedha 'New Purchase' se General Purchase toggle on karke khareed sakte ho — same 3-step flow."
+    ],
+    example: "Noida store mein Chicken kam hai → Indent raise hui → Manager ne Approve kiya → PO-5519 bana, vendor se Chicken khareedi gayi (Step 1 Buy) → bill upload kiya (Step 2) → saman branch pahuncha, Material Received mark kiya (Step 3) → GRN-3310 auto-bana → Quality Check mein PASS mila → poora 9kg Chicken Inventory stock mein add ho gaya. Agar PARTIAL/FAIL hota, to kharab qty (jaise 2.5kg) vendor ko wapas jaati aur uska refund Accounts mein chala jaata."
+  },
+  {
+    id: "pos", cat: "frontend", status: "pending", route: "/pos", icon: "💳",
+    title: "POS / Cashier",
+    short: "Restaurant ka billing system — Dine-in, Takeaway, Swiggy, Zomato sab ek jagah.",
+    what: "Jab bhi koi customer order karta hai (chahe table pe baith kar, takeaway, ya Swiggy/Zomato se), uska bill yahan POS mein record hota hai — amount, channel, table number, payment mode (Cash/UPI/Card), aur kaunse cashier ne banaya.",
+    how: [
+      "'New Order' button se naya order enter karo — branch, channel (Dine-in/Takeaway/Swiggy/Zomato), table number, amount, tender type.",
+      "Table mein sab orders dikhte hain, status COMPLETED ya VOIDED (cancel hua)."
+    ],
+    example: "Table T-12 par ek customer ne ₹1,840 ka Dine-in order kiya, UPI se payment hua, Amit Kumar cashier tha — yeh order CP-9981 ban kar POS table mein turant dikhne lagta hai, aur Owner Dashboard ke 'Revenue Today' mein bhi count ho jaata hai."
+  },
+  {
+    id: "cash-drop", cat: "frontend", status: "pending", route: "/cash-drop", icon: "🔒",
+    title: "Blind Cash Drop",
+    short: "Shift end par cashier cash gin kar enter karta hai — bina 'expected amount' dekhe.",
+    what: "Yeh ek anti-cheating feature hai. Shift khatam hone par cashier apne paas ka cash (notes aur coins denomination-wise) gin kar enter karta hai. System ko pata hai kitna cash 'hona chahiye tha' (expected), lekin yeh number cashier ko submit karne se PEHLE kabhi nahi dikhaya jaata — isliye naam 'Blind' Cash Drop. Submit karne ke baad hi shortage/excess reveal hota hai.",
+    how: [
+      "₹500, ₹200, ₹100, ₹50, ₹20, ₹10 notes ki ginti alag-alag enter karo, plus coins.",
+      "System khud total 'Counted Cash' calculate kar deta hai.",
+      "'Submit Cash Drop' dabane ke baad hi pata chalta hai ki yeh expected amount se match karta hai ya nahi (shortage/excess)."
+    ],
+    example: "Shift end par cashier Amit ne saari denominations gini — total ₹18,350 bana. Submit karne ke baad system ne bataya expected ₹18,500 tha — matlab ₹150 ki shortage. Yeh automatically Cash Reconciliation report mein bhi dikh jaata hai."
+  },
+  {
+    id: "accounts", cat: "finance", status: "pending", route: "/accounts", icon: "💰",
+    title: "Accounts",
+    short: "Petty Cash Book, Aggregator Recon, Profit & Loss, Balance Sheet — sab ek jagah.",
+    what: "Yeh poore restaurant chain ka financial record-keeping hai, 4 tabs mein baata hua: (1) Petty Cash Book — chhoti-chhoti rozmarra expenses ka ledger, (2) Aggregator Recon — Swiggy/Zomato se milan, (3) Profit & Loss — kitna kamaya kitna kharcha hua, (4) Balance Sheet — company ke paas kya hai vs kiska karz hai.",
+    how: [
+      "Petty Cash Book: 'Petty Cash Entry' button se IN (HQ se top-up / refund) ya OUT (expense) entry daalo — har entry ke baad running balance khud update hota hai, jaise ek bank passbook.",
+      "Profit & Loss: Revenue minus COGS (food cost) = Gross Profit, minus Labor/Rent/Utilities/Marketing = Net Profit.",
+      "Balance Sheet: Assets (jo company ke paas hai — cash, inventory, equipment), Liabilities (jo dena hai — vendor bills, GST), Equity (owner ka paisa). Teeno ka total match hona chahiye: Assets = Liabilities + Equity."
+    ],
+    example: "Connaught Place manager ne ₹420 ka 'Milk emergency top-up' OUT entry daali — running balance ₹2,000 se ₹1,580 ho gaya. Mahine ke end mein Owner Balance Sheet dekhta hai: Total Assets ₹52,53,400, aur Liabilities+Equity bhi ₹52,53,400 — hisaab match karta hai, matlab books sahi hain."
+  },
+  {
+    id: "users", cat: "admin", status: "live", route: "/admin/users", icon: "👥",
+    title: "Users & Access",
+    short: "Naya employee add karo, uska role aur exact kya-kya dekh sakta hai decide karo.",
+    what: "Har employee ka ek role hota hai (Super Admin, Central Store Manager, Branch Manager, Cashier, Kitchen Staff), aur uske upar fine-grained 'Module Access' — matlab chahe role Cashier ho, par agar chaaho to usko sirf POS + Cash Drop access do, baaki modules na dikhen.",
+    how: [
+      "'New User' button — Name, WhatsApp phone number, Role, Branch bharo.",
+      "Module Access checkboxes — 18 modules mein se jo-jo is user ko dikhne chahiye wo tick karo."
+    ],
+    example: "Amit Kumar ko Cashier role diya gaya, aur Module Access mein sirf 'POS_CASHIER' aur 'CASH_DROP' tick kiya gaya — matlab wo Purchase, Accounts, ya Users jaise sensitive modules bilkul nahi dekh payega, sirf apna billing aur cash drop screen."
+  },
+  {
+    id: "branches", cat: "admin", status: "live", route: "/admin/branches", icon: "🏢",
+    title: "Branches",
+    short: "6 branches ki list + naya branch ya ek click mein purani branch clone karo.",
+    what: "Yeh HQ-level admin screen hai jahan saari branches manage hoti hain. Sabse khaas feature hai 'Clone Branch Wizard' — ek existing (template) branch ka Menu Items, BOM Recipes, aur Checklists sab ek click mein naye branch mein copy ho jaate hain, taaki naya branch khulte hi din-1 se operational ho.",
+    how: [
+      "'New Branch' — bilkul khaali branch banao (khud se sab setup karna padega).",
+      "'Clone Branch' — source branch choose karo (jaise 'Connaught Place — template'), naya code aur naam do, submit karo — Menu, Recipes, Checklists sab copy ho jaayenge."
+    ],
+    example: "Restaurant ek nayi 7th branch 'Vasant Kunj' khol raha hai. Owner 'Clone Branch' dabata hai, Connaught Place ko template source chunta hai, 'B7 — Vasant Kunj' naam deta hai — turant naya branch ban jaata hai apne menu, recipes aur daily checklists ke saath, bina kuch manually type kiye."
+  },
+  {
+    id: "whatsapp", cat: "whatsapp", status: "live", route: "/admin/settings/whatsapp", icon: "📲",
+    title: "WhatsApp Settings (ChatXFlow)",
+    short: "Restaurant ka WhatsApp number yahan se connect hota hai — poore system ki backbone.",
+    what: "ChatXFlow ek third-party service hai (chatxflow.online) jo WhatsApp se real messages bhejne deta hai. Ek baar yahan API token save karne ke baad, poora ERP isi connection se automatically WhatsApp messages bhej sakta hai — task reminders, indent approval buttons, GRN quality alerts, 8AM sales summary, sab kuch.",
+    how: [
+      "ChatXFlow.online par apna WhatsApp number QR scan se connect karo (ek baar ka setup).",
+      "Wahan se Developer API Token copy karke yahan paste karo, Save Settings dabao.",
+      "Iske baad poore ERP ke modules (Tasks, Purchase, Indent Approval) WhatsApp notifications bhej sakte hain — bina kisi alag setup ke."
+    ],
+    example: "Ek baar ChatXFlow connect ho jaane ke baad, jab Gurugram ka Indent manager approval ke liye pending ho, to owner ko seedha WhatsApp par ek message aayega jisme [Approve] [Reject] buttons hon — owner ek tap mein approve kar sakta hai, ERP khol kar login kiye bina."
+  }
+];
+
+const grid = document.getElementById('grid');
+MODULES.forEach((m, i) => {
+  const card = document.createElement('div');
+  card.className = `card c-${m.cat}`;
+  card.innerHTML = `
+    <div class="num">${String(i+1).padStart(2,'0')}</div>
+    <div style="font-size:26px;margin-bottom:8px;">${m.icon}</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <h3 style="margin:0;">${m.title}</h3>
+      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:999px;${m.status === 'live' ? 'background:rgba(52,211,153,0.18);color:#34d399;' : 'background:rgba(251,191,36,0.18);color:#fbbf24;'}">${m.status === 'live' ? 'Live DB' : 'Pending'}</span>
+    </div>
+    <p>${m.short}</p>
+    <div class="tap">👆 Click karo pura samajhne ke liye</div>
+  `;
+  card.onclick = () => openModal(m);
+  grid.appendChild(card);
+});
+
+const overlay = document.getElementById('overlay');
+const modal = document.getElementById('modal');
+
+function openModal(m) {
+  modal.innerHTML = `
+    <button class="close" onclick="closeModal()">×</button>
+    <div class="badge-route">${m.route}</div>
+    <h2>${m.icon} ${m.title}</h2>
+    <div class="section-label">Yeh kya hai?</div>
+    <p>${m.what}</p>
+    <div class="section-label">Kaise use hota hai?</div>
+    <ul>${m.how.map(x => `<li>${x}</li>`).join('')}</ul>
+    <div class="section-label">Real Example</div>
+    <div class="example">${m.example}</div>
+  `;
+  overlay.classList.add('open');
+}
+function closeModal() { overlay.classList.remove('open'); }
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "73586939-42f8-4b0d-8028-09c5b2c68e4f",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\restaurant erp\\.archify\\architecture-restaurant-erp-20261022-090634\\candidate.json",
+  "output": "D:\\restaurant erp\\.archify\\architecture-restaurant-erp-20261022-090634\\restaurant-erp-archify.html",
+  "specification": {
+    "sha256": "de304cafc9d7c83e80cf2a2f75143ef02ec46f8018bc0ef82dd132d92864003b",
+    "bytes": 7776
+  },
+  "artifact": {
+    "sha256": "d5f628e11f9031393251f139cfaf8cb19cd0f856ae7fc7263baf5c8432e2f778",
+    "bytes": 779473
+  }
+}
