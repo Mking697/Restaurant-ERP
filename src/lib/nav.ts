@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { href: "/purchase", label: "Purchase & GRN", icon: "ShoppingCart", module: "PURCHASE_ORDER" },
   { href: "/pos", label: "POS / Cashier", icon: "CreditCard", module: "POS_CASHIER" },
   { href: "/cash-drop", label: "Blind Cash Drop", icon: "Wallet", module: "CASH_DROP" },
+  { href: "/workforce", label: "Staff, Attendance & Payroll", icon: "Users", module: "PAYROLL" },
   { href: "/accounts", label: "Accounts", icon: "Landmark", module: "PETTY_CASH" },
   { href: "/admin/users", label: "Users & Access", icon: "Users", module: "USER_ADMIN" },
   { href: "/admin/branches", label: "Branches", icon: "Building2", module: "BRANCH_ADMIN" },

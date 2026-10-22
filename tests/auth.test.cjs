@@ -18,6 +18,17 @@ test("ten-digit mobile login normalizes to the existing Indian account identifie
 const owner = { id: "owner", name: "Owner", phoneE164: "+919999999999", role: "SUPER_ADMIN", branchId: null, moduleAccess: [], status: "Active" };
 const manager = { ...owner, id: "manager", role: "BRANCH_MANAGER", branchId: "b1", moduleAccess: ["INVENTORY", "USER_ADMIN"] };
 const staff = { ...manager, id: "staff", role: "CASHIER", moduleAccess: ["INVENTORY"] };
+test("accountant and workforce grants stay branch scoped and delegable only within held permissions", () => {
+ const grants = ["ACCOUNTS_EXPENSES", "PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"];
+ assert.deepEqual(validateGrants(grants), grants);
+ const admin = { ...manager, moduleAccess: grants };
+ const accountant = { ...staff, id: "accountant", role: "ACCOUNTANT", moduleAccess: grants };
+ assertDelegation(admin, accountant);
+ assert.equal(branchScope(accountant), "b1");
+ assert.throws(() => branchScope(accountant, "b2"));
+ assert.throws(() => assertUserAdmin(accountant));
+ assert.throws(() => assertDelegation(manager, accountant));
+});
 test("password hashes use independent salts and verify exact password", async () => {
  const a = await hashPassword("a-valid-password-123"), b = await hashPassword("a-valid-password-123");
  assert.notEqual(a, b); assert.equal(await verifyPassword("a-valid-password-123", a), true); assert.equal(await verifyPassword("wrong", a), false);

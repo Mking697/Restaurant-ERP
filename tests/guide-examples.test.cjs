@@ -8,7 +8,7 @@ const { GUIDE_MODULES } = require('../src/lib/guide-content.ts');
 const { GUIDE_EXAMPLES, getGuideExample } = require('../src/lib/guide-examples.ts');
 
 test('every module has a practical scenario, four steps and expected result in both languages', () => {
-  assert.equal(GUIDE_MODULES.length, 12);
+  assert.equal(GUIDE_MODULES.length, 13);
   assert.deepEqual(Object.keys(GUIDE_EXAMPLES).sort(), GUIDE_MODULES.map(m => m.route).sort());
   for (const module of GUIDE_MODULES) {
     for (const language of ['en', 'hinglish']) {
@@ -23,7 +23,7 @@ test('every module has a practical scenario, four steps and expected result in b
   assert.equal(getGuideExample('/missing', 'en'), undefined);
 });
 
-test('standalone guide embeds the same twelve bilingual examples as the app', () => {
+test('standalone guide embeds the same bilingual examples as the app', () => {
   const html = fs.readFileSync(path.join(__dirname, '../docs/restaurant-erp-archify.html'), 'utf8').replace(/\r\n/g, '\n');
   const raw = html.match(/const EXAMPLES = ([^\r\n]+);/)?.[1];
   assert.ok(raw, 'standalone example data exists');
@@ -31,12 +31,30 @@ test('standalone guide embeds the same twelve bilingual examples as the app', ()
   assert.match(html, /EXAMPLES\[m\.route\]/);
 });
 
+test('workforce guidance preserves leave identity and states practice permission prerequisites', () => {
+  const workforce = GUIDE_MODULES.find(module => module.route === '/workforce');
+  const editor = fs.readFileSync(path.join(__dirname, '../src/app/workforce/employees-panel.tsx'), 'utf8');
+  for (const language of ['en', 'hinglish']) {
+    const practice = GUIDE_EXAMPLES['/workforce'][language];
+    const text = [practice.scenario, ...practice.steps].join(' ');
+    for (const grant of ['PAYROLL', 'LEAVE_SELF', 'ATTENDANCE', 'LEAVE_APPROVAL']) assert.ok(text.includes(grant), language + ' ' + grant);
+    const chapter = language === 'en' ? workforce : workforce.hinglish;
+    assert.match(chapter.what, /PENDING\/APPROVED\/REJECTED/);
+    assert.match(chapter.what, /Owner/);
+  }
+  assert.match(editor, /PENDING\/APPROVED\/REJECTED/);
+  assert.match(editor, /even Owner/);
+  const html = fs.readFileSync(path.join(__dirname, '../docs/restaurant-erp-archify.html'), 'utf8');
+  const modules = JSON.parse(html.match(/const MODULES = ([^\r\n]+);/)[1]);
+  assert.deepEqual(modules.find(module => module.route === '/workforce'), workforce);
+});
+
 test('examples distinguish page-local demos from real writes and never supply credentials', () => {
-  for (const route of ['/tasks', '/purchase', '/pos', '/cash-drop', '/accounts']) {
+  for (const route of ['/tasks', '/purchase', '/pos', '/cash-drop']) {
     assert.match(GUIDE_EXAMPLES[route].en.result, /demo|page|local/i, route);
     assert.match(GUIDE_EXAMPLES[route].en.result, /not|no |reset|reload/i, route);
   }
-  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp']) {
+  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce']) {
     assert.match(GUIDE_EXAMPLES[route].en.result, /real|persist|database/i, route);
   }
   const cash = GUIDE_EXAMPLES['/cash-drop'].en;

@@ -2,7 +2,7 @@ import type { ModuleKey } from "@/lib/moduleAccess";
 export interface GuideModule {
   module: ModuleKey; route: string; icon: string;
   cat: "frontend" | "backend" | "finance" | "admin" | "whatsapp";
-  status: "live" | "pending";
+  status: "live" | "pending" | "mixed";
   title: string; short: string; what: string; how: string[]; example: string;
 }
 interface BilingualGuideModule extends GuideModule { hinglish: Pick<GuideModule, "title" | "short" | "what" | "how" | "example">; }
@@ -227,32 +227,61 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     }
   },
   {
-    "module": "PETTY_CASH",
+    "module": "ACCOUNTS_EXPENSES",
     "route": "/accounts",
     "icon": "💰",
     "cat": "finance",
-    "status": "pending",
-    "title": "Accounts",
-    "short": "Sample cash book, aggregator reconciliation and financial statements.",
-    "what": "Petty Cash Book, Aggregator Recon, Profit & Loss and Balance Sheet are demonstrations. Cash entries change this page’s running balance only. No ledger entry or financial posting is persisted.",
+    "status": "mixed",
+        "title": "Accounts",
+    "short": "Real branch expenses and payroll costs; other accounting areas remain clearly marked demos.",
+    "what": "Permitted accountants enter Rent, Utilities, Marketing and Other operating expenses with branch, date, amount and reference. Expenses persist and can be voided with a reason. P&L shows actual posted expenses and finalized salary snapshots. Sales and food-cost integration remain pending, so gross/net profit are not invented. Petty cash, aggregator reconciliation and balance-sheet areas remain demo or pending, as labelled.",
     "how": [
-      "Choose a tab to inspect the sample data.",
-      "Petty Cash Entry: choose IN for top-up/refund or OUT for expense, then enter the branch, amount and description.",
-      "Treat balance-sheet equality and profit figures as illustrative, not audited statements."
+      "Choose branch and month, then open Expenses or P&L.",
+      "Add an expense with category, date, subcategory, amount, description and bill/reference; save and reload to confirm persistence.",
+      "Use Void with a reason to reverse an incorrect expense without deleting its history. Do not enter payroll again as an operating expense: finalized payroll supplies labor cost."
     ],
-    "example": "Illustration: add a ₹500 OUT expense. The page balance changes; reloading restores sample data and no real expense was posted.",
+    "example": "Example: save ₹5,000 Rent for a test branch in September. Its real September rent total increases by ₹5,000. Net profit remains unavailable until sales and COGS are connected.",
     "hinglish": {
       "title": "Accounts",
-      "short": "Sample cash book, aggregator reconciliation aur financial statements.",
-      "what": "Petty Cash Book, Aggregator Recon, P&L aur Balance Sheet demo hain. Cash entry sirf page ka running balance badalti hai. Real ledger ya financial posting save nahi hoti.",
+      "short": "Real branch expenses aur payroll costs; baaki accounting areas labelled demo hain.",
+      "what": "Permission wala accountant Rent, Utilities, Marketing aur Other expense branch/date/amount/reference ke saath daalta hai. Expenses save hote hain aur reason dekar Void kiye ja sakte hain. P&L mein real expenses aur finalized salary cost aati hai. Sales/food-cost integration pending hai, isliye gross/net profit invent nahi hota. Baaki accounting areas par demo/pending label dekho.",
       "how": [
-        "Sample data dekhne ke liye tab chuno.",
-        "Petty Cash Entry mein top-up/refund ke liye IN ya expense ke liye OUT chuno, phir branch, amount aur description bharo.",
-        "Balance-sheet equality aur profit figures sirf examples hain, audited statements nahi."
+        "Branch aur month chuno, phir Expenses ya P&L kholo.",
+        "Category, date, subcategory, amount, description aur bill/reference se expense add karo; save ke baad reload se persistence check karo.",
+        "Galat expense ko reason dekar Void karo; history delete nahi hoti. Salary dobara expense mein mat daalo: finalized payroll se labor cost aati hai."
       ],
-      "example": "Example: ₹500 OUT expense jodo. Page balance badlega; reload par sample data aayega aur real expense post nahi hua."
+      "example": "Example: test branch mein September ka ₹5,000 Rent save karo. Real rent total ₹5,000 badhega. Sales/COGS connect hone tak Net Profit unavailable rahega."
     }
   },
+{
+  "module": "PAYROLL",
+  "route": "/workforce",
+  "icon": "👥",
+  "cat": "finance",
+  "status": "live",
+  "title": "Staff, Attendance & Payroll",
+  "short": "Real employee rates, daily attendance, approved leave and monthly salary snapshots.",
+  "what": "Set ON_ROLL monthly salary or OFF_ROLL daily wages once. There is no Weekly Off status. Present is one unit, Half Day is half, Absent is zero. Employees apply leave; an authorized manager other than the applicant approves or rejects. Only approved paid ON_ROLL leave contributes paid units. OFF_ROLL leave is unpaid. ON_ROLL uses the actual calendar days in each month, including leap years. Missing attendance blocks finalization. Final payroll is immutable and does not transfer money. After ANY leave history (PENDING/APPROVED/REJECTED), the employee login link cannot be assigned, replaced or cleared, even by Owner. Keeping the existing link and other safe edits are allowed.",
+  "how": [
+    "With PAYROLL access, create an employee in a test branch, set employment type/rate/join date and optionally link their same-branch login for self-service leave.",
+    "With ATTENDANCE access, mark each eligible day Present, Half Day or Absent. Approved leave is shown separately and cannot be double marked.",
+    "Employee applies leave with dates/reason. A different authorized reviewer selects Approved or Rejected; paid/unpaid is explicit for on-roll, off-roll leave stays unpaid.",
+    "Preview a completed month, resolve missing dates and finalize a single branch. Final payroll feeds P&L labor cost once; future rate changes take effect from an explicit future month boundary."
+  ],
+  "example": "Example: September has 30 days. A ₹30,000 monthly employee with 29 Present days and one approved Paid Leave earns ₹30,000. An ₹800 daily-wage employee with 20 full days and one half-day earns ₹16,400; all other eligible dates must be marked/covered before finalizing.",
+  "hinglish": {
+    "title": "Staff, Attendance aur Salary",
+    "short": "Real employee rates, daily attendance, approved leave aur monthly salary snapshots.",
+    "what": "ON_ROLL ki monthly salary ya OFF_ROLL ki daily wage ek baar set karo. Weekly Off status nahi hai. Present 1, Half Day 0.5, Absent 0 units. Employee leave apply karta hai; applicant se alag authorized manager approve/reject karta hai. Sirf approved paid ON_ROLL leave paid units mein aati hai. OFF_ROLL leave unpaid hai. ON_ROLL calculation actual 28/29/30/31 calendar days se hoti hai. Missing attendance par finalization blocked; final payroll immutable hai, paisa transfer nahi hota. Koi bhi leave history (PENDING/APPROVED/REJECTED) hone ke baad employee login link assign, replace ya clear nahi kar sakte, Owner bhi nahi. Existing link rakhna aur doosre safe edits allowed hain.",
+    "how": [
+      "PAYROLL access se test branch mein employee banao; employment type/rate/join date set karo aur self-service leave ke liye same-branch login optionally link karo.",
+      "ATTENDANCE access se har eligible din Present, Half Day ya Absent mark karo. Approved leave alag dikhti hai aur double attendance mark nahi hoti.",
+      "Employee dates/reason se leave apply kare. Doosra authorized reviewer Approved/Rejected chune; on-roll par paid/unpaid explicit, off-roll leave unpaid rahegi.",
+      "Completed month preview karo, missing dates resolve karke single branch finalize karo. Salary cost P&L mein ek baar aati hai; rate change explicit future month se hota hai."
+    ],
+    "example": "Example: September mein 30 din hain. ₹30,000 monthly employee ke 29 Present aur 1 approved Paid Leave par ₹30,000 bante hain. ₹800 daily wage ke 20 full aur 1 half-day par ₹16,400. Finalize se pehle baaki eligible dates bhi marked/covered honi chahiye."
+  }
+},
   {
     "module": "USER_ADMIN",
     "route": "/admin/users",

@@ -9,6 +9,7 @@ export const roleEnum = pgEnum("role", [
   "SUPER_ADMIN", // Owner/HQ — all branches, compiled + drill-down
   "CENTRAL_STORE_MGR", // raises/approves POs & indents across branches
   "BRANCH_MANAGER", // single branch scope
+  "ACCOUNTANT", // branch-scoped finance/workforce with explicit grants
   "CASHIER", // POS + blind cash drop
   "KITCHEN_STAFF", // recurring tasks, night variance submission
 ]);

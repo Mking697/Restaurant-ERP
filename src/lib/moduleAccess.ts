@@ -23,6 +23,11 @@ export const MODULE_KEYS = [
   "MIS_PERFORMANCE", // MIS score leaderboard
   "REPORTS", // reports module
   "WHATSAPP_LOGS", // WhatsApp message log / audit viewer
+  "ACCOUNTS_EXPENSES", // branch categorized operating expenses and P&L
+  "PAYROLL", // employee compensation and finalized monthly payroll
+  "ATTENDANCE", // branch daily attendance marking
+  "LEAVE_APPROVAL", // branch leave review (never own leave)
+  "LEAVE_SELF", // linked employee self-service applications
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];

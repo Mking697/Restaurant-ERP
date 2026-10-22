@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { users, roleEnum } from "@/db/schema/auth";
 import { branches } from "@/db/schema/platform";
+import { employees } from "@/db/schema/workforce";
 import type { Executor } from "./auth";
 import { phone, string } from "./http";
 import { assertDelegation, HttpError, validateGrants, type Identity, type Role } from "./permissions";
@@ -16,6 +17,10 @@ export async function userInput(tx: Executor, actor: Identity, input: Record<str
   const branchId = hq ? null : string(merged.branchId ?? (actor.role === "BRANCH_MANAGER" ? actor.branchId : undefined), "branchId");
   if (hq && merged.branchId != null && merged.branchId !== "") throw new HttpError(400, "HQ users must not have a branch");
   if (existing) assertDelegation(actor, existing);
+  if (existing && existing.branchId !== branchId) {
+    const linked = await tx.select({ id: employees.id }).from(employees).where(eq(employees.userId, existing.id)).limit(1);
+    if (linked.length) throw new HttpError(409, "Unlink employee before changing user branch");
+  }
   assertDelegation(actor, { id: existing?.id ?? "", role, branchId, moduleAccess });
   if (branchId && !(await tx.select({ id: branches.id }).from(branches).where(eq(branches.id, branchId)).limit(1)).length) throw new HttpError(400, "Branch not found");
   const reportingManagerId = merged.reportingManagerId === undefined ? "" : merged.reportingManagerId === "" ? "" : string(merged.reportingManagerId, "reportingManagerId");

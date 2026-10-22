@@ -15,7 +15,7 @@ async function main(){
  assert.ok(['localhost','127.0.0.1'].includes(target.hostname) && target.protocol==='http:' && !target.username && !target.password && target.pathname==='/' && !target.search && !target.hash,'BASE_URL must be plain loopback HTTP');
  assert.ok(['localhost','127.0.0.1'].includes(process.env.PGHOST),'Only loopback PGHOST allowed');
  assert.equal(process.env.PGPORT,'5436');
- assert.match(process.env.PGDATABASE||'',/^restaurant_erp_branding_qa(?:_[a-zA-Z0-9]+)*$/);
+ assert.match(process.env.PGDATABASE||'',/^(restaurant_erp_branding_qa(?:_[a-zA-Z0-9]+)*|restaurant_erp_workforce_qa_\d{8})$/);
  const pool=new Pool({host:process.env.PGHOST,port:5436,user:process.env.PGUSER,password:process.env.PGPASSWORD,database:process.env.PGDATABASE,ssl:false});
  const origin=target.origin, run=randomUUID(), password=randomBytes(24).toString('hex');
  const ids=[],branches=[]; let acquired=false, constraint=false, count=0;

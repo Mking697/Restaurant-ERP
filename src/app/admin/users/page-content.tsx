@@ -11,7 +11,7 @@ import { MODULE_KEYS, type ModuleKey } from "@/lib/moduleAccess";
 import { refreshCurrentUser, requestJson, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 interface UserRow { id: string; name: string; phoneE164: string; role: string; branchId: string | null; moduleAccess: ModuleKey[]; status: "Active" | "Inactive"; }
-const ROLES = ["SUPER_ADMIN", "CENTRAL_STORE_MGR", "BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF"];
+const ROLES = ["SUPER_ADMIN", "CENTRAL_STORE_MGR", "BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF", "ACCOUNTANT"];
 const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 export default function UsersAdminPage() {
   const uiText = useUiCopy();
@@ -38,7 +38,7 @@ export default function UsersAdminPage() {
     requestJson<{ users: UserRow[] }>(url).then(data => { if (active) { setUsers(data.users); setLoadedScope(scopeKey); } }).catch(err => { if (active) setError(err.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [allowed, url, scopeKey]);
-  function canEdit(user: UserRow) { return owner || (user.id !== actor.id && user.branchId === actor.branchId && ["BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF"].includes(user.role) && user.moduleAccess.every(key => actor.moduleAccess.includes(key))); }
+  function canEdit(user: UserRow) { return owner || (user.id !== actor.id && user.branchId === actor.branchId && ["BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF", "ACCOUNTANT"].includes(user.role) && user.moduleAccess.every(key => actor.moduleAccess.includes(key))); }
   function open(user?: UserRow) {
     setError(""); setMessage(""); setPassword("");
     setEditing(user ? { ...user, phoneE164: user.phoneE164.replace(/^\+91(?=\d{10}$)/, ""), moduleAccess: [...user.moduleAccess] } : { id: "", name: "", phoneE164: "", role: "KITCHEN_STAFF", branchId: owner ? (selected === "all" ? "" : selected) : actor.branchId, moduleAccess: [], status: "Active" });

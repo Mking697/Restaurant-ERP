@@ -8,5 +8,7 @@ export * from "./purchase";
 export * from "./tasks";
 export * from "./pos";
 export * from "./accounts";
+export * from "./expenses";
+export * from "./workforce";
 export * from "./mis";
 export * from "./whatsapp";

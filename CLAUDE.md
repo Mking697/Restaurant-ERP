@@ -11,6 +11,34 @@ first every time work resumes on this project.
 
 ---
 
+## ACTIVE IMPLEMENTATION — expenses, attendance, approved leave and payroll
+
+User requested real Accountant expense inputs and basic attendance payroll.
+Confirmed monthly per-day basis: actual calendar days (28/29/30/31).
+Latest correction: NO WEEKLY OFF concept. Leave Apply form -> different
+manager review Approve/Reject. Only approved paid ON_ROLL leave is paid;
+OFF_ROLL earns worked days only. Missing attendance blocks payroll final.
+Detailed acceptance/API contract: `docs/accounts-workforce-contract.md`;
+workforce backend notes: `docs/workforce-api-notes.md` when available.
+
+Three bounded agents implement expenses/P&L backend, workforce backend and
+shared UI in parallel. Parent shared changes: ACCOUNTANT branch role,
+ACCOUNTS_EXPENSES/PAYROLL/ATTENDANCE/LEAVE_APPROVAL/LEAVE_SELF grants, nav
+and page permissions; 13 auth tests passed. Guide content/examples updated
+for the new flows with 13 chapters, but implementation is NOT yet accepted
+or deployed. Do not mistake these staged guide entries for verified live
+features until the gates below pass.
+
+Remaining parent gates: settle agent interfaces; export new schemas; generate
+additive migration; apply to dedicated loopback DB
+`restaurant_erp_workforce_qa_20261022` (already created, initially empty);
+run all focused tests, true HTTP+PG suites and browser workflows; review
+branch leakage, leave double count, missing attendance, immutable/idempotent
+payroll, rate history and no mock profit blending. Then apply approved
+additive migration to production BEFORE deploying code. No expense/payroll
+fixtures or statutory/bank-payment behavior are authorized on production.
+No new finance migration has been generated/applied yet at this checkpoint.
+
 ## CURRENT BRANDING + PRACTICAL GUIDE CHECKPOINT
 
 Restaurant branding is persisted chain-wide in the existing `settings` table:
