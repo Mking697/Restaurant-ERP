@@ -1,3 +1,5 @@
+import { BrandingProvider } from "@/components/branding-provider";
+import { readBranding } from "@/lib/server/branding";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,10 +9,10 @@ import { SessionBootstrap } from "@/components/session-bootstrap";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "Restaurant HQ — ERP",
-  description: "Multi-branch restaurant chain ERP + WhatsApp automation",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await readBranding();
+  return { title: branding.name, icons: { icon: [{ url: branding.logoUrl ?? "/api/branding/logo?v=default", type: branding.logoUrl ? "image/png" : "image/svg+xml" }] } };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const path = (await headers()).get("x-restaurant-path") ?? "/";
@@ -28,6 +30,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // Never put path-dependent content or demo/denial notices in this layout.
     content = <SessionBootstrap user={safeUser(user)}>{content}</SessionBootstrap>;
   }
-  return <html lang="en"><body className="min-h-screen antialiased">{content}</body></html>;
+  return <html lang="en"><body className="min-h-screen antialiased"><BrandingProvider initial={await readBranding()}>{content}</BrandingProvider></body></html>;
 }
 

@@ -1,3 +1,5 @@
+import { brandingInput, BRANDING_BODY_BYTES } from "@/lib/server/branding-input";
+import { saveBranding } from "@/lib/server/branding";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -15,13 +17,15 @@ export const dynamic = "force-dynamic";
 export async function GET() { return api(async () => { const rows = await db.select({ id: users.id }).from(users).where(eq(users.role, "SUPER_ADMIN")).limit(1); return json({ setupRequired: rows.length === 0 }); }); }
 export async function POST(request: Request) { return api(async () => {
   assertSameOrigin(request);
-  const input = await body(request);
+  const input = await body(request, BRANDING_BODY_BYTES);
+  const branding = await brandingInput(input, true);
   const name = string(input.name, "name"); const phoneE164 = phone(input.phoneE164);
   if (!validPassword(input.password)) throw new HttpError(400, "Password must have at least 12 characters and at most 256 UTF-8 bytes");
   const passwordHash = await hashPassword(input.password);
   const result = await locked(async tx => {
     if ((await tx.select({ id: users.id }).from(users).where(eq(users.role, "SUPER_ADMIN")).limit(1)).length) throw new HttpError(409, "Setup already completed");
     const [user] = await tx.insert(users).values({ id: randomUUID(), name, phoneE164, passwordHash, role: "SUPER_ADMIN", branchId: null, moduleAccess: [...MODULE_KEYS] }).returning();
+    await saveBranding(tx, branding);
     return { user: safeUser(user), token: await issueSession(tx, user) };
   });
   return setSession(json({ user: result.user }, 201), result.token);

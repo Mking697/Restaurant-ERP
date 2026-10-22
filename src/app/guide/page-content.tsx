@@ -8,16 +8,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useCurrentUser } from "@/lib/current-user";
 import { GUIDE_MODULES, getGuideModules, CAT_LABEL, CAT_CLASS } from "@/lib/guide-content";
 import { useTranslation } from "@/lib/i18n";
+import { getGuideExample } from "@/lib/guide-examples";
 import { BookOpenCheck } from "lucide-react";
 
 export default function GuideBookPage() {
   const uiText = useUiCopy();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const user = useCurrentUser();
   const [openKey, setOpenKey] = React.useState<string | null>(null);
 
   const visible = getGuideModules(t).filter((m) => canNavigate(user, m.route, m.module));
   const open = visible.find(m => m.module === openKey);
+  const walkthrough = open ? getGuideExample(open.route, language) : undefined;
   const hiddenCount = GUIDE_MODULES.length - visible.length;
 
   return (
@@ -32,6 +34,15 @@ export default function GuideBookPage() {
         <p>{t("English is the default. Switch to Hinglish with the Language selector. Choose Amber (light), Dark, Blue or Emerald with the Theme selector. Sign in with your 10-digit mobile number, without +91. Preferences are remembered in this browser and do not change permissions or business records.", "English default hai. Language selector se Hinglish chuno. Theme selector mein Amber (light), Dark, Blue ya Emerald chuno. Login mein sirf 10-digit mobile number bharo, +91 nahi. Preferences isi browser mein yaad rehti hain; permissions ya business records nahi badalte.")}</p>
         <p>{t("Four modules use the real database: Inventory, Users & Access, Branches and WhatsApp Settings. Eight are interactive demos: Dashboard, Reports, MIS, Tasks, Purchase, POS, Cash Drop and Accounts. Demo data is illustrative; page-local changes reset on reload and do not post to the database. Automated reminders, approvals and stock/refund postings remain pending.", "Chaar modules real database use karte hain: Inventory, Users & Access, Branches aur WhatsApp Settings. Aath interactive demos hain: Dashboard, Reports, MIS, Tasks, Purchase, POS, Cash Drop aur Accounts. Demo data sample hai; reload par local changes reset hote hain aur database mein post nahi hote. Auto reminders, approvals aur stock/refund posting pending hain.")}</p>
       </section>
+      {user.role === "SUPER_ADMIN" && <section className="mb-6 space-y-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+        <h2 className="font-semibold text-foreground">{t("Example: set your restaurant name and logo", "Example: restaurant ka naam aur logo set karo")}</h2>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li>{t("Open Restaurant Settings as Owner. First-time Owners can enter the same details during signup.", "Owner se Restaurant Settings kholo. Naya Owner signup ke time bhi yahi details bhar sakta hai.")}</li>
+          <li>{t("Enter your restaurant name, for example Garden Restaurant, and choose your own PNG, JPEG or WebP logo (up to 1 MB).", "Restaurant ka naam, jaise Garden Restaurant, bharo aur apna PNG, JPEG ya WebP logo chuno (1 MB tak).")}</li>
+          <li>{t("Check the preview and click Save restaurant. Use Remove logo followed by Save to clear it.", "Preview check karke Save restaurant dabao. Logo hatane ke liye Remove logo aur phir Save dabao.")}</li>
+          <li>{t("Expected result: the saved name/logo appear in the sidebar, login page and browser tab/favicon across the chain. This is a real global setting, not demo data.", "Result: saved naam/logo sidebar, login aur browser tab/favicon mein saari chain ke liye dikhenge. Yeh real global setting hai, demo data nahi.")}</li>
+        </ol>
+      </section>}
       {visible.length === 0 && (
         <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
           {uiText(" Aapke role mein abhi koi module access nahi hai. Admin se Users & Access mein apna Module Access set karwao. ")}</div>
@@ -100,9 +111,14 @@ export default function GuideBookPage() {
                 </ul>
               </div>
               <div>
-                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-orange-500">{uiText("Real Example")}</div>
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-700 dark:text-emerald-300">
-                  {open.example}
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-orange-500">{t("Try this example — step by step", "Yeh example try karo — step by step")}</div>
+                <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-800 dark:text-emerald-200">
+                  {walkthrough ? <>
+                    <p className="font-medium">{walkthrough.scenario}</p>
+                    <ol className="list-decimal space-y-2 pl-5">{walkthrough.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
+                    <p className="border-t border-emerald-500/30 pt-2"><strong>{t("Expected result: ", "Result kya hoga: ")}</strong>{walkthrough.result}</p>
+                    <p className="text-xs">{t("These are practice instructions, not a button that creates data automatically. Only try real-record steps in a test branch/account.", "Yeh practice instructions hain; data apne aap create nahi hota. Real-record steps sirf test branch/account mein try karo.")}</p>
+                  </> : open.example}
                 </div>
               </div>
             </div>

@@ -1,9 +1,10 @@
 "use client";
 import * as React from "react";
+import { RestaurantBrand } from "@/components/branding-provider";
 import Link from "next/link";
 import { PreferencesControls } from "@/components/preferences-controls";
 import { useTranslation } from "@/lib/i18n";
-import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, UtensilsCrossed, Menu, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, Menu, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -15,7 +16,7 @@ const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Troph
 export function canNavigate(user: CurrentUser, href: string, module: string) {
   if (!user.ready || !user.authenticated) return false;
   if (href === "/admin/users" || href === "/admin/branches") return ["SUPER_ADMIN", "BRANCH_MANAGER"].includes(user.role);
-  if (href === "/admin/settings/whatsapp") return user.role === "SUPER_ADMIN";
+  if (href === "/admin/settings/restaurant" || href === "/admin/settings/whatsapp") return user.role === "SUPER_ADMIN";
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
@@ -23,12 +24,12 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   };
   return hasCurrentModule(user, ...(groups[href] ?? [module]));
 }
-function Logo() { return <div className="flex items-center gap-2"><UtensilsCrossed className="size-7 text-primary" /><div className="text-sm font-semibold">Restaurant HQ<div className="text-xs font-normal text-muted-foreground">ERP + WhatsApp</div></div></div>; }
+function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN",
   "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
-  "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/guide": "Guide Book",
+  "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/guide": "Guide Book",
 };
 function NavList({ user, activeHref, onNavigate }: { user: CurrentUser; activeHref?: string; onNavigate?: () => void }) {
   const { t } = useTranslation();

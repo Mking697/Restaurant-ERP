@@ -11,6 +11,45 @@ first every time work resumes on this project.
 
 ---
 
+## CURRENT BRANDING + PRACTICAL GUIDE CHECKPOINT
+
+Restaurant branding is persisted chain-wide in the existing `settings` table:
+`RESTAURANT_NAME` and normalized `RESTAURANT_LOGO` only. No schema migration.
+First Owner setup requires restaurant name and accepts optional PNG/JPEG/WebP
+logo. Owner + branding + session save atomically under existing bootstrap lock.
+Existing Owners use `/admin/settings/restaurant` to edit name, replace/remove
+logo; this page/API is Owner-only. Desktop/mobile brand, login, browser title
+and favicon use saved branding; the `ERP + WhatsApp` subtitle is removed.
+No production restaurant name/logo has been invented or set by the assistant.
+
+Uploads: at most 1 MB, strict MIME/signature, no SVG/animation, max 4M decoded
+pixels, sharp re-encodes metadata-free PNG <=256px /128KB. PNG base64 lives in
+Postgres, not Vercel ephemeral disk. Public branding/logo endpoints intentionally
+expose only branding allowlisted keys, never ChatXFlow/provider configuration.
+Logo URL includes content hash; changing branding updates sidebar/title/favicon.
+Default API body limit remains 16KB; only setup/branding opt into bounded larger
+streaming body reads. `sharp` is a direct dependency.
+
+Guide Book: all 12 module chapters have bilingual scenario + four exact practice
+steps + expected result (`src/lib/guide-examples.ts`). Static HTML embeds the same
+data and an automated parity test prevents drift. Examples are instructions,
+not auto-created records; real-write examples warn to use a test branch/account,
+and demo examples state their persistence limitations. Owner sees an additional
+restaurant-branding walkthrough. Both in-app and offline guide updated.
+
+Parent verified: 42 unit/regression checks; 18 existing real HTTP/Postgres auth
+checks; 9 branding HTTP/Postgres checks in isolated loopback DB
+`restaurant_erp_branding_qa_20261022` (migrated existing schema, no real data),
+including first-owner rollback on invalid logo AND forced DB failure, public
+DTO token isolation, same logo/favicon bytes, owner update and removal, denied
+anonymous/manager/CSRF writes. Real browser upload/preview/save/reload confirmed
+brand+favicon, login branding and no old subtitle. All 12 guide examples in both
+languages checked in authenticated app and offline guide (24 combinations each).
+Final production build/typecheck passed. Temporary QA user/session/settings and
+scratch session file cleaned; isolated QA database retained empty for reuse.
+Deploy this checkpoint through existing GitHub→Vercel pipeline and verify Ready
+before reporting live. Existing eight domain modules remain interactive demos.
+
 ## CURRENT UI CHECKPOINT — bilingual preferences and navigation
 
 English is the default UI language; Hinglish is selectable from the header

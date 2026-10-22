@@ -78,15 +78,18 @@ test("401 clears identity without retry; a late refresh cannot restore logged-ou
 test("desktop, mobile and header navigation use Next links and expose the preferences toolbar", () => {
   const { store } = harness(); store.seedCurrentUser(identity);
   const icon = () => null;
-  const { AppShell } = load("src/components/app-shell.tsx", {
+  const { AppShell, canNavigate } = load("src/components/app-shell.tsx", {
     "next/link": { default: link, __esModule: true }, "next/navigation": { useRouter: () => ({}) },
     "lucide-react": new Proxy({}, { get: () => icon }), "@/lib/utils": { cn: (...args) => args.filter(Boolean).join(" ") },
     "@/lib/nav": load("src/lib/nav.ts"), "@/lib/current-user": store,
     "@/lib/current-branch": { useBranches: () => ({ branches: [], loading: false }), useSelectedBranchId: () => "all", setSelectedBranchId() {} },
     "@/components/ui/sheet": { Sheet: passthrough, SheetContent: passthrough, SheetCloseButton: () => null },
     "@/components/ui/button": { Button: ({ children }) => React.createElement("button", null, children) },
+    "@/components/branding-provider": { RestaurantBrand: () => React.createElement("span", null, "QA Restaurant") },
     "@/components/preferences-controls": { PreferencesControls: () => React.createElement("div", { "data-preferences": "true" }) }, "@/lib/i18n": translation,
   });
+  assert.equal(canNavigate(store.verifiedCurrentUser(identity), "/admin/settings/restaurant", "USER_ADMIN"), true);
+  assert.equal(canNavigate(store.verifiedCurrentUser({...identity,role:"BRANCH_MANAGER",moduleAccess:["USER_ADMIN"]}), "/admin/settings/restaurant", "USER_ADMIN"), false);
   // SSR intentionally ignores the singleton; the verified request context is required.
   const html = renderToString(React.createElement(store.SessionIdentityContext.Provider, { value: store.verifiedCurrentUser(identity) }, React.createElement(AppShell, null, "Module body")));
   const anchors = html.match(/<a\b[^>]*>/g) || [];
@@ -105,6 +108,8 @@ test("root layout only bootstraps safe identity; it owns no route-dependent noti
     "@/lib/server/auth": { requireIdentity: async () => { if (!current) throw new permissions.HttpError(401, "No session"); return current; } },
     "@/lib/server/permissions": permissions,
     "@/components/session-bootstrap": { SessionBootstrap: value => { props = value; return React.createElement(passthrough, value); } },
+    "@/components/branding-provider": { BrandingProvider: passthrough },
+    "@/lib/server/branding": { readBranding: async () => ({name:"QA Restaurant",logoUrl:null}) },
     "./globals.css": {},
   });
   const html = renderToString(await RootLayout({ children: "Page-owned content" }));
@@ -132,7 +137,7 @@ function pageHarness() {
   });
   return { state, guard, redirect };
 }
-const protectedRoutes = ["/", "/dashboard", "/reports", "/reports/[report]", "/performance", "/tasks", "/inventory", "/purchase", "/pos", "/cash-drop", "/accounts", "/admin/branches", "/admin/users", "/admin/settings/whatsapp", "/guide"];
+const protectedRoutes = ["/", "/dashboard", "/reports", "/reports/[report]", "/performance", "/tasks", "/inventory", "/purchase", "/pos", "/cash-drop", "/accounts", "/admin/branches", "/admin/users", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/guide"];
 test("every protected page is a dynamic server wrapper using its own literal route and the live guard", async () => {
   const { state, guard, redirect } = pageHarness();
   for (const route of protectedRoutes) {
@@ -145,6 +150,7 @@ test("every protected page is a dynamic server wrapper using its own literal rou
       "@/components/protected-page": guard,
       "./page-content": { __esModule: true, default: () => React.createElement("p", null, "MODULE_SECRET") },
       "./report-content": { __esModule: true, default: () => React.createElement("p", null, "MODULE_SECRET") },
+      "@/lib/server/branding": { readBranding: async () => ({name:"QA Restaurant",logoUrl:null}) },
       "@/lib/reports": { REPORT_DEFS: [{ slug: "qa-report" }] },
       "next/navigation": { redirect, notFound: () => { throw new Error("NOT_FOUND"); } },
     }).default;
@@ -165,7 +171,7 @@ test("page navigation without rerendering root updates demo notice, permissions 
   // These are independent page/RSC renders while the root stays mounted.
   let html = renderToString(await guard.protectedPage("/dashboard", content));
   assert.match(html, /Demo data/); assert.match(html, /MODULE_SECRET/);
-  for (const route of ["/guide", "/inventory", "/admin/users", "/admin/branches", "/admin/settings/whatsapp"]) {
+  for (const route of ["/guide", "/inventory", "/admin/users", "/admin/branches", "/admin/settings/whatsapp", "/admin/settings/restaurant"]) {
     html = renderToString(await guard.protectedPage(route, content));
     assert.doesNotMatch(html, /Demo data/); assert.match(html, /MODULE_SECRET/);
   }
@@ -173,7 +179,7 @@ test("page navigation without rerendering root updates demo notice, permissions 
   assert.match(html, /Demo data/);
   state.user = { ...identity, role: "CASHIER", branchId: "own-branch", moduleAccess: ["INVENTORY"], passwordHash: "MUST_NOT_SERIALIZE" };
   const before = rendered;
-  for (const route of ["/dashboard", "/reports/sales", "/admin/users", "/admin/settings/whatsapp"]) {
+  for (const route of ["/dashboard", "/reports/sales", "/admin/users", "/admin/settings/whatsapp", "/admin/settings/restaurant"]) {
     html = renderToString(await guard.protectedPage(route, content));
     assert.match(html, /Access denied/); assert.doesNotMatch(html, /MODULE_SECRET|Demo data/);
   }

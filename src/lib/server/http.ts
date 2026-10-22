@@ -16,10 +16,15 @@ export function assertSameOrigin(request: Request) {
   const expected = process.env.APP_ORIGIN || new URL(request.url).origin;
   if (!origin || origin !== expected || request.headers.get("sec-fetch-site") === "cross-site") throw new HttpError(403, "Same-origin request required");
 }
-export async function body(request: Request): Promise<Record<string, unknown>> {
+export async function body(request: Request, maxBytes = 16384): Promise<Record<string, unknown>> {
   if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) throw new HttpError(415, "JSON required");
-  const text = await request.text();
-  if (Buffer.byteLength(text) > 16384) throw new HttpError(413, "Request too large");
+  const reader = request.body?.getReader();
+  const chunks: Uint8Array[] = []; let size = 0;
+  if (reader) {
+    try { while (true) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > maxBytes) { await reader.cancel(); throw new HttpError(413, "Request too large"); } chunks.push(value); } }
+    finally { reader.releaseLock(); }
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
   let value; try { value = JSON.parse(text); } catch { throw new HttpError(400, "Invalid JSON"); }
   if (!value || Array.isArray(value) || typeof value !== "object") throw new HttpError(400, "JSON object required");
   return value;

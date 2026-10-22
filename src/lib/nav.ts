@@ -1,4 +1,5 @@
 export const NAV_ITEMS = [
+  { href: "/admin/settings/restaurant", label: "Restaurant Settings", icon: "Building2", module: "USER_ADMIN" },
   { href: "/dashboard", label: "Owner Dashboard", icon: "LayoutDashboard", module: "DASHBOARD_OWNER" },
   { href: "/reports", label: "Reports", icon: "FileBarChart", module: "REPORTS" },
   { href: "/performance", label: "MIS Leaderboard", icon: "Trophy", module: "MIS_PERFORMANCE" },
