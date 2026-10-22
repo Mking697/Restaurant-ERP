@@ -28,7 +28,14 @@ export function string(value: unknown, field: string, max = 200): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw new HttpError(400, `Invalid ${field}`);
   return value.trim();
 }
-export function phone(value: unknown) { const result = string(value, "phoneE164", 16); if (!/^\+[1-9]\d{7,14}$/.test(result)) throw new HttpError(400, "Use E.164 phone, e.g. +919876543210"); return result; }
+export function phone(value: unknown) {
+  const result = string(value, "mobile number", 16);
+  // Keep the canonical identifier unchanged so existing accounts, unique keys,
+  // WhatsApp delivery and login throttling use the same value in both formats.
+  if (/^[6-9]\d{9}$/.test(result)) return `+91${result}`;
+  if (/^\+[1-9]\d{7,14}$/.test(result)) return result; // Existing API clients.
+  throw new HttpError(400, "Enter a valid 10-digit mobile number");
+}
 export function numeric(value: unknown, field: string, fallback = "0"): string {
   const result = value === undefined ? fallback : String(value);
   if (!/^\d{1,9}(\.\d{1,3})?$/.test(result)) throw new HttpError(400, `Invalid ${field}`);

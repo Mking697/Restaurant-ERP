@@ -38,7 +38,8 @@
   --chart-5: oklch(0.6 0.2 10);
 }
 
-.dark {
+.dark,
+:root[data-theme="dark"] {
   --background: oklch(0.17 0.01 60);
   --foreground: oklch(0.96 0.005 90);
   --card: oklch(0.22 0.01 60);
@@ -62,6 +63,63 @@
   --border: oklch(0.32 0.01 60);
   --input: oklch(0.32 0.01 60);
   --ring: oklch(0.68 0.19 45);
+  --chart-1: oklch(0.75 0.16 65);
+  --chart-2: oklch(0.76 0.13 180);
+  --chart-3: oklch(0.73 0.14 260);
+  --chart-4: oklch(0.84 0.14 100);
+  --chart-5: oklch(0.74 0.16 15);
+}
+
+/* Light palettes override semantic tokens, not utility classes. Existing cards,
+   dialogs, inputs and chart variables therefore follow the same preference. */
+:root[data-theme="blue"] {
+  --background: #f4f7fc;
+  --foreground: #17243c;
+  --card: #ffffff;
+  --card-foreground: #17243c;
+  --popover: #ffffff;
+  --popover-foreground: #17243c;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #e7eefb;
+  --secondary-foreground: #1e3a5f;
+  --muted: #eaf0f8;
+  --muted-foreground: #475569;
+  --accent: #dbeafe;
+  --accent-foreground: #1e3a8a;
+  --border: #c7d3e5;
+  --input: #c7d3e5;
+  --ring: #1d4ed8;
+  --chart-1: #2563eb;
+  --chart-2: #0f766e;
+  --chart-3: #7c3aed;
+  --chart-4: #b45309;
+  --chart-5: #be123c;
+}
+
+:root[data-theme="emerald"] {
+  --background: #f3faf7;
+  --foreground: #153b2f;
+  --card: #ffffff;
+  --card-foreground: #153b2f;
+  --popover: #ffffff;
+  --popover-foreground: #153b2f;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --secondary: #e1f2ea;
+  --secondary-foreground: #174d3a;
+  --muted: #e9f4ee;
+  --muted-foreground: #456054;
+  --accent: #d1fae5;
+  --accent-foreground: #064e3b;
+  --border: #bed9cb;
+  --input: #bed9cb;
+  --ring: #047857;
+  --chart-1: #047857;
+  --chart-2: #0369a1;
+  --chart-3: #7c3aed;
+  --chart-4: #b45309;
+  --chart-5: #be123c;
 }
 
 @theme inline {

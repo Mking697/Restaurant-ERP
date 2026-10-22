@@ -11,6 +11,49 @@ first every time work resumes on this project.
 
 ---
 
+## CURRENT UI CHECKPOINT — bilingual preferences and navigation
+
+English is the default UI language; Hinglish is selectable from the header
+and login/setup screens. Preferences persist per browser in localStorage,
+not per account or database. Four palettes: Amber (light), Dark, Blue,
+Emerald. Controls also work at 390px width. In-app Guide Book and standalone
+`docs/restaurant-erp-archify.html` now explain both languages/themes and the
+honest 4 Live DB / 8 interactive-demo boundary. Offline guide preferences
+are independent from app preferences. Business names/IDs/input values are
+not translated.
+
+Login/setup and user administration use a 10-digit Indian mobile field,
+without +91. Shared server `phone()` normalizes to the existing +91
+identifier so accounts/passwords, uniqueness and WhatsApp integration remain
+compatible; existing E.164 API callers still work. No account migration or
+password reset needed.
+
+Blank navigation fix: Next Links replace shell document reloads; safe
+server identity hydrates client consumers immediately. Refresh has a shared
+lifecycle, coalesces concurrent calls and times out after 8 seconds per
+attempt (one retry), then fails closed with Retry. Critical follow-up:
+App Router root layouts are cached during Link navigation. Every protected
+`page.tsx` is now a dynamic server wrapper calling `protectedPage()` with
+its own route before rendering adjacent `page-content.tsx`. The guard
+rechecks live identity and permissions and owns demo/denial notices. Do not
+move these guards back into root layout or rely on a client branch selector.
+Root layout retains initial authentication as defense-in-depth only.
+
+Parent verification: `npm test` 29 passed; real local HTTP/Postgres suite
+18 passed including 10-digit login to an existing +91 account; full build
+and project typecheck passed. Real authenticated browser: all 13 module
+routes plus a report detail navigate without document reload/verification
+blank; demo banner disappears on Inventory/Guide and appears on demo routes.
+An isolated QA Owner narrowed to Cash Drop was denied Inventory through an
+already-visible client Link (no Add Item controls), and Guide narrowed to
+one card. Four themes, preference reload, English/Hinglish and 390px layout
+were checked. No Neon records, real user passwords or provider settings were
+changed during this pass. Temporary QA user/session is removed after QA.
+
+Deployment: source is being prepared for the existing GitHub/Vercel
+production pipeline; verify the current commit's Vercel status before
+claiming it live. Existing business persistence gaps remain unchanged.
+
 ## CURRENT LOCAL IMPLEMENTATION CHECKPOINT — branch isolation
 
 User confirmed local PostgreSQL now, VPS migration later. Permission contract:

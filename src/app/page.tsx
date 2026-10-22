@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { protectedPage } from "@/components/protected-page";
 
-export default function Home() {
-  redirect("/dashboard");
+export const dynamic = "force-dynamic";
+export default async function Home() {
+  return protectedPage("/", () => redirect("/dashboard"));
 }

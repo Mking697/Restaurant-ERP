@@ -10,6 +10,16 @@ const anonymous: CurrentUser = {
   id: "", name: "", phone: "", phoneE164: "", role: "ANONYMOUS", branch: "", branchId: null,
   moduleAccess: [], status: "Inactive", ready: false, authenticated: false, error: null,
 };
+export type SessionUser = Pick<CurrentUser, "id" | "name" | "phoneE164" | "role" | "branchId" | "status"> & { moduleAccess: readonly string[] };
+export function verifiedCurrentUser(user: SessionUser): CurrentUser {
+  // Explicit allowlist: no password hash, token/version, or arbitrary DTO fields.
+  return { id: user.id, name: user.name, phoneE164: user.phoneE164, phone: user.phoneE164,
+    role: user.role, branchId: user.branchId, branch: user.branchId ?? "All branches",
+    moduleAccess: [...user.moduleAccess] as ModuleKey[], status: user.status, ready: true, authenticated: true, error: null };
+}
+/** Request-scoped SSR snapshot; never write server identity to the module singleton. */
+export const SessionIdentityContext = React.createContext<CurrentUser | null>(null);
+export function seedCurrentUser(user: SessionUser) { identityVersion++; publish(verifiedCurrentUser(user)); }
 let snapshot = anonymous;
 let pending: Promise<void> | null = null;
 let identityVersion = 0;
@@ -20,33 +30,65 @@ export function clearCurrentUser() { identityVersion++; publish({ ...anonymous, 
 export async function refreshCurrentUser(): Promise<void> {
   if (pending) return pending;
   const version = identityVersion;
-  pending = (async () => {
-    try {
-      const response = await fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" });
-      const data = await response.json();
-      if (version !== identityVersion) return;
-      if (response.status === 401) { clearCurrentUser(); return; }
-      if (!response.ok || !data.user?.id) throw new Error(data.error || "Could not verify session");
-      const user = data.user;
-      publish({ ...user, phone: user.phoneE164, branch: user.branchId ?? "All branches", ready: true, authenticated: true, error: null });
-    } catch (error) {
-      if (version !== identityVersion) return;
-      publish({ ...anonymous, ready: true, error: error instanceof Error ? error.message : "Could not verify session" });
+  const task = (async () => {
+    // One retry only; the deadline covers response body decoding too. Promise.race
+    // also settles when a transport ignores AbortSignal (e.g. stalled browser IO).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const controller = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const result = await Promise.race([
+          (async () => {
+            const response = await fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
+            if (response.status === 401) return { response, data: null };
+            return { response, data: await response.json() };
+          })(),
+          new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error("Session verification timed out. Please retry.")); }, 8000); }),
+        ]);
+        if (version !== identityVersion) return;
+        if (result.response.status === 401) { clearCurrentUser(); return; }
+        if (!result.response.ok || !result.data?.user?.id || result.data.user.status !== "Active") throw new Error(result.data?.error || "Could not verify session");
+        publish(verifiedCurrentUser(result.data.user));
+        return;
+      } catch (error) {
+        if (version !== identityVersion) return;
+        if (attempt === 1) publish({ ...anonymous, ready: true, error: error instanceof Error ? error.message : "Could not verify session" });
+      } finally { if (timer !== undefined) clearTimeout(timer); }
     }
-  })().finally(() => { pending = null; });
-  return pending;
+  })();
+  pending = task;
+  void task.finally(() => { if (pending === task) pending = null; });
+  return task;
 }
 function subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
-/** Cookie-backed identity; anonymous until verified. No provider required. */
-export function useCurrentUser(): CurrentUser {
-  const user = React.useSyncExternalStore(subscribe, getCurrentUser, () => anonymous);
-  React.useEffect(() => {
-    void refreshCurrentUser();
+let refreshConsumers = 0;
+let stopRefresh: (() => void) | null = null;
+/** Shared lifecycle, regardless of the number of hooks/branch selectors mounted. */
+export function startCurrentUserRefresh() {
+  refreshConsumers++;
+  if (refreshConsumers === 1) {
+    if (!snapshot.ready) void refreshCurrentUser();
     const refresh = () => { void refreshCurrentUser(); };
     window.addEventListener("focus", refresh);
     const timer = window.setInterval(refresh, 60000);
-    return () => { window.removeEventListener("focus", refresh); window.clearInterval(timer); };
-  }, []);
+    stopRefresh = () => { window.removeEventListener("focus", refresh); window.clearInterval(timer); };
+  }
+  let stopped = false;
+  return () => {
+    if (stopped) return;
+    stopped = true;
+    if (--refreshConsumers === 0) { stopRefresh?.(); stopRefresh = null; }
+  };
+}
+/** Cookie-backed identity with a request-scoped server snapshot for hydration. */
+export function useCurrentUser(): CurrentUser {
+  const initial = React.useContext(SessionIdentityContext);
+  const user = React.useSyncExternalStore(subscribe, () => snapshot.ready ? snapshot : initial ?? snapshot, () => initial ?? anonymous);
+  React.useEffect(() => {
+    // The bootstrap owns refresh for its whole tree; legacy standalone consumers
+    // share the same lifecycle rather than creating timers for every hook.
+    if (!initial) return startCurrentUserRefresh();
+  }, [initial]);
   return user;
 }
 export function hasCurrentModule(user: CurrentUser, ...keys: string[]) {

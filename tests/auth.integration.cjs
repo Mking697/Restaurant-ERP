@@ -26,7 +26,7 @@ async function login(user,password){return (await request('/api/auth/login','','
  const phone='+918'+String(Date.now()).slice(-9);
  try {
   await pool.query('insert into users (id,name,phone_e164,role,password_hash,module_access) values ($1,$2,$3,$4,$5,$6)',[ownerId,'QA Owner '+run,phone,'SUPER_ADMIN',await hashPassword(pass),[]]);
-  const owner=await login({phoneE164:phone},pass); passed('actual password login and session cookie');
+  const owner=await login({phoneE164:phone.slice(3)},pass); passed('ten-digit login resolves existing +91 account and issues session cookie');
   await request('/api/auth/me','', 'GET',undefined,401); passed('anonymous me denied');
   const a=(await request('/api/branches',owner,'POST',{name:'QA A '+run,code:'QA-A-'+run.slice(0,12)} ,201)).data.branch; branchIds.push(a.id);
   const b=(await request('/api/branches',owner,'POST',{name:'QA B '+run,code:'QA-B-'+run.slice(0,12)},201)).data.branch; branchIds.push(b.id);
@@ -69,7 +69,7 @@ async function login(user,password){return (await request('/api/auth/login','','
   await request('/api/admin/settings/whatsapp',sc,'GET',undefined,403);
   await request('/api/admin/settings/whatsapp','', 'GET',undefined,401);passed('WhatsApp global settings owner-only');
   const page=await fetch(origin+'/inventory',{redirect:'manual'});assert.equal(page.status,307);assert.ok(page.headers.get('location').includes('/login'));passed('anonymous direct page URL redirected');
-  const forbiddenPage=await fetch(origin+'/admin/users',{headers:{cookie:sc}});const forbiddenHTML=await forbiddenPage.text();assert.ok(forbiddenHTML.includes('Access nahi hai'));assert.ok(!forbiddenHTML.includes('QA Owner '+run));passed('direct forbidden page does not render user table');
+  const forbiddenPage=await fetch(origin+'/admin/users',{headers:{cookie:sc}});const forbiddenHTML=await forbiddenPage.text();assert.ok(forbiddenHTML.includes('Access denied'));assert.ok(!forbiddenHTML.includes('QA Owner '+run));passed('direct forbidden page does not render user table');
   const ownerDTO=(await request('/api/auth/me',owner)).data.user;assert.equal('passwordHash' in ownerDTO,false);assert.equal('tokenVersion' in ownerDTO,false);passed('HTTP identity DTO has no credential material');
   console.log('RESULT '+count+' real integration checks passed');
  } finally {
