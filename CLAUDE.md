@@ -50,9 +50,13 @@ one card. Four themes, preference reload, English/Hinglish and 390px layout
 were checked. No Neon records, real user passwords or provider settings were
 changed during this pass. Temporary QA user/session is removed after QA.
 
-Deployment: source is being prepared for the existing GitHub/Vercel
-production pipeline; verify the current commit's Vercel status before
-claiming it live. Existing business persistence gaps remain unchanged.
+Deployment parent-verified: feature commit `85e3013` pushed to main; Vercel
+production deployment `dpl_DfZpAQ8vLnCdz8fPQt1eSU1jkZoB` Ready and GitHub's
+Vercel status success. Public alias `https://restaurant-erp-tau.vercel.app`
+checked in a real browser: English-default 10-digit login, Hinglish switch
+and Dark theme work. Authenticated navigation was tested locally with QA
+fixtures, not the user's production credentials. QA user/session and scratch
+session file removed. Existing business persistence gaps remain unchanged.
 
 ## CURRENT LOCAL IMPLEMENTATION CHECKPOINT — branch isolation
 
