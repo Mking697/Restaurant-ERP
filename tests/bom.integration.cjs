@@ -3,8 +3,10 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 
 const pool = new Pool({ host: process.env.PGHOST, port: Number(process.env.PGPORT), user: process.env.PGUSER, password: process.env.PGPASSWORD, database: process.env.PGDATABASE, ssl: false });
-const BASE = 'http://localhost:3000';
-const ORIGIN = 'http://localhost:3000'; // matches .env APP_ORIGIN; dev server itself is on 3001 because 3000 was occupied
+// BASE_URL/APP_ORIGIN are overridable so this can target a dedicated QA app
+// port bound to a disposable DB (never the shared local dev server/DB silently).
+const BASE = process.env.BASE_URL || 'http://localhost:3000';
+const ORIGIN = process.env.APP_ORIGIN || BASE;
 const tokenHash = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
 const ids = {

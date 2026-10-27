@@ -180,25 +180,25 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "status": "live",
     "title": "POS / Cashier",
     "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-    "what": "Confirming an order explodes its BOM (including nested Semi-FG) and atomically deducts real branch inventory in PostgreSQL — insufficient stock rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm.",
+    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm.",
     "how": [
       "New Order: pick channel, counter (1 or 2), items and tender. Customer name/WhatsApp number are optional.",
-      "Confirm Order explodes the real BOM, checks and deducts branch stock, and posts the order — a shortfall rejects the whole order with a 409.",
+      "Confirm Order checks and deducts direct raw + produced Semi-FG stock, and posts the order — a shortfall, or a dish whose Semi-FG hasn't been produced yet (see Menu & BOM's Production panel), rejects the whole order with a 409.",
       "The receipt shows GST (CGST/SGST or IGST) when the branch and company GST state codes are configured, else it bills tax-free with a clear note.",
       "Pick a non-INR payment currency (configured via the Owner-only Currency Rates panel) to also show the payable amount in that currency alongside the INR invoice total."
     ],
-    "example": "Example: 2 plates of Butter Chicken on Counter 2, paid in USD. Receipt shows ₹363.20 (GST invoice, incl. 5% GST) and Payable in USD: $4.30 (rate locked at ₹84.50). Real raw material + Semi-FG gravy stock both deduct from that branch's inventory.",
+    "example": "Example: 2 plates of Butter Chicken on Counter 2, paid in USD. Receipt shows ₹363.20 (GST invoice, incl. 5% GST) and Payable in USD: $4.30 (rate locked at ₹84.50). Real direct raw material (chicken) + already-produced Semi-FG gravy stock both deduct from that branch's inventory — the gravy's own raw ingredients were already consumed when it was produced, not again at sale.",
     "hinglish": {
       "title": "POS / Cashier",
       "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-      "what": "Order confirm karte hi BOM explode hota hai (nested Semi-FG samet) aur real branch inventory PostgreSQL mein atomically minus hoti hai — stock kam ho to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai.",
+      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai.",
       "how": [
         "New Order: channel, counter (1 ya 2), items aur tender chuno. Customer naam/WhatsApp number optional hain.",
-        "Confirm Order real BOM explode karta hai, branch stock check+deduct karta hai aur order post karta hai — kami ho to 409 ke saath poora order reject.",
+        "Confirm Order direct raw + produced Semi-FG stock check+deduct karta hai aur order post karta hai — kami ho, ya kisi dish ka Semi-FG abhi produce na hua ho (Menu & BOM ke Production panel se produce karo), to 409 ke saath poora order reject.",
         "Receipt GST dikhati hai (CGST/SGST ya IGST) jab branch aur company ke GST state code set hon, warna clear note ke saath tax-free bill ban jaata hai.",
         "Non-INR payment currency chuno (Owner-only Currency Rates panel se configured) to INR invoice total ke saath us currency mein payable amount bhi dikhta hai."
       ],
-      "example": "Example: 2 plate Butter Chicken Counter 2 par, USD mein payment. Receipt ₹363.20 (GST invoice, 5% GST samet) aur Payable in USD: $4.30 (rate lock ₹84.50) dikhati hai. Real raw material + Semi-FG gravy dono stock us branch ki inventory se minus hote hain."
+      "example": "Example: 2 plate Butter Chicken Counter 2 par, USD mein payment. Receipt ₹363.20 (GST invoice, 5% GST samet) aur Payable in USD: $4.30 (rate lock ₹84.50) dikhati hai. Real direct raw material (chicken) + pehle se produced Semi-FG gravy dono stock us branch ki inventory se minus hote hain — gravy ka apna raw ingredient production ke time hi consume ho chuka tha, sale par dobara nahi."
     }
   },
   {
@@ -372,26 +372,26 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "cat": "backend",
     "status": "live",
     "title": "Menu & BOM",
-    "short": "Real dish recipes: raw materials and Semi-FG, recursively, with live cost estimate.",
-    "what": "Create menu items (sellable dishes, or Semi-FG bases like gravy/marinade that are not directly orderable) and build each dish's BOM — a recipe can use raw materials OR another Semi-FG item as a component, nested any number of levels deep. A cycle (A needs B needs A) is rejected at save time. Explode & Cost recursively walks the whole tree and estimates per-unit cost from the lowest active vendor rate.",
+    "short": "Real dish recipes with explicit units, live stock preview, and real Semi-FG production stock.",
+    "what": "Create menu items (sellable dishes, or Semi-FG bases like gravy/marinade that are not directly orderable) with an explicit output unit (portion/kg/ltr/pcs). Recipe Builder saves the whole recipe — multiple ingredient rows, each a raw material OR an existing same-branch Semi-FG, normalized per one output unit — in one atomic save; saving a recipe never touches stock. A cycle (A needs B needs A) is rejected at save time. A Semi-FG dish only has real stock after it is actually PRODUCED (its own panel on this page) — production consumes the Semi-FG's own direct raw/nested-Semi-FG ingredients and credits prepared stock. Selling a dish then consumes its direct raw materials plus any produced Semi-FG stock directly — never the Semi-FG's embedded raw ingredients a second time. Preview stock & cost shows the theoretical raw-cost rollup (planning estimate) alongside what will ACTUALLY be consumed (direct raw + direct Semi-FG, with required/available/shortage) — it is a preview only, never a reservation.",
     "how": [
-      "Add Item: name, branch, price, and whether it's Semi-FG (base, not sellable) or a sellable dish.",
-      "Open a dish and add BOM lines: pick either a raw material or an existing Semi-FG item as the component, with qty per unit.",
-      "Explode & Cost shows the full recursive ingredient breakdown and an estimated cost — a planning tool, not a GST invoice figure.",
-      "This same BOM is what POS explodes live on every order confirm to deduct inventory and split the kitchen/billing copies."
+      "Recipe Builder: enter the dish/Semi-FG name, branch, price (for sellable dishes), output unit and batch yield, then add ingredient rows (search, pick raw material or Semi-FG, enter batch quantity) — one Save writes the dish and its whole recipe together.",
+      "Preview stock & cost on a saved recipe: shows the theoretical raw-material rollup/cost estimate, and separately the direct raw + Semi-FG stock this item will actually consume, with any shortage.",
+      "Semi-FG production & stock panel: pick a Semi-FG and an output quantity, Record production — this is the only action that credits real prepared stock; selling a dish never substitutes for production.",
+      "POS then only needs direct raw material stock and any already-produced Semi-FG stock on hand — a dish referencing an unproduced Semi-FG is blocked from sale until it's produced."
     ],
-    "example": "Example: Butter Chicken needs 1 unit of Gravy (Semi-FG) + 200g Chicken. Gravy itself needs Tomato + Butter + Spices. Explode & Cost shows all 4 raw materials rolled up, costing ₹90.80 per plate.",
+    "example": "Example: Butter Chicken needs 0.1kg Gravy (Semi-FG) + 0.25kg Chicken per portion. Gravy's own recipe needs Tomato + Butter. Producing 1kg of Gravy consumes that Tomato/Butter directly and credits 1kg to Gravy's Semi-FG stock; selling 10 plates of Butter Chicken then consumes 1kg of that Gravy stock plus 2.5kg Chicken — never the Gravy's Tomato/Butter again.",
     "hinglish": {
       "title": "Menu aur BOM",
-      "short": "Real dish recipes: raw material aur Semi-FG, recursively, live cost estimate ke saath.",
-      "what": "Menu items banao (sellable dish, ya Semi-FG base jaise gravy/marinade jo directly order nahi hoti) aur har dish ka BOM banao — ek recipe raw material YA kisi aur Semi-FG item ko component ki tarah use kar sakti hai, kitne bhi level nested. Cycle (A ko B chahiye, B ko A chahiye) save time par reject hota hai. Explode & Cost poori tree recursively ghoom kar lowest active vendor rate se per-unit cost estimate deta hai.",
+      "short": "Real dish recipes explicit units ke saath, live stock preview, aur real Semi-FG production stock.",
+      "what": "Menu items banao (sellable dish, ya Semi-FG base jaise gravy/marinade jo directly order nahi hoti) explicit output unit (portion/kg/ltr/pcs) ke saath. Recipe Builder poori recipe ek saath save karta hai — multiple ingredient rows, har ek raw material YA existing isi-branch ka Semi-FG, 1 output unit ke hisaab se normalized — ek atomic save mein; recipe save karne se stock kabhi nahi badalta. Cycle (A ko B chahiye, B ko A chahiye) save time par reject hota hai. Semi-FG dish ka real stock tabhi hota hai jab usey actually PRODUCE kiya jaye (isi page par apna panel) — production us Semi-FG ke apne direct raw/nested-Semi-FG ingredients consume karke prepared stock credit karta hai. Dish bechne par uska direct raw material + jo bhi produced Semi-FG stock available hai, wahi directly consume hota hai — Semi-FG ke embedded raw ingredients dobara kabhi nahi. Preview stock & cost theoretical raw-cost rollup (planning estimate) ke saath yeh bhi dikhata hai ki ACTUALLY kya consume hoga (direct raw + direct Semi-FG, required/available/shortage ke saath) — yeh sirf preview hai, reservation nahi.",
       "how": [
-        "Add Item: naam, branch, price, aur yeh Semi-FG (base, sellable nahi) hai ya sellable dish.",
-        "Dish kholo aur BOM lines add karo: raw material ya existing Semi-FG item component ki tarah chuno, qty per unit ke saath.",
-        "Explode & Cost poora recursive ingredient breakdown aur estimated cost dikhata hai — yeh planning tool hai, GST invoice figure nahi.",
-        "Yahi BOM POS mein har order confirm par live explode hota hai inventory deduct karne aur kitchen/billing copy split karne ke liye."
+        "Recipe Builder: dish/Semi-FG naam, branch, price (sellable dish ke liye), output unit aur batch yield bharo, phir ingredient rows add karo (search karo, raw material ya Semi-FG chuno, batch quantity daalo) — ek Save se dish aur poori recipe ek saath save hoti hai.",
+        "Saved recipe par Preview stock & cost: theoretical raw-material rollup/cost estimate aur alag se direct raw + Semi-FG stock dikhata hai jo yeh item actually consume karega, shortage samet.",
+        "Semi-FG production & stock panel: Semi-FG aur output quantity chuno, Record production — yahi ek action hai jo real prepared stock credit karta hai; dish bechna production ka substitute kabhi nahi.",
+        "POS ko ab sirf direct raw material stock aur jo bhi Semi-FG pehle se produced hai, wahi chahiye — agar Semi-FG abhi produce nahi hua to us par depend karne wali dish ki sale block ho jayegi jab tak produce na ho."
       ],
-      "example": "Example: Butter Chicken ko 1 unit Gravy (Semi-FG) + 200g Chicken chahiye. Gravy khud Tomato + Butter + Spices se banti hai. Explode & Cost saare 4 raw materials rolled up dikhata hai, ₹90.80 per plate cost."
+      "example": "Example: Butter Chicken ko per portion 0.1kg Gravy (Semi-FG) + 0.25kg Chicken chahiye. Gravy ki apni recipe mein Tomato + Butter chahiye. 1kg Gravy produce karne se wahi Tomato/Butter directly consume hota hai aur Gravy ke Semi-FG stock mein 1kg credit hota hai; 10 plate Butter Chicken bechne se us 1kg Gravy stock + 2.5kg Chicken consume hota hai — Gravy ka Tomato/Butter dobara kabhi nahi."
     }
   },
   {

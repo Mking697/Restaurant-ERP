@@ -1,6 +1,8 @@
 import { and, eq, min } from "drizzle-orm";
 import { db } from "@/db/client";
 import { bomRecipes, menuItems, rawMaterials } from "@/db/schema/menu";
+import { inventoryStock } from "@/db/schema/inventory";
+import { semiFgStock } from "@/db/schema/production";
 import { vendorRates } from "@/db/schema/vendors";
 import { requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
@@ -77,6 +79,25 @@ export async function GET(request: Request) {
       costNote = "Estimated from the lowest active vendor rate per raw material — a planning estimate, not a locked costing policy.";
     }
 
-    return json({ menuItemId, qty, requirements: requirementList, estimatedCost, costNote });
+    const directRows = index.get(menuItemId) ?? [];
+    if (!directRows.length) throw new HttpError(409, "Save a recipe before previewing stock consumption");
+    const [rawStock, preparedStock, branchItems, allMaterials] = await Promise.all([
+      db.select().from(inventoryStock).where(eq(inventoryStock.branchId, branchId)),
+      db.select().from(semiFgStock).where(eq(semiFgStock.branchId, branchId)),
+      db.select().from(menuItems).where(eq(menuItems.branchId, branchId)),
+      db.select().from(rawMaterials),
+    ]);
+    const consumption = directRows.map((row) => {
+      const isRaw = row.componentType === "RAW_MATERIAL";
+      const id = (isRaw ? row.rawMaterialId : row.componentMenuItemId)!;
+      const material = isRaw ? allMaterials.find((candidate) => candidate.id === id) : null;
+      const semi = isRaw ? null : branchItems.find((candidate) => candidate.id === id);
+      if (!material && !semi) throw new HttpError(409, "Recipe ingredient no longer exists in this branch");
+      const required = Math.ceil((Number(row.qtyPerUnit) * qty - 1e-9) * 1000) / 1000;
+      const available = Number(isRaw ? rawStock.find((stock) => stock.rawMaterialId === id)?.qtyOnHand ?? 0 : preparedStock.find((stock) => stock.menuItemId === id)?.qtyOnHand ?? 0);
+      return { type: row.componentType, id, name: material?.name ?? semi!.name, unit: material?.unit ?? semi!.outputUnit, required, available, shortage: Math.max(0, Math.round((required - available) * 1000) / 1000) };
+    });
+    return json({ menuItemId, qty, requirements: requirementList, estimatedCost, costNote, consumption,
+      consumptionNote: "Preview only, not a stock reservation. Production or sale consumes the direct ingredients shown; expanded raw requirements are theoretical costing only, never a second deduction." });
   });
 }

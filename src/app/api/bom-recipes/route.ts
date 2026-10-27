@@ -6,6 +6,7 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { assertAcyclicInsert, buildRecipeIndex, parseBomRow, type BomRow } from "@/lib/server/bom";
+import { lockRecipeBranch, replaceRecipe } from "@/lib/server/recipe-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,23 @@ export async function GET(request: Request) {
   });
 }
 
+export async function PUT(request: Request) {
+  return api(async () => {
+    const rows = await mutate(request, async (tx, actor) => {
+      assertModule(actor, "MENU_BOM");
+      const input = await body(request);
+      if (typeof input.menuItemId !== "string") throw new HttpError(400, "menuItemId is required");
+      const [item] = await tx.select().from(menuItems).where(eq(menuItems.id, input.menuItemId)).limit(1);
+      if (!item) throw new HttpError(404, "Menu item not found");
+      const branchId = branchScope(actor, item.branchId);
+      if (!branchId || input.branchId !== branchId) throw new HttpError(400, "branchId must match the menu item's branch");
+      await lockRecipeBranch(tx, branchId);
+      return replaceRecipe(tx, actor, branchId, item.id, input.components);
+    });
+    return json({ bomRecipes: rows });
+  });
+}
+
 export async function POST(request: Request) {
   return api(async () => {
     const row = await mutate(request, async (tx, actor) => {
@@ -46,6 +64,7 @@ export async function POST(request: Request) {
       const branchId = branchScope(actor, item.branchId);
       if (!branchId) throw new HttpError(400, "Select a branch");
       if (input.branchId !== branchId) throw new HttpError(400, "branchId must match the menu item's branch");
+      await lockRecipeBranch(tx, branchId);
       // Non-owner authors can never author an HQ-locked row, and can never
       // edit/delete an existing one (checked on DELETE) — only SUPER_ADMIN
       // sets lockedByHq true for a new row.

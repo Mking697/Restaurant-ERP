@@ -11,6 +11,259 @@ first every time work resumes on this project.
 
 ---
 
+## RESUMED — Recipe Builder + real Semi-FG stock (October 27, 2026, same day)
+
+User said "pending kaam shuru kro" — resumed from the paused checkpoint below.
+What this pass actually closed, with real evidence:
+
+1. **Missing `menu-workspace.tsx` written** (`src/app/menu/menu-workspace.tsx`,
+   NEW) — the file `page-content.tsx` was re-exporting but that didn't exist
+   at pause, so `/menu` was a dead route. Assembles the already-partial
+   `recipe-builder.tsx` + `production-panel.tsx` + `menu-ui-helpers.ts` into
+   one page: item list, Recipe Builder dialog (multi-ingredient, +Add Item,
+   remove, searchable raw/Semi-FG rows, HQ-lock badges), recipe view,
+   stock/cost preview panel, Semi-FG production panel.
+2. **Real bug fixed**: `tests/semi-fg.integration.cjs`'s concurrency check
+   passed `undefined` as the `request()` helper's `expected` status arg,
+   which resolves to the default `200` — but a first-create concurrent
+   production response is legitimately `201`. Fixed to pass `null` (the
+   helper's existing accept-200-or-201 path). Confirmed this was a real gap,
+   not a false flag, by watching it actually fail before the fix.
+3. **Schema drift migration generated**: `semi_fg_stock`, `semi_fg_productions`
+   and `menu_items.output_unit` existed in `src/db/schema/*.ts` but were
+   never in the committed migration chain — `drizzle/0007_equal_ultragirl.sql`
+   (NEW) closes that gap, additive only (2 new tables + 1 new column + FKs/
+   indexes), reviewed and applied cleanly to a real Postgres below.
+4. **`tests/pos-orders.integration.cjs` rewritten**: the old version still
+   asserted the pre-Semi-FG-stock "virtual recursive raw deduction" (selling
+   a dish with a Semi-FG component used to deduct that Semi-FG's own butter/
+   tomato directly). That's no longer how the system works. Rewrote the
+   scenario: sale is blocked 409 until the Semi-FG is actually produced,
+   production consumes its own raw, sale then consumes direct raw + the
+   produced Semi-FG stock (never the embedded raw again), insufficient
+   Semi-FG stock rejects atomically. Also parametrized `BASE_URL`/`APP_ORIGIN`
+   (was hardcoded to `localhost:3000`) so it can target an isolated QA app
+   port, matching `semi-fg.integration.cjs`'s existing convention. Same
+   env-based parametrization applied to `tests/bom.integration.cjs`.
+
+### Real verification performed this pass (not claimed, executed)
+- `npx tsc --noEmit` — 0 errors.
+- `npx next build` — clean, `/menu` now compiles (9.59 kB route, was a
+  dead import before).
+- `npm test` — **115/115 unit tests pass** (includes the fixed
+  production-quantity/production-policy/menu-ui suites).
+- Docker Desktop was found stopped; started it, found the project's
+  `restaurant-erp-local-db` container existed but was stopped (volume
+  intact) — restarted it, did not recreate/drop it.
+- `npx drizzle-kit migrate` against the local dev DB — `0007` applied
+  cleanly on top of the existing 6 migrations.
+- Created dedicated QA database `restaurant_erp_recipe_qa_20261027` (per
+  the original checkpoint's naming), migrated it independently, started an
+  isolated `next dev` on port 3911 with `NEXT_DIST_DIR=.next-qa` bound only
+  to that QA DB (never touched the main dev DB/port).
+- **Real HTTP+Postgres integration suites, run against that isolated QA
+  app+DB**: `tests/semi-fg.integration.cjs` **9/9 passed** (auth/grants/CSRF,
+  nested Semi-FG blocked without stock, idempotent replay never double-
+  writes, POS consumes direct raw + stocked Semi-FG without double-consuming
+  embedded raw, shortages roll back every row, inactive components rejected,
+  immutable replay survives recipe/name changes, concurrent same-key
+  production returns one shared record). `tests/bom.integration.cjs`
+  **17/17 passed** unmodified (cycle prevention, explode, cost, delete).
+  Rewrote and ran `tests/pos-orders.integration.cjs` — **21/21 passed**
+  (blocked-until-produced, production deducts its own raw once, sale
+  deducts direct raw + Semi-FG only, no double-deduction, shortage leaves
+  stock untouched, exactly 1 order persisted, Semi-FG can't be ordered
+  directly).
+- **Real browser acceptance** against the isolated QA app (390px bugs not
+  re-checked this pass, desktop only): logged in via a disposable QA
+  session row (no password typed in the browser tool, per the vault rule —
+  generated server-side and injected as a cookie), opened `/menu`, opened
+  Recipe Builder, filled dish/branch/price/output unit, searched and picked
+  a raw-material ingredient, confirmed live "per 1 output" normalization,
+  added then removed a second ingredient row (both worked), saved — "Recipe
+  saved." banner, new row appeared in the table live. Clicked View recipe —
+  correct component/qty/HQ-locked badge. Clicked Preview stock & cost —
+  correctly showed "no vendor rate" cost warning and a Required/Available/
+  Shortage table (0.2kg required, 0kg available, 0.2kg shortage) — matches
+  the "preview only, not a reservation" contract text verbatim.
+- All QA fixtures (test users/branches/items/materials/sessions) were
+  deleted from the QA DB after; the QA DB itself was left migrated and
+  empty for reuse, same convention as prior sessions. QA dev server and
+  `.next-qa` build output were stopped/removed. Did not touch the main
+  dev server, main dev DB data, or any other container.
+- **NOT run this pass**: `auth.integration.cjs` (its own guard only accepts
+  `PGDATABASE` = `restaurant_erp_local` or a workforce-QA name, and no app
+  was bound to `restaurant_erp_local` on a free port this pass — this is a
+  gap, not a pass, flag before claiming full regression coverage). No
+  mobile/390px re-check this pass. No production/Neon migration or deploy —
+  not authorized, not attempted.
+
+### Still open before this can be called fully accepted
+- No production (Neon) migration applied — `0007` exists locally/QA only.
+- Nothing was committed or pushed this pass — ask before doing either.
+
+### Second pass — remaining gaps closed (same day)
+User said "baaki gap close kro" after the resume above. Closed all three
+items the resume note had flagged as still open:
+- **`auth.integration.cjs` full regression**: started the app bound to the
+  real (empty, no business data) `restaurant_erp_local` DB on port 3000 in
+  an isolated `NEXT_DIST_DIR=.next-authqa` output — **18/18 real HTTP/
+  Postgres checks passed** (login, branch isolation, grant delegation,
+  session revocation, CSRF, anonymous/forbidden-page denial, DTO safety).
+  Stopped that server and removed its dist dir after.
+- **390px mobile check on the new Recipe Builder dialog**: logged into the
+  QA app via a disposable session row (generated server-side, injected as a
+  cookie — no password typed in the browser tool), set a 390×844 mobile
+  viewport, opened Recipe Builder — screenshot-confirmed single-column
+  fields, a correctly-stacked ingredient row (type/search/select/quantity/
+  unit/remove), and full-width Cancel/Save buttons with no clipping or
+  horizontal overflow.
+- **Guide Book / standalone HTML sync**: the `MENU_BOM` and `POS` entries in
+  `src/lib/guide-content.ts` (both languages) and the `/menu` practice
+  walkthrough in `src/lib/guide-examples.ts` still described the OLD
+  behavior — one-line-at-a-time "Add Item"/"Add Component" BOM editing, and
+  POS "explodes the BOM recursively through Semi-FG" at sale time. Rewrote
+  both to the real current behavior: Recipe Builder's single atomic
+  multi-ingredient save, the Preview stock & cost required/available/
+  shortage table, the Semi-FG production panel as the only thing that
+  credits real stock, and POS deducting direct raw + already-produced
+  Semi-FG only (never that Semi-FG's embedded raw a second time). Synced
+  `docs/restaurant-erp-archify.html`'s `MODULES`/`EXAMPLES` JSON blobs to
+  match via a small Node script (parses+rewrites the minified JSON, same
+  approach as the project's own parity test). `node --test
+  tests/guide-examples.test.cjs tests/menu-ui.test.cjs` — **5/5 pass**,
+  including the exact-deepEqual standalone/app parity tests.
+- **Real bug found and fixed in this verification pass, unrelated to the
+  feature**: after several `source .env` calls in the same persistent
+  terminal session, `APP_ORIGIN` (and other `PG*` vars) stayed exported and
+  leaked into a later plain `npm test` run, flipping one branding CSRF test
+  from an expected 400 to a 403 — **not a product bug**, a shell-session
+  contamination artifact from this verification work. Unset the leaked vars
+  and reran: **115/115 unit tests pass, `tsc --noEmit` 0 errors, `next
+  build` clean** (same 26 routes). Flagging this because the same
+  contamination risk applies to any future session that chains multiple
+  `source .env`-prefixed commands in one terminal — prefer a fresh
+  subshell/explicit env override per command instead of accumulating
+  exports, or `unset` before a plain `npm test`/`next build` run.
+
+All QA DB fixtures and dev-server/dist-dir artifacts from this pass were
+removed again afterward; `restaurant-erp-local-db` container and its two
+databases (`restaurant_erp_local`, `restaurant_erp_recipe_qa_20261027`)
+were left running/migrated for reuse, same as before. Still nothing
+committed/pushed, no production/Neon migration — ask before either.
+
+### Third pass — responsive check across device classes (same day)
+User asked that desktop/laptop/tablet/mobile users all get a user-friendly
+experience. Screenshot-verified the Recipe Builder + full `/menu` workspace
+(item table, recipe view, stock/cost preview) at 5 real viewport widths
+against the isolated QA app: 390×844 (phone), 768×1024 (tablet portrait),
+1024×768 (tablet landscape/small laptop), 1440×900 (laptop), 1920×1080
+(desktop). All five render correctly — no horizontal overflow, no clipped
+fields, the ingredient row degrades from the full 6-column desktop grid to
+a clean 2-column layout at `sm`/`md` and a single column below that, and
+the dialog itself stays sensibly capped at `max-w-5xl` (never stretches
+edge-to-edge) on the 1920px desktop shot. No code changes were needed —
+this confirmed the existing responsive patterns (from the earlier Mobile
+Responsiveness Pass) already cover the new Recipe Builder correctly.
+QA fixtures (branch/user/session/dish/recipe) and the QA dev server/dist
+dir were removed again after.
+
+## PAUSED AT USER REQUEST — Recipe Builder + real Semi-FG stock (October 27, 2026) — historical, superseded above
+
+This section is the original pause note, kept for history. The "resumed"
+section above is the current state — read that first.
+
+### Authorized next-session scope
+- One dish/Semi-FG form with multiple searchable ingredient rows, +Add Item,
+  remove, Raw Material vs Semi-FG badges, quantities and explicit stock units.
+- Yield-aware recipe entry normalized per one output unit; clear recipe view,
+  expandable nested Semi-FG, cost/food-cost estimate only when rates exist,
+  direct-stock required/available/shortage preview (not a reservation).
+- Real Semi-FG production: consume raw/already-produced nested Semi-FG stock,
+  credit prepared stock. Sale consumes prepared Semi-FG + direct raw only;
+  never deduct embedded raw twice. Recipe save never changes inventory.
+- See `docs/recipe-builder-contract.md` for the acceptance/API contract.
+- English-default UI with Hinglish option; preserve branch isolation/HQ locks.
+- User approved local implementation, NOT a new production migration/deploy,
+  commit or push. Do not push main: Vercel build auto-runs DB migrations.
+
+### State actually observed at pause (PARTIAL / NOT ACCEPTED)
+- Repo `G:\restaurant erp`, branch `main`, HEAD `de6a7b9` (previous English
+  Process Flow Chart commit). All current feature edits are UNCOMMITTED;
+  untracked files must travel with this folder, not just a fresh git clone.
+- Parent added atomic menu+components POST support, whole-recipe PUT,
+  component input validation, same-branch/cycle/HQ-lock checks and shared
+  recipe-stock lock in `src/lib/server/recipe-write.ts`, `bom.ts`,
+  `/api/menu-items`, `/api/bom-recipes`, `/api/bom-recipes/[id]`.
+- Parent extended `/api/bom-recipes/explode` with direct-stock `consumption`
+  preview alongside theoretical raw-cost expansion. This is UNVERIFIED and
+  depends on the new production schema. Check precision against production
+  helper arithmetic; incomplete nested recipes must not yield fake zero costs.
+- Agent partial stock backend exists: `src/db/schema/production.ts` exports
+  `semiFgStock` / `semiFgProductions`, menu schema adds `outputUnit`, index
+  exports production. Helpers `src/lib/server/production.ts`,
+  `production-policy.ts`, `production-quantity.ts`; API
+  `src/app/api/semi-fg/production/route.ts`; POS order route modified to use
+  stocked components. New `tests/semi-fg.test.cjs` and
+  `tests/semi-fg.integration.cjs` exist. Inspect rather than re-create blindly.
+- Agent partial UI exists: `menu-ui-helpers.ts`, `recipe-builder.tsx`,
+  `production-panel.tsx`, and `tests/menu-ui.test.cjs`.
+  CRITICAL: at pause `src/app/menu/page-content.tsx` was reduced to
+  `export { default } from "./menu-workspace";` BUT `menu-workspace.tsx`
+  did NOT exist. UI work was interrupted mid-extraction; /menu is NOT a
+  working accepted artifact. Finish that workspace before claiming compile.
+- Both implementation agents received stop requests. Delayed child messages
+  are interruption reports only, NOT permission to restart implementation.
+- No parent-run tests/typecheck/build/browser acceptance performed for this
+  changed tree. Historical 109 unit / 110 HTTP checks belong to the PRIOR
+  release; they are NOT evidence for the unfinished current feature.
+- NO new migration generated/applied. Dedicated loopback database
+  `restaurant_erp_recipe_qa_20261027` was CREATED, otherwise not migrated or
+  populated by parent. Never drop/recreate an existing DB to resume.
+- Existing Docker DB container was healthy at pause, port 127.0.0.1:5436.
+  Existing local port 3000 listener was observed but not started/stopped by
+  this stage; preserve unrelated/user-owned processes. Parent started NO
+  new dev server, build or test job in this stage.
+- `next.config.ts` now supports `NEXT_DIST_DIR` (default `.next`), `.gitignore`
+  ignores `.next-*/`, enabling isolated QA output without corrupting the
+  existing dev server. Recheck tsconfig generated-type includes as needed.
+- Production untouched by this stage. Current live app still uses the old
+  recursive/virtual Semi-FG raw deduction. Do NOT claim real production stock
+  is live. Existing Guide Book/Process Flow Chart have NOT been synced to this
+  new, unfinished behavior.
+
+### Exact resume sequence after explicit user instruction
+1. Re-read this checkpoint + contract; `git status`, branch and diff. Inspect
+   preserved source and any child completion summaries for partial writes.
+   No blanket reset/stash/clean, no duplicate implementation.
+2. Finish missing UI workspace, reconcile POST/PUT/explode/production payloads,
+   explicit output units, same-branch Semi-FG options, idempotent response-loss
+   handling, and stale user/branch/request suppression.
+3. Inspect stock backend end to end: no recursive raw fallback; empty recipe
+   denial, decimal-safe quantities, same lock order, atomic shortages,
+   immutable production history, key replay/payload mismatch and no oversell.
+   Legacy single-row BOM writes/delete and other stock writers must agree.
+4. Write/run focused tests for atomic multi-row creation/replacement rollback,
+   HQ locks, duplicates/cycles/branch isolation; finish new test harnesses.
+   Existing POS integration expectations of virtual raw deduction need an
+   explicit prepared-stock setup + no-double-deduction assertions, not weakened
+   assertions. Keep raw-only GST/currency/WhatsApp behavior intact.
+5. Generate/review additive migration locally ONLY. Apply against the dedicated
+   QA DB using inherited local PG* fields (never print secrets). New Semi-FG
+   harness requires PGHOST=127.0.0.1, PGPORT=5436,
+   PGDATABASE=restaurant_erp_recipe_qa_20261027,
+   SEMI_FG_QA_DATABASE=<same> and explicit BASE_URL to a dedicated QA app port.
+   Bind HTTP app to the same DB before writes; inspect harness safety first.
+6. Run project unit/typecheck/build and true HTTP+PG suites, then desktop/phone
+   browser create -> multi-ingredient save -> reload -> edit -> preview ->
+   production -> sale -> stock readback. Use isolated NEXT_DIST_DIR for QA;
+   never dev/build concurrently in the same output directory. Clean only own
+   fixtures and stop only own QA processes; leave existing app/DB intact.
+7. Review settled diff independently; sync in-app/offline guides and client
+   process flow honestly, with examples and explicit deferred yield-variance,
+   wastage and expiry-lot scope. Update checkpoint with actual evidence.
+8. Ask separately before production migration/deployment or commit/push.
+
 ## ACTIVE IMPLEMENTATION — expenses, attendance, approved leave and payroll
 
 User requested real Accountant expense inputs and basic attendance payroll.

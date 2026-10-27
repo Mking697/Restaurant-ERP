@@ -2,6 +2,7 @@ export * from "./platform";
 export * from "./settings";
 export * from "./auth";
 export * from "./menu";
+export * from "./production";
 export * from "./vendors";
 export * from "./inventory";
 export * from "./purchase";

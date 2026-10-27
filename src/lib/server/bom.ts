@@ -62,8 +62,22 @@ export function parseBomRow(input: Record<string, unknown>) {
   if (typeof input.qtyPerUnit !== "string" || !/^\d{1,6}(\.\d{1,3})?$/.test(input.qtyPerUnit))
     throw new HttpError(400, "Invalid qtyPerUnit (max 3 decimals)");
   if (!(Number(input.qtyPerUnit) > 0)) throw new HttpError(400, "qtyPerUnit must be positive");
-  const lockedByHq = input.lockedByHq === undefined ? true : Boolean(input.lockedByHq);
+  if (input.lockedByHq !== undefined && typeof input.lockedByHq !== "boolean") throw new HttpError(400, "Invalid lockedByHq");
+  const lockedByHq = input.lockedByHq === undefined ? true : input.lockedByHq;
   return { branchId, menuItemId, componentType, rawMaterialId, componentMenuItemId, qtyPerUnit: input.qtyPerUnit, lockedByHq };
+}
+
+export function parseComponents(value: unknown, branchId: string, menuItemId: string) {
+  if (!Array.isArray(value) || !value.length || value.length > 50) throw new HttpError(400, "Recipe needs 1–50 ingredient rows");
+  const seen = new Set<string>();
+  return value.map((component) => {
+    if (!component || typeof component !== "object" || Array.isArray(component)) throw new HttpError(400, "Invalid ingredient row");
+    const row = parseBomRow({ ...component, branchId, menuItemId });
+    const key = `${row.componentType}:${row.rawMaterialId ?? row.componentMenuItemId}`;
+    if (seen.has(key)) throw new HttpError(409, "Duplicate ingredient — combine its quantities in one row");
+    seen.add(key);
+    return row;
+  });
 }
 
 export function buildRecipeIndex(rows: BomRow[]): Map<string, BomRow[]> {

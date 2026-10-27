@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { bomRecipes, menuItems } from "@/db/schema/menu";
-import { inventoryStock } from "@/db/schema/inventory";
+import { menuItems } from "@/db/schema/menu";
 import { posOrderLines, posOrders } from "@/db/schema/pos";
 import { branches } from "@/db/schema/platform";
 import { settings } from "@/db/schema/settings";
@@ -10,7 +9,8 @@ import { currencyRates } from "@/db/schema/currency";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
-import { buildRecipeIndex, explodeBom, type BomRow } from "@/lib/server/bom";
+import { deductStock, lockRecipeStock, readStockRecipe } from "@/lib/server/production";
+import { directRequirements } from "@/lib/server/production-quantity";
 import { gstInvoiceSummary } from "@/lib/server/gst";
 import { thankYouMessage, validOptionalPhone } from "@/lib/server/whatsapp-triggers";
 import { sendWhatsAppMessage } from "@/lib/chatxflow";
@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         if (typeof qty !== "number" || !Number.isInteger(qty) || qty < 1 || qty > 500) throw new HttpError(400, "Invalid qty (1-500)");
         return { menuItemId, qty };
       });
+      await lockRecipeStock(tx, branchId);
       const menuItemIds = [...new Set(lines.map((l) => l.menuItemId))];
       const items = await tx
         .select({ id: menuItems.id, branchId: menuItems.branchId, name: menuItems.name, price: menuItems.price, isActive: menuItems.isActive, isSellable: menuItems.isSellable, gstRatePercent: menuItems.gstRatePercent, hsnSacCode: menuItems.hsnSacCode })
@@ -104,54 +105,9 @@ export async function POST(request: Request) {
         if (!item.isSellable) throw new HttpError(400, `${item.name} is a Semi-FG base and cannot be ordered directly`);
       }
 
-      const recipeRows = (await tx
-        .select({
-          id: bomRecipes.id,
-          branchId: bomRecipes.branchId,
-          menuItemId: bomRecipes.menuItemId,
-          componentType: bomRecipes.componentType,
-          rawMaterialId: bomRecipes.rawMaterialId,
-          componentMenuItemId: bomRecipes.componentMenuItemId,
-          qtyPerUnit: bomRecipes.qtyPerUnit,
-          lockedByHq: bomRecipes.lockedByHq,
-        })
-        .from(bomRecipes)
-        .where(eq(bomRecipes.branchId, branchId))) as BomRow[];
-      const index = buildRecipeIndex(recipeRows);
-
-      const required = new Map<string, number>();
-      for (const line of lines) {
-        const explosion = explodeBom(line.menuItemId, line.qty, index);
-        for (const [rawMaterialId, qty] of explosion) required.set(rawMaterialId, (required.get(rawMaterialId) ?? 0) + qty);
-      }
-
-      const requiredIds = [...required.keys()];
-      const stockRows = requiredIds.length
-        ? await tx
-            .select({ id: inventoryStock.id, rawMaterialId: inventoryStock.rawMaterialId, qtyOnHand: inventoryStock.qtyOnHand })
-            .from(inventoryStock)
-            .where(and(eq(inventoryStock.branchId, branchId), inArray(inventoryStock.rawMaterialId, requiredIds)))
-        : [];
-      const stockByMaterial = new Map(stockRows.map((row) => [row.rawMaterialId, row]));
-
-      const shortfalls = requiredIds
-        .map((rawMaterialId) => {
-          const needed = required.get(rawMaterialId)!;
-          const onHand = Number(stockByMaterial.get(rawMaterialId)?.qtyOnHand ?? 0);
-          return { rawMaterialId, needed: Math.round(needed * 1000) / 1000, onHand };
-        })
-        .filter((row) => row.onHand < row.needed);
-      if (shortfalls.length)
-        throw new HttpError(
-          409,
-          `Insufficient stock for ${shortfalls.length} raw material(s): ${shortfalls.map((s) => `${s.rawMaterialId} needs ${s.needed}, has ${s.onHand}`).join("; ")}`
-        );
-
-      for (const rawMaterialId of requiredIds) {
-        const row = stockByMaterial.get(rawMaterialId)!;
-        const newQty = (Number(row.qtyOnHand) - required.get(rawMaterialId)!).toFixed(3);
-        await tx.update(inventoryStock).set({ qtyOnHand: newQty, updatedAt: new Date() }).where(eq(inventoryStock.id, row.id));
-      }
+      const recipeRows = await readStockRecipe(tx, branchId, menuItemIds);
+      const required = directRequirements(branchId, recipeRows, lines.map(line => ({ menuItemId: line.menuItemId, quantity: String(line.qty) })));
+      const deductions = await deductStock(tx, branchId, required);
 
       const subtotal = lines.reduce((sum, line) => sum + Number(itemById.get(line.menuItemId)!.price) * line.qty, 0);
 
@@ -215,9 +171,11 @@ export async function POST(request: Request) {
         gst: gstSummary ? { configured: true, ...gstSummary } : { configured: false, note: "GST not configured for this branch/company yet — billed tax-free." },
         currency: tenderCurrencyCode === "INR" ? null : { tenderCurrencyCode, fxRateToInr: fxRateToInr.toFixed(6), tenderCurrencyAmount },
       };
-      const inventoryDeducted = requiredIds.map((rawMaterialId) => ({ rawMaterialId, qtyDeducted: Math.round(required.get(rawMaterialId)! * 1000) / 1000 }));
+      // Preserve existing numeric POS output; internal stock math stays exact.
+      const inventoryDeducted = deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) }));
+      const semiFgDeducted = deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) }));
 
-      return { order: { id: orderId, orderNumber, branchId, branchName: branchRow?.name ?? "", channel: input.channel, tableNo, counterNo, tenderType: input.tenderType, customerPhone, customerName }, kot, receipt, inventoryDeducted };
+      return { order: { id: orderId, orderNumber, branchId, branchName: branchRow?.name ?? "", channel: input.channel, tableNo, counterNo, tenderType: input.tenderType, customerPhone, customerName }, kot, receipt, inventoryDeducted, semiFgDeducted };
     });
 
     // WhatsApp Thank You — best-effort, AFTER the order transaction has

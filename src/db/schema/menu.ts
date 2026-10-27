@@ -11,6 +11,7 @@ export const menuItems = pgTable(
       .references(() => branches.id),
     name: text("name").notNull(),
     category: text("category").notNull().default(""),
+    outputUnit: text("output_unit").notNull().default("portion"),
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     isActive: boolean("is_active").notNull().default(true),
     // Semi-FG (base gravy/sauce/marinade): own recipe, not sold directly to a
