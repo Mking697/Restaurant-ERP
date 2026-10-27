@@ -4,9 +4,11 @@ export interface GuideModule {
   cat: "frontend" | "backend" | "finance" | "admin" | "whatsapp";
   status: "live" | "pending" | "mixed";
   title: string; short: string; what: string; how: string[]; example: string;
+  /** Lookup key for GUIDE_EXAMPLES when two modules share the same route (e.g. Accounts tabs) — defaults to `route`. */
+  exampleKey?: string;
 }
 interface BilingualGuideModule extends GuideModule { hinglish: Pick<GuideModule, "title" | "short" | "what" | "how" | "example">; }
-// Four persisted modules and eight interactive, non-persisted demos. Keep standalone guide in sync.
+// Seventeen bilingual chapters. "live" means database-backed functionality, not a production-deployment claim. Keep standalone guide in sync.
 export const GUIDE_MODULES: BilingualGuideModule[] = [
   {
     "module": "DASHBOARD_OWNER",
@@ -180,9 +182,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "status": "live",
     "title": "POS / Cashier",
     "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm.",
+    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm. Operational confidentiality only: only Owner can set or restore Owner-only visibility, with a 3-500 character reason and audit history. All non-Owner operational users, including an accountant with official-report access, see filtered orders and visible totals only. Owner sees actual, visible and private totals for the selected scope. Visibility never cancels a sale, reverses stock or removes official records: authorized OFFICIAL_SALES_REPORTS exports remain actual. Existing printouts/downloads cannot be revoked; other dashboards/reports remain mock demos, not private live records.",
     "how": [
-      "New Order: pick channel, counter (1 or 2), items and tender. Customer name/WhatsApp number are optional.",
+      "In a QA test branch/account with POS_CASHIER, first Start Shift if shifts are configured but no run is open. Review and Accept Handover if PENDING: sales are blocked until acceptance. Unconfigured branches retain legacy POS but cannot real-close until shifts are configured. New Order writes real orders and stock; choose channel, counter (1 or 2), items and tender.",
       "Confirm Order checks and deducts direct raw + produced Semi-FG stock, and posts the order — a shortfall, or a dish whose Semi-FG hasn't been produced yet (see Menu & BOM's Production panel), rejects the whole order with a 409.",
       "The receipt shows GST (CGST/SGST or IGST) when the branch and company GST state codes are configured, else it bills tax-free with a clear note.",
       "Pick a non-INR payment currency (configured via the Owner-only Currency Rates panel) to also show the payable amount in that currency alongside the INR invoice total."
@@ -191,9 +193,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "hinglish": {
       "title": "POS / Cashier",
       "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai.",
+      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai. Yeh sirf operational confidentiality hai: sirf Owner, 3-500 character reason aur audit history ke saath, Owner-only visibility set ya restore kar sakta hai. Har non-Owner, official-report access wala accountant bhi, operational POS mein filtered orders aur visible totals hi dekhega. Owner selected scope ke actual, visible aur private totals dekhta hai. Visibility se sale cancel, stock reverse ya official records remove nahi hote: authorized OFFICIAL_SALES_REPORTS exports actual rehte hain. Existing printouts/downloads revoke nahi hote; doosre dashboards/reports mock demos hain, private live records nahi.",
       "how": [
-        "New Order: channel, counter (1 ya 2), items aur tender chuno. Customer naam/WhatsApp number optional hain.",
+        "POS_CASHIER wale QA test branch/account mein configured shifts par run open na ho to Start Shift karo. PENDING handover check karke Accept Handover karo: acceptance tak sale blocked hai. Unconfigured branch ka legacy POS chalta hai par config ke bina real-close nahi. New Order real orders/stock likhta hai; channel, counter (1 ya 2), items aur tender chuno.",
         "Confirm Order direct raw + produced Semi-FG stock check+deduct karta hai aur order post karta hai — kami ho, ya kisi dish ka Semi-FG abhi produce na hua ho (Menu & BOM ke Production panel se produce karo), to 409 ke saath poora order reject.",
         "Receipt GST dikhati hai (CGST/SGST ya IGST) jab branch aur company ke GST state code set hon, warna clear note ke saath tax-free bill ban jaata hai.",
         "Non-INR payment currency chuno (Owner-only Currency Rates panel se configured) to INR invoice total ke saath us currency mein payable amount bhi dikhta hai."
@@ -206,26 +208,28 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "route": "/cash-drop",
     "icon": "🔒",
     "cat": "frontend",
-    "status": "pending",
+    "status": "live",
     "title": "Blind Cash Drop",
-    "short": "Count denominations and submit an illustrative closing total.",
-    "what": "The page totals notes and coins locally. No expected-cash API, saved cash-drop record or shortage/excess calculation is connected yet. Do not treat demo submission as shift closure.",
+    "short": "Locally implemented real database closing: blind count, End Shift & Handover, then acceptance.",
+    "what": "With CASH_DROP access, count physical notes and coins without seeing expected cash before submission. End Shift & Handover saves a real PostgreSQL cash-drop record, ends the current run and opens the next run with a PENDING handover. Expected cash equals accepted incoming physical cash plus this run's completed CASH sales; shortage/excess is counted minus expected. Card/UPI/Other are this run's receipts only, never carried-forward drawer balances or real bank/payment transfers. The next run cannot sell or close until its handover is accepted. Branches without configured shifts retain legacy POS, but cannot real-close until configured. Initial cash float and safe withdrawals are not modeled. This is local implementation status, not a production-live claim. Owner-only orders still count in actual cash and every tender receipt summary; reconciliation is unaffected by POS visibility. Closing and handover indirect totals can disclose true cash custody intentionally: custody accuracy takes priority over operational privacy.",
     "how": [
-      "Enter counts for each note denomination.",
-      "Add the total coin value.",
-      "Submit Cash Drop to see the counted total. Reloading resets it."
+      "Use a QA test branch/account with CASH_DROP. Ask Owner or an authorized Branch Admin to configure shift windows; click Start Shift if none is open. Accept any pending incoming handover first.",
+      "Enter whole, non-negative counts of ₹500/₹200/₹100/₹50/₹20/₹10 notes and the total coin value in rupees, not the number of coins. Count all physical cash including accepted incoming cash.",
+      "Click End Shift & Handover once. Only after submission does the result reveal expected cash and shortage/excess; the server calculates Card/UPI/Other from this run's orders.",
+      "The next cashier checks the displayed handover and clicks Accept Handover on POS or Cash Drop before selling or closing. For an unconfirmed write, ask an administrator to verify saved records; do not blindly resubmit."
     ],
-    "example": "Illustration: a counted ₹18,350 is displayed after submission. No shortage is calculated and no closing entry is saved.",
+    "example": "QA example: accepted incoming cash ₹6,000 plus current CASH sales ₹550 gives expected ₹6,550. Count ₹6,550: variance is zero. Only that counted physical cash carries forward; this run's Card/UPI/Other receipts are recorded separately, not transferred. Practice writes persist after reload.",
     "hinglish": {
       "title": "Blind Cash Drop",
-      "short": "Notes aur coins gino aur sample closing total submit karo.",
-      "what": "Page notes aur coins locally total karta hai. Expected-cash API, saved cash-drop record aur shortage/excess calculation connected nahi hain. Demo submission ko shift closure mat samjho.",
+      "short": "Locally implemented real DB closing: blind count, End Shift & Handover, phir acceptance.",
+      "what": "CASH_DROP access se physical notes/coins gino; submit se pehle expected cash hidden hai. End Shift & Handover real PostgreSQL cash-drop record save karta hai, current run end karke next run aur PENDING handover kholta hai. Expected cash = accepted incoming physical cash + is run ki completed CASH sales; shortage/excess = counted minus expected. Card/UPI/Other sirf is run ki receipts hain, carry-forward drawer balance ya real bank/payment transfer nahi. Next run handover accept hone tak sale ya close nahi kar sakta. Unconfigured branches ka legacy POS chalta hai, par config ke bina real-close nahi. Initial cash float aur safe withdrawals modeled nahi hain. Yeh local implementation hai, production-live claim nahi. Owner-only orders actual cash aur har tender receipt summary mein count hote hain; POS visibility se reconciliation nahi badalti. Closing/handover ke indirect totals true cash custody disclose kar sakte hain; yeh intentional hai, custody accuracy ko operational privacy se pehle rakha gaya hai.",
       "how": [
-        "Har denomination ke notes ki ginti bharo.",
-        "Coins ki total value bharo.",
-        "Submit Cash Drop se counted total dekho. Reload par reset hota hai."
+        "CASH_DROP wala QA test branch/account use karo. Owner ya authorized Branch Admin se shift windows configure karwao; run open na ho to Start Shift dabao. Pending incoming handover pehle accept karo.",
+        "₹500/₹200/₹100/₹50/₹20/₹10 notes ki whole non-negative ginti aur coins ki total rupee value bharo, coin count nahi. Accepted incoming cash samet saara physical cash gino.",
+        "End Shift & Handover ek baar dabao. Submit ke baad hi expected cash aur shortage/excess dikhenge; server Card/UPI/Other is run ke orders se calculate karta hai.",
+        "Next cashier POS ya Cash Drop par handover amounts check karke Accept Handover kare, tab sale ya close chalega. Write ka result unconfirmed ho to admin se saved records verify karwao; blindly resubmit mat karo."
       ],
-      "example": "Example: submission ke baad gina hua ₹18,350 dikhta hai. Shortage calculate ya closing entry save nahi hoti."
+      "example": "QA example: accepted incoming cash ₹6,000 + current CASH sales ₹550 = expected ₹6,550. ₹6,550 count par variance zero. Sirf counted physical cash aage carry hota hai; Card/UPI/Other is run ki alag receipts hain, transfer nahi. Practice writes reload ke baad bhi rehti hain."
     }
   },
   {
@@ -339,6 +343,35 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     }
   },
   {
+    "module": "SHIFT_MANAGEMENT",
+    "route": "/admin/settings/shifts",
+    "icon": "🕒",
+    "cat": "admin",
+    "status": "live",
+    "title": "Shift Management",
+    "short": "Locally implemented branch shift windows, manual runs and accepted cash handovers.",
+    "what": "Owner can configure a selected branch; a Branch Admin (BRANCH_MANAGER) with SHIFT_MANAGEMENT can configure only their own branch. Save 1-12 ordered windows covering a full 24h in IST with no gaps or overlaps: each end meets the next start and the last wraps to the first. A single window with identical start/end covers 24h. Start Shift is manual and selects the current window; scheduled end is a reminder, never an automatic cutoff. Cash Drop's manual End Shift & Handover ends the current run and opens the next cycle run, even for a single-shift setup. PENDING acceptance blocks POS sales and further closing. Replacing windows preserves historical definition rows and recorded run times; it does not rewrite past runs. Unconfigured branches retain legacy POS but cannot real-close without configuration. Local database functionality does not mean production deployment.",
+    "how": [
+      "Use a QA test branch/account. Owner selects one branch; Branch Admin needs SHIFT_MANAGEMENT and is restricted to their own branch. English is default; Hinglish is optional in preferences.",
+      "In Shift windows, set Shift A 00:00-12:00 and Shift B 12:00-00:00 with Add Shift, then Save Shifts. Use 24h HH:MM; for one daily shift use 00:00-00:00.",
+      "Click Start Shift when no run is open, then Reload saved status. Times do not auto-start/end runs. With CASH_DROP, manually End Shift & Handover after counting physical cash.",
+      "On POS or Cash Drop, review the incoming amounts and Accept Handover before the next run sells or closes. Editing windows affects future cycle selection, not historical rows. These actions are real writes; do not use business branches for practice."
+    ],
+    "example": "QA example: one 00:00-00:00 shift can cycle repeatedly. A manual close preserves the ended run, opens a new run with the same label and creates a PENDING handover. Accept it before the next sale. Card/UPI/Other are per-run receipts, not money transfers; initial cash float and safe withdrawals are not modeled.",
+    "hinglish": {
+      "title": "Shift Management",
+      "short": "Locally implemented branch shift windows, manual runs aur accepted cash handovers.",
+      "what": "Owner selected branch configure kar sakta hai; SHIFT_MANAGEMENT wala Branch Admin (BRANCH_MANAGER) sirf apni branch configure karega. 1-12 ordered windows IST mein pura 24h cover karein, gap/overlap nahi: har end agle start se mile aur last first se jude. Single window ka same start/end matlab 24h. Start Shift manual hai aur current window chunta hai; scheduled end sirf reminder hai, automatic cutoff nahi. Cash Drop ka manual End Shift & Handover current run end karke next cycle run kholta hai, single-shift setup mein bhi. PENDING acceptance par POS sale aur next closing blocked hain. Windows replace karne se historical definition rows aur recorded run times preserve rehte hain, past runs rewrite nahi hote. Unconfigured branch ka legacy POS chalta hai par config ke bina real-close nahi. Local DB functionality ka matlab production deployment nahi.",
+      "how": [
+        "QA test branch/account use karo. Owner ek branch chune; Branch Admin ko SHIFT_MANAGEMENT chahiye aur sirf apni branch milegi. English default hai; preferences mein Hinglish optional hai.",
+        "Shift windows mein Shift A 00:00-12:00 aur Add Shift se Shift B 12:00-00:00 set karke Save Shifts dabao. 24h HH:MM use karo; single daily shift ke liye 00:00-00:00.",
+        "Run open na ho to Start Shift, phir Reload saved status dabao. Time se runs auto-start/end nahi hote. CASH_DROP se physical cash ginkar manually End Shift & Handover karo.",
+        "POS ya Cash Drop par incoming amounts check karke Accept Handover karo, tab next run sale/close kar sakega. Windows edit future cycle selection badalta hai, historical rows nahi. Yeh real writes hain; practice business branch mein mat karo."
+      ],
+      "example": "QA example: ek 00:00-00:00 shift baar-baar cycle kar sakti hai. Manual close ended run preserve karta hai, same label ka naya run aur PENDING handover kholta hai. Next sale se pehle accept karo. Card/UPI/Other per-run receipts hain, money transfer nahi; initial cash float aur safe withdrawals modeled nahi hain."
+    }
+  },
+  {
     "module": "WHATSAPP_LOGS",
     "route": "/admin/settings/whatsapp",
     "icon": "📲",
@@ -424,15 +457,17 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     }
   },
   {
-    "module": "POS_CASHIER",
-    "route": "/gst-export",
+    "module": "OFFICIAL_SALES_REPORTS",
+        "route": "/accounts",
+        "exampleKey": "/accounts-gstr",
     "icon": "🧾",
     "cat": "finance",
     "status": "live",
     "title": "GSTR-1 HSN Summary Export",
-    "short": "Real GSTR-1 Table 12 style HSN-wise export, built from actual completed orders.",
-    "what": "Pick a date range and branch scope; the page pulls every real completed order in range, groups taxable value + CGST/SGST/IGST by HSN/SAC code and rate, and lets you export it as CSV ready for the GST portal's offline tool. Orders from a branch (or before the company) had its GST state code configured are excluded from the summary and counted separately — a GSTR filing never silently includes tax-free sales as if they were GST-compliant.",
+    "short": "Real GSTR-1 Table 12 style HSN-wise export, built from actual completed orders — now a tab inside Accounts.",
+    "what": "Owner or a user explicitly granted OFFICIAL_SALES_REPORTS can open the Accounts GSTR Export tab. POS_CASHIER alone does not grant this access; existing grants are not automatically backfilled. This official report uses actual records including Owner-only orders, never filtered staff POS totals. Pick a date range and branch scope; it pulls every real completed order in range, groups taxable value + CGST/SGST/IGST by HSN/SAC code and rate, and lets you export it as CSV ready for the GST portal's offline tool. Orders from a branch (or before the company) had its GST state code configured are excluded from the summary and counted separately — a GSTR filing never silently includes tax-free sales as if they were GST-compliant.",
     "how": [
+      "As Owner or with an explicit OFFICIAL_SALES_REPORTS grant, open Accounts, then click the GSTR Export tab. This grant authorizes actual official sales disclosure, not private operational POS access.",
       "Pick From/To dates and (optionally) a branch, then Generate.",
       "Review the HSN-wise table: rate, quantity, taxable value, CGST/SGST/IGST, total tax and total value, with a Grand Total row.",
       "If any orders in range are excluded for missing GST configuration, a clear warning states exactly how many.",
@@ -441,9 +476,10 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "example": "Example: two orders in October both have menu items under HSN 2106 at 5% GST — the export merges them into one row: Qty 3, Taxable ₹400.00, CGST ₹10.00, SGST ₹10.00, Total ₹420.00.",
     "hinglish": {
       "title": "GSTR-1 HSN Summary Export",
-      "short": "Real GSTR-1 Table 12 jaisa HSN-wise export, real completed orders se bana.",
-      "what": "Date range aur branch scope chuno; page us range ke saare real completed orders uthati hai, HSN/SAC code aur rate ke hisaab se taxable value + CGST/SGST/IGST group karti hai, aur CSV export deti hai jo GST portal ke offline tool mein seedha ja sake. Jin branch (ya jab tak company) ka GST state code configure nahi tha unke orders summary se exclude hote hain aur alag count hote hain — GSTR filing mein kabhi tax-free sales GST-compliant jaisi silently nahi dikhti.",
+      "short": "Real GSTR-1 Table 12 jaisa HSN-wise export, real completed orders se bana — ab Accounts ke andar ek tab hai.",
+      "what": "Owner ya explicit OFFICIAL_SALES_REPORTS grant wala user Accounts ka GSTR Export tab khole. Sirf POS_CASHIER se access nahi milta; existing grants ka auto-backfill nahi hota. Official report actual records se banti hai, Owner-only orders samet; filtered staff POS totals se nahi. Date range aur branch scope chuno; page us range ke saare real completed orders uthati hai, HSN/SAC code aur rate ke hisaab se taxable value + CGST/SGST/IGST group karti hai, aur CSV export deti hai jo GST portal ke offline tool mein seedha ja sake. Jin branch (ya jab tak company) ka GST state code configure nahi tha unke orders summary se exclude hote hain aur alag count hote hain — GSTR filing mein kabhi tax-free sales GST-compliant jaisi silently nahi dikhti.",
       "how": [
+        "Owner ya explicit OFFICIAL_SALES_REPORTS grant se Accounts ka GSTR Export tab kholo. Yeh actual official sales disclose karne ka access hai, private operational POS access nahi.",
         "From/To dates aur (optional) branch chuno, phir Generate dabao.",
         "HSN-wise table dekho: rate, quantity, taxable value, CGST/SGST/IGST, total tax aur total value, saath mein Grand Total row.",
         "Agar range ke kuch orders GST configuration na hone ki wajah se exclude hue hain, ek clear warning exact count batati hai.",
@@ -454,7 +490,7 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   }
 ];
 export function getGuideModules(t: (english: string, hinglish?: string) => string): GuideModule[] {
-  return GUIDE_MODULES.map(m => ({ ...m, title: t(m.title, m.hinglish.title), short: t(m.short, m.hinglish.short), what: t(m.what, m.hinglish.what), how: m.how.map((s, i) => t(s, m.hinglish.how[i])), example: t(m.example, m.hinglish.example) }));
+  return GUIDE_MODULES.map(m => ({ ...m, title: t(m.title, m.hinglish.title), short: t(m.short, m.hinglish.short), what: t(m.what, m.hinglish.what), how: m.how.map((s, i) => t(s, m.hinglish.how[i])), example: t(m.example, m.hinglish.example), exampleKey: m.exampleKey }));
 }
 export const CAT_LABEL: Record<GuideModule["cat"], string> = { frontend: "Daily Operations", finance: "Finance", backend: "Purchase / Stock", admin: "Admin / Setup", whatsapp: "WhatsApp Connection" };
 export const CAT_CLASS: Record<GuideModule["cat"], string> = { frontend: "border-sky-500/50 bg-sky-500/10", finance: "border-violet-500/50 bg-violet-500/10", backend: "border-emerald-500/50 bg-emerald-500/10", admin: "border-amber-500/50 bg-amber-500/10", whatsapp: "border-rose-500/50 bg-rose-500/10" };

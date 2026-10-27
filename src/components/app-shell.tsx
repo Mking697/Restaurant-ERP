@@ -4,7 +4,7 @@ import { RestaurantBrand } from "@/components/branding-provider";
 import Link from "next/link";
 import { PreferencesControls } from "@/components/preferences-controls";
 import { useTranslation } from "@/lib/i18n";
-import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, Clock, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetCloseButton } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { clearCurrentUser, hasCurrentModule, refreshCurrentUser, requestJson, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId, setSelectedBranchId } from "@/lib/current-branch";
-const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, WarehouseIcon };
+const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, WarehouseIcon, Clock };
 export function canNavigate(user: CurrentUser, href: string, module: string) {
   if (!user.ready || !user.authenticated) return false;
   if (href === "/admin/users" || href === "/admin/branches") return ["SUPER_ADMIN", "BRANCH_MANAGER"].includes(user.role);
@@ -20,7 +20,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
-    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL"],
+    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS"],
     "/workforce": ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"],
   };
   return hasCurrentModule(user, ...(groups[href] ?? [module]));
@@ -28,7 +28,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
 function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/performance": "MIS Ranking",
-  "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer", "/gst-export": "GSTR Export",
+  "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer",
   "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
   "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/guide": "Guide Book",
 };

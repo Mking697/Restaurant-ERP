@@ -29,8 +29,8 @@ const COPY: Record<string, readonly [string, string]> = {
     "Har denomination gino aur demo cash drop submit karo. Expected cash aur server reconciliation abhi connected nahi hain."
   ],
   "Note ki ginti bharo. Expected amount submit ke baad hi dikhega.": [
-    "Enter the number of notes. This demo does not fetch or reveal an expected amount.",
-    "Notes ki ginti bharo. Yeh demo expected amount fetch ya reveal nahi karta."
+    "Enter the number of notes. Expected cash is revealed only after submission.",
+    "Notes ki ginti bharo. Expected cash sirf submit ke baad dikhega."
   ],
   "Submit karne ke baad yahan shortage/excess dikhega. Expected cash backend se tabhi aata hai — frontend mein kabhi pre-load nahi hota (API-layer rule, Phase 3 mein wire hoga).": [
     "The demo records your counted total in page state only. Expected cash, shortage/excess calculation and saving to the database are not implemented.",

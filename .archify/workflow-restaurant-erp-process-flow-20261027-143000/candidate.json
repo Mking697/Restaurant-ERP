@@ -2,129 +2,696 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Restaurant ERP - Order to Invoice Process Flow (Built & Verified)",
-    "subtitle": "BOM/Semi-FG split, 2-counter billing, 2-level warehouse, GST + multi-currency + GSTR export, WhatsApp automation",
+    "title": "Restaurant ERP - Current Process Flow",
+    "subtitle": "Order + real stock | Shift handover | Owner-only privacy | Actual GST/accounts preserved. New shift/privacy: local QA, not deployed.",
     "visual_preset": "signal-flow",
     "quality_profile": "showcase",
     "output": ".archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html",
     "views": [
-      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Full built-and-verified flow from order to GSTR filing export — 13 detailed steps below, each with a worked example" },
-      { "id": "bom_view", "label": "BOM & Kitchen Split", "focus": ["n_confirm","n_bom","n_kot","n_stock_deduct","n_pos_receipt","n_semifg_alert"], "note": "On confirm, the BOM explodes: Kitchen gets a KOT (no price), Billing gets the price, Inventory is deducted — see cards 1-3" },
-      { "id": "inventory_view", "label": "Warehouse & Stock Alerts", "focus": ["n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert"], "note": "2-level: Central -> Branch; dispatch is a paper record only, Receive is what actually moves stock — cards 4-6" },
-      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou"], "note": "2-counter billing -> multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> GSTR-1 HSN export -> WhatsApp Thank You — cards 7-11" },
-      { "id": "offer_view", "label": "WhatsApp Offer Campaign", "focus": ["n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Owner creates an offer, WhatsApp broadcasts it to REAL past customers — card 12" }
+      {
+        "id": "all",
+        "label": "Full Flow",
+        "focus": [
+          "n_table",
+          "n_items",
+          "n_confirm",
+          "n_recipe",
+          "n_produce",
+          "n_stock_check",
+          "n_kot",
+          "n_semifg_alert",
+          "n_central_wh",
+          "n_stock_deduct",
+          "n_low_stock",
+          "n_pos_receipt",
+          "n_payment_invoice",
+          "n_gstr_export",
+          "n_thankyou",
+          "n_shift_setup",
+          "n_shift_start",
+          "n_shift_gate",
+          "n_blind_count",
+          "n_shift_next",
+          "n_accept_handover",
+          "n_owner_privacy",
+          "n_visibility_audit",
+          "n_staff_view",
+          "n_actual_records",
+          "n_official_access"
+        ],
+        "note": "Current code map. Shift/privacy are QA-tested locally, not deployed; sample dashboard/report modules are not live totals."
+      },
+      {
+        "id": "recipe_view",
+        "label": "Recipe, Production & Stock",
+        "focus": [
+          "n_recipe",
+          "n_produce",
+          "n_stock_check",
+          "n_kot",
+          "n_semifg_alert",
+          "n_central_wh",
+          "n_stock_deduct",
+          "n_low_stock"
+        ],
+        "note": "Recipe save never changes inventory. Production credits real Semi-FG; sale consumes direct stock. Warehouse Receive credits branch stock."
+      },
+      {
+        "id": "billing_view",
+        "label": "Billing, GST & WhatsApp",
+        "focus": [
+          "n_pos_receipt",
+          "n_payment_invoice",
+          "n_gstr_export",
+          "n_thankyou"
+        ],
+        "note": "Receipt and optional FX/GST; Accounts GSTR includes every eligible sale. WhatsApp is optional, best-effort text after commit."
+      },
+      {
+        "id": "shift_view",
+        "label": "Shift + Cash Handover",
+        "focus": [
+          "n_shift_setup",
+          "n_shift_start",
+          "n_shift_gate",
+          "n_blind_count",
+          "n_shift_next",
+          "n_accept_handover",
+          "n_confirm"
+        ],
+        "note": "Manual closing opens next run. Accept handover before sale. Cash carries forward; digital receipts are per-run, not bank transfers."
+      },
+      {
+        "id": "privacy_view",
+        "label": "Owner Privacy + Actual Accounts",
+        "focus": [
+          "n_owner_privacy",
+          "n_visibility_audit",
+          "n_staff_view",
+          "n_actual_records",
+          "n_official_access",
+          "n_gstr_export"
+        ],
+        "note": "Only operational reads are filtered. Owner and authorized official accounts retain actual records; cash reconciliation stays actual."
+      }
     ]
   },
   "lanes": [
-    { "id": "order", "label": "Waiter / Tablet POS" },
-    { "id": "kitchen", "label": "Kitchen & BOM Engine" },
-    { "id": "inventory", "label": "Inventory & Warehouse" },
-    { "id": "billing", "label": "Billing & GST" },
-    { "id": "whatsapp", "label": "WhatsApp Automation" }
+    {
+      "id": "shifts",
+      "label": "Branch Shift Cycle"
+    },
+    {
+      "id": "order",
+      "label": "Branch POS"
+    },
+    {
+      "id": "kitchen",
+      "label": "Recipe, Semi-FG & Kitchen"
+    },
+    {
+      "id": "inventory",
+      "label": "Inventory & Warehouse"
+    },
+    {
+      "id": "billing",
+      "label": "Billing & GST"
+    },
+    {
+      "id": "privacy",
+      "label": "Owner Privacy / Accounts"
+    }
   ],
-  "phases": [
-    { "id": "phase_capture", "label": "Order Capture", "fromCol": 0, "toCol": 1 },
-    { "id": "phase_explode", "label": "BOM Explode", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
-    { "id": "phase_fulfil", "label": "Fulfilment Split", "fromCol": 3, "toCol": 3 },
-    { "id": "phase_settle", "label": "Settle, Invoice, GSTR & WhatsApp", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  "groups": [],
+  "mainPath": [
+    "n_table",
+    "n_items",
+    "n_confirm",
+    "n_stock_check",
+    "n_stock_deduct",
+    "n_pos_receipt",
+    "n_payment_invoice",
+    "n_thankyou"
   ],
-  "groups": [
-    { "id": "grp_bom", "label": "BOM + Semi-FG Engine", "lane": "kitchen", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
-    { "id": "grp_wh", "label": "Central + Branch Warehouse", "lane": "inventory", "fromCol": 2, "toCol": 4, "variant": "default" },
-    { "id": "grp_offer", "label": "Offer Campaign (parallel)", "lane": "whatsapp", "fromCol": 0, "toCol": 2, "variant": "dashed" }
-  ],
-  "mainPath": ["n_table", "n_items", "n_confirm", "n_bom", "n_stock_deduct", "n_pos_receipt", "n_payment_invoice", "n_thankyou"],
   "nodes": [
-    { "id": "n_table", "lane": "order", "col": 0, "type": "frontend", "label": "Table / Takeaway Select", "sublabel": "Counter 1 or 2, waiter tablet" },
-    { "id": "n_items", "lane": "order", "col": 1, "type": "frontend", "label": "Add Items to Order", "sublabel": "Menu + modifiers" },
-    { "id": "n_confirm", "lane": "order", "col": 2, "type": "frontend", "label": "Confirm Order", "sublabel": "To kitchen + billing" },
-
-    { "id": "n_bom", "lane": "kitchen", "col": 2, "type": "backend", "label": "BOM Explode Engine", "sublabel": "Dish -> Semi-FG -> Raw", "tag": "recursive recipe tree" },
-    { "id": "n_kot", "lane": "kitchen", "col": 3, "type": "frontend", "label": "KOT Ticket", "sublabel": "Qty+notes, no price" },
-    { "id": "n_semifg_alert", "lane": "kitchen", "col": 4, "type": "security", "label": "Semi-FG Batch Alert", "sublabel": "Below par, prep now" },
-
-    { "id": "n_central_wh", "lane": "inventory", "col": 2, "type": "database", "label": "Central Warehouse", "sublabel": "Bulk raw stock" },
-    { "id": "n_stock_deduct", "lane": "inventory", "col": 3, "type": "database", "label": "Auto Stock Deduction", "sublabel": "Raw+Semi-FG minus" },
-    { "id": "n_low_stock", "lane": "inventory", "col": 4, "type": "security", "label": "Low Stock Alert", "sublabel": "To Purchase" },
-
-    { "id": "n_pos_receipt", "lane": "billing", "col": 3, "type": "frontend", "label": "POS Receipt", "sublabel": "Counter 1/2 copy" },
-    { "id": "n_payment_invoice", "lane": "billing", "col": 4, "type": "database", "label": "Payment + GST Invoice", "sublabel": "FX lock, CGST/SGST/IGST" },
-    { "id": "n_gstr_export", "lane": "billing", "col": 5, "type": "security", "label": "GSTR-1 HSN Export", "sublabel": "Date-range CSV pull" },
-
-    { "id": "n_offer_owner", "lane": "whatsapp", "col": 0, "type": "frontend", "label": "Owner Creates Offer", "sublabel": "Text + validity" },
-    { "id": "n_offer_broadcast", "lane": "whatsapp", "col": 1, "type": "messagebus", "label": "Offer Alert Broadcast", "sublabel": "Batch fan-out" },
-    { "id": "n_customer_offer", "lane": "whatsapp", "col": 2, "type": "external", "label": "Customer WhatsApp", "sublabel": "Receives offer" },
-    { "id": "n_thankyou", "lane": "whatsapp", "col": 4, "type": "messagebus", "label": "WhatsApp Thank You", "sublabel": "Invoice link" }
+    {
+      "id": "n_table",
+      "lane": "order",
+      "col": 0,
+      "type": "frontend",
+      "label": "Table Select",
+      "sublabel": "Counter 1 or 2"
+    },
+    {
+      "id": "n_items",
+      "lane": "order",
+      "col": 1,
+      "type": "frontend",
+      "label": "Add Items",
+      "sublabel": "From menu"
+    },
+    {
+      "id": "n_confirm",
+      "lane": "order",
+      "col": 2,
+      "type": "frontend",
+      "label": "Confirm Order",
+      "sublabel": "Kitchen + billing"
+    },
+    {
+      "id": "n_recipe",
+      "lane": "kitchen",
+      "col": 0,
+      "type": "frontend",
+      "label": "Recipe Builder",
+      "sublabel": "One atomic save"
+    },
+    {
+      "id": "n_produce",
+      "lane": "kitchen",
+      "col": 1,
+      "type": "backend",
+      "label": "Semi-FG Batch",
+      "sublabel": "Credits real stock"
+    },
+    {
+      "id": "n_stock_check",
+      "lane": "kitchen",
+      "col": 2,
+      "type": "backend",
+      "label": "Stock Check",
+      "sublabel": "Raw + Semi-FG only"
+    },
+    {
+      "id": "n_kot",
+      "lane": "kitchen",
+      "col": 3,
+      "type": "frontend",
+      "label": "KOT Ticket",
+      "sublabel": "Item qty, no price"
+    },
+    {
+      "id": "n_semifg_alert",
+      "lane": "kitchen",
+      "col": 4,
+      "type": "security",
+      "label": "Semi-FG Check",
+      "sublabel": "Stock preview"
+    },
+    {
+      "id": "n_central_wh",
+      "lane": "inventory",
+      "col": 2,
+      "type": "database",
+      "label": "Central WH",
+      "sublabel": "Bulk raw stock"
+    },
+    {
+      "id": "n_stock_deduct",
+      "lane": "inventory",
+      "col": 3,
+      "type": "database",
+      "label": "Stock Deduct",
+      "sublabel": "Raw+SemiFG, atomic"
+    },
+    {
+      "id": "n_low_stock",
+      "lane": "inventory",
+      "col": 4,
+      "type": "security",
+      "label": "Low Stock",
+      "sublabel": "Min/max badge"
+    },
+    {
+      "id": "n_pos_receipt",
+      "lane": "billing",
+      "col": 3,
+      "type": "frontend",
+      "label": "POS Receipt",
+      "sublabel": "Counter 1/2 copy"
+    },
+    {
+      "id": "n_payment_invoice",
+      "lane": "billing",
+      "col": 4,
+      "type": "database",
+      "label": "GST Invoice",
+      "sublabel": "FX lock, GST split"
+    },
+    {
+      "id": "n_gstr_export",
+      "lane": "billing",
+      "col": 5,
+      "type": "security",
+      "label": "Accounts GSTR",
+      "sublabel": "All eligible sales",
+      "yOffset": 78
+    },
+    {
+      "id": "n_thankyou",
+      "lane": "billing",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Thank You",
+      "sublabel": "Optional text send",
+      "yOffset": 0
+    },
+    {
+      "id": "n_shift_setup",
+      "lane": "shifts",
+      "col": 0,
+      "type": "security",
+      "label": "Shift Setup",
+      "sublabel": "Branch windows"
+    },
+    {
+      "id": "n_shift_start",
+      "lane": "shifts",
+      "col": 1,
+      "type": "backend",
+      "label": "Start Shift",
+      "sublabel": "Current IST window"
+    },
+    {
+      "id": "n_shift_gate",
+      "lane": "shifts",
+      "col": 2,
+      "type": "security",
+      "label": "Shift Gate",
+      "sublabel": "Open + accepted"
+    },
+    {
+      "id": "n_blind_count",
+      "lane": "shifts",
+      "col": 3,
+      "type": "frontend",
+      "label": "Blind Count",
+      "sublabel": "Manual End Shift"
+    },
+    {
+      "id": "n_shift_next",
+      "lane": "shifts",
+      "col": 4,
+      "type": "database",
+      "label": "Next Shift",
+      "sublabel": "Handover pending"
+    },
+    {
+      "id": "n_accept_handover",
+      "lane": "shifts",
+      "col": 5,
+      "type": "security",
+      "label": "Accept Shift",
+      "sublabel": "Handover approval"
+    },
+    {
+      "id": "n_owner_privacy",
+      "lane": "privacy",
+      "col": 0,
+      "type": "security",
+      "label": "Owner-only",
+      "sublabel": "Owner action only"
+    },
+    {
+      "id": "n_visibility_audit",
+      "lane": "privacy",
+      "col": 1,
+      "type": "database",
+      "label": "Reason + Audit",
+      "sublabel": "One transaction"
+    },
+    {
+      "id": "n_staff_view",
+      "lane": "privacy",
+      "col": 2,
+      "type": "frontend",
+      "label": "Staff View",
+      "sublabel": "Visible sales only",
+      "yOffset": -44
+    },
+    {
+      "id": "n_actual_records",
+      "lane": "privacy",
+      "col": 2,
+      "type": "database",
+      "label": "Actual Records",
+      "sublabel": "Tax, stock, cash",
+      "yOffset": 44
+    },
+    {
+      "id": "n_official_access",
+      "lane": "privacy",
+      "col": 3,
+      "type": "security",
+      "label": "Accounts GSTR",
+      "sublabel": "Separate grant",
+      "yOffset": 44
+    }
   ],
   "edges": [
-    { "id": "e1", "from": "n_table", "to": "n_items", "variant": "default" },
-    { "id": "e2", "from": "n_items", "to": "n_confirm", "variant": "default" },
-    { "id": "e3", "from": "n_confirm", "to": "n_bom", "variant": "emphasis" },
-    { "id": "e4", "from": "n_bom", "to": "n_kot", "label": "kitchen copy", "variant": "default", "role": "branch" },
-    { "id": "e5", "from": "n_bom", "to": "n_stock_deduct", "label": "raw+semiFG qty", "variant": "emphasis" },
-    { "id": "e6", "from": "n_stock_deduct", "to": "n_pos_receipt", "label": "price copy", "variant": "emphasis" },
-    { "id": "e7", "from": "n_central_wh", "to": "n_stock_deduct", "label": "replenish", "variant": "dashed" },
-    { "id": "e8", "from": "n_kot", "to": "n_semifg_alert", "label": "par check", "variant": "dashed", "role": "branch" },
-    { "id": "e9", "from": "n_stock_deduct", "to": "n_low_stock", "label": "below min", "variant": "dashed", "role": "branch" },
-    { "id": "e10", "from": "n_pos_receipt", "to": "n_payment_invoice", "label": "tax split", "variant": "default" },
-    { "id": "e12", "from": "n_payment_invoice", "to": "n_gstr_export", "label": "HSN summary", "variant": "dashed", "role": "branch" },
-    { "id": "e11", "from": "n_payment_invoice", "to": "n_thankyou", "label": "invoice link", "variant": "emphasis" },
-    { "id": "e13", "from": "n_offer_owner", "to": "n_offer_broadcast", "variant": "default" },
-    { "id": "e14", "from": "n_offer_broadcast", "to": "n_customer_offer", "variant": "default" }
+    {
+      "id": "e1",
+      "from": "n_table",
+      "to": "n_items",
+      "variant": "default"
+    },
+    {
+      "id": "e2",
+      "from": "n_items",
+      "to": "n_confirm",
+      "variant": "default"
+    },
+    {
+      "id": "e3",
+      "from": "n_confirm",
+      "to": "n_stock_check",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_setup1",
+      "from": "n_recipe",
+      "to": "n_produce",
+      "label": "defines batch",
+      "variant": "default"
+    },
+    {
+      "id": "e_setup2",
+      "from": "n_produce",
+      "to": "n_stock_check",
+      "label": "stock ready",
+      "variant": "default"
+    },
+    {
+      "id": "e4",
+      "from": "n_stock_check",
+      "to": "n_kot",
+      "label": "kitchen copy",
+      "variant": "default",
+      "role": "branch"
+    },
+    {
+      "id": "e5",
+      "from": "n_stock_check",
+      "to": "n_stock_deduct",
+      "label": "raw + Semi-FG qty",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e6",
+      "from": "n_stock_deduct",
+      "to": "n_pos_receipt",
+      "label": "price copy",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e7",
+      "from": "n_central_wh",
+      "to": "n_stock_deduct",
+      "label": "replenish",
+      "variant": "dashed"
+    },
+    {
+      "id": "e8",
+      "from": "n_kot",
+      "to": "n_semifg_alert",
+      "label": "stock check",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e9",
+      "from": "n_stock_deduct",
+      "to": "n_low_stock",
+      "label": "below min",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e10",
+      "from": "n_pos_receipt",
+      "to": "n_payment_invoice",
+      "label": "tax split",
+      "variant": "default"
+    },
+    {
+      "id": "e12",
+      "from": "n_payment_invoice",
+      "to": "n_gstr_export",
+      "label": "HSN summary",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e11",
+      "from": "n_payment_invoice",
+      "to": "n_thankyou",
+      "label": "optional send",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_shift_setup_shift_start",
+      "from": "n_shift_setup",
+      "to": "n_shift_start",
+      "variant": "default"
+    },
+    {
+      "id": "e_shift_start_shift_gate",
+      "from": "n_shift_start",
+      "to": "n_shift_gate",
+      "variant": "default"
+    },
+    {
+      "id": "e_shift_gate_blind_count",
+      "from": "n_shift_gate",
+      "to": "n_blind_count",
+      "variant": "default",
+      "label": "after work"
+    },
+    {
+      "id": "e_blind_count_shift_next",
+      "from": "n_blind_count",
+      "to": "n_shift_next",
+      "variant": "default"
+    },
+    {
+      "id": "e_shift_next_accept_handover",
+      "from": "n_shift_next",
+      "to": "n_accept_handover",
+      "variant": "default"
+    },
+    {
+      "id": "e_owner_privacy_visibility_audit",
+      "from": "n_owner_privacy",
+      "to": "n_visibility_audit",
+      "variant": "security"
+    },
+    {
+      "id": "e_visibility_audit_staff_view",
+      "from": "n_visibility_audit",
+      "to": "n_staff_view",
+      "variant": "security"
+    },
+    {
+      "id": "e_visibility_audit_actual_records",
+      "from": "n_visibility_audit",
+      "to": "n_actual_records",
+      "variant": "dashed",
+      "label": "unchanged"
+    },
+    {
+      "id": "e_actual_records_official_access",
+      "from": "n_actual_records",
+      "to": "n_official_access",
+      "variant": "default"
+    },
+    {
+      "id": "e_shift_allows_sale",
+      "from": "n_shift_gate",
+      "to": "n_confirm",
+      "label": "sale allowed",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_shift_cycle_return",
+      "from": "n_accept_handover",
+      "to": "n_shift_gate",
+      "label": "next run ready",
+      "role": "return",
+      "variant": "dashed"
+    }
   ],
   "cards": [
-    { "dot": "cyan", "title": "1. Order Capture — Waiter Tablet", "items": [
-      "The waiter picks the table/takeaway on their own tablet, adds items from the menu, then taps Confirm Order.",
-      "Example: Table T-12, Counter 1 — added 2x Butter Chicken + 1x Garlic Naan and confirmed."
-    ] },
-    { "dot": "cyan", "title": "2. BOM Explode Engine — the Dish's Real Recipe", "items": [
-      "Every dish's BOM (Bill of Materials) is recursive: a dish can use a Semi-FG (gravy/sauce/marinade) as an ingredient, and that Semi-FG is itself a small recipe made from raw materials.",
-      "Example: Butter Chicken = 1 unit of Gravy (Semi-FG) + 200g Chicken. The Gravy itself is made from Tomato + Butter + Spices — on confirm, the system explodes both levels at once and works out the real raw-material quantity needed."
-    ] },
-    { "dot": "amber", "title": "2b. How Semi-FG Raw Material Is Actually Deducted", "items": [
-      "There is no separate 'batch cooked the gravy today' transaction yet. The system does NOT keep a live stock count for Semi-FG items (no 'how much Gravy is left in the pot' number).",
-      "Instead, every time a dish using that Semi-FG is ordered, the system walks the recipe down to raw materials and deducts Tomato/Butter/Spices from the branch's real inventory at that moment — as if the Gravy were made fresh for that one order.",
-      "Why this is still correct: over a full day, Total Raw Material Used = Total Dishes Sold × Recipe Ratio either way, so the end-of-day inventory numbers come out right regardless of real kitchen batching. What it does NOT yet track is a literal 'we made 10 litres of Gravy this morning' stock entry — that would be a separate future feature (a true Semi-FG production/batch-stock module) if the kitchen wants to track in-progress batches explicitly."
-    ] },
-    { "dot": "cyan", "title": "3. Kitchen KOT + Semi-FG Alert", "items": [
-      "The kitchen only sees a ticket with item + quantity (the KOT) — no price, so kitchen staff are never distracted by billing.",
-      "Example: the KOT prints 'Butter Chicken x2, Garlic Naan x1'. If the Gravy's recent consumption rate suggests the batch is running low, the kitchen also gets a 'prep now' alert."
-    ] },
-    { "dot": "emerald", "title": "4. Central + Branch Warehouse", "items": [
-      "The Owner sets up one Central warehouse (bulk stock) and each branch gets its own local warehouse.",
-      "Example: Central dispatches 50 kg Chicken to Branch B2 — this is a paper record only; B2's actual stock has not changed yet."
-    ] },
-    { "dot": "emerald", "title": "5. Receive = the Real Stock Move", "items": [
-      "Dispatch is just a record; branch inventory only changes when the branch confirms Receive.",
-      "Example: B2 receives 48 kg (out of 50 dispatched) — B2's inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden."
-    ] },
-    { "dot": "emerald", "title": "6. Auto Stock Deduction + Low Stock Alert", "items": [
-      "The moment an order is confirmed, both raw material and Semi-FG raw-material requirements are deducted from the branch's real inventory. If stock is short, the WHOLE order is rejected (never a partial order).",
-      "Example: Chicken stock drops below the 20 kg minimum — the Purchase team gets a Low Stock Alert immediately, before it becomes a shortage."
-    ] },
-    { "dot": "violet", "title": "7. POS Receipt — 2 Billing Counters", "items": [
-      "Each branch has 2 independent billing counters (Counter 1 and Counter 2) that can bill at the same time — no queue during rush hours.",
-      "Example: Counter 1 bills a dine-in customer while Counter 2 bills a takeaway customer at the same moment — no conflict between them."
-    ] },
-    { "dot": "violet", "title": "8. GST Invoice — CGST/SGST/IGST Auto-Split", "items": [
-      "One company GSTIN, every branch invoices under it. Same state → CGST+SGST split evenly; different state → full IGST — with an HSN/SAC code on every item.",
-      "Example: a ₹300 item at 5% GST — same state: CGST ₹7.50 + SGST ₹7.50; a customer from another state instead pays IGST ₹15.00 in one line."
-    ] },
-    { "dot": "violet", "title": "9. Multi-Currency — NRI / Export Billing", "items": [
-      "Payments can be accepted in a foreign currency; the exchange rate is locked at the moment of SALE — if the rate changes later, that past bill never changes. The GST invoice itself always stays in INR (legal requirement).",
-      "Example: a ₹363.20 bill, paid in USD — the receipt shows 'Payable in USD: $4.30 (rate locked at ₹84.50)'. Even if tomorrow's rate becomes ₹85, this bill stays exactly as it was."
-    ] },
-    { "dot": "violet", "title": "10. GSTR-1 HSN Export — Filing Ready", "items": [
-      "The Owner/Accountant picks a date range and branch, and downloads an HSN-wise GST summary CSV in one click — it pastes directly into the GST portal's offline filing tool.",
-      "Example: two October orders both have items under HSN 2106 @ 5% — the export merges them into one row: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Orders from a branch without GST set up are shown separately as 'excluded' — never silently hidden inside the filing."
-    ] },
-    { "dot": "rose", "title": "11. WhatsApp Thank You Message", "items": [
-      "The moment an order is confirmed, a real Thank You message goes to the customer's WhatsApp (if they gave a number) — fully automatic, no manual step.",
-      "Example: 'Hi Rahul! Your order #ORD-4821 is confirmed — Total ₹420. Thank you, see you again! 🙏'"
-    ] },
-    { "dot": "rose", "title": "12. WhatsApp Offer Campaign", "items": [
-      "When the Owner creates a new offer, it broadcasts to every REAL customer in one click — the list is not invented, it's only people who actually ordered before and gave their number.",
-      "Example: 'Saket Branch: 20% off all starters today! Valid until 31 Oct' — sent to 45 past customers at once, with a live sent/failed count."
-    ] }
+    {
+      "dot": "cyan",
+      "title": "1. Order Capture - Branch POS",
+      "items": [
+        "POS user selects table/takeaway, counter and same-branch sellable items, then confirms. This is the responsive POS screen, not a separate waiter app.",
+        "Branch/grant/session checks run server-side. A configured branch requires an open shift and accepted incoming handover before sale."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "2. Recipe Builder — Define the Dish's Real Recipe (one-time setup)",
+      "items": [
+        "Before anything can be sold, its recipe is saved once in Recipe Builder: the dish/Semi-FG name, branch, output unit (portion/kg/ltr/pcs), batch yield, and every ingredient row — each either a raw material OR an existing same-branch Semi-FG. The whole dish + recipe saves atomically in one go; saving a recipe never touches stock.",
+        "Example: Butter Chicken's recipe = 0.1kg Gravy (Semi-FG) + 0.25kg Chicken per portion. Gravy's own recipe = 0.3kg Tomato + 0.3kg Butter per 1kg produced. A cycle (Gravy needing itself, directly or through another Semi-FG) is rejected at save time."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "3. Semi-FG Production — Real Prepared Stock, Not Virtual",
+      "items": [
+        "A Semi-FG only becomes real, sellable stock after it is actually PRODUCED on the Production panel — pick the Semi-FG and an output quantity, Record production. This is the ONLY action that credits real prepared stock in Postgres (semi_fg_stock).",
+        "Production consumes the Semi-FG's OWN direct raw materials (and any nested Semi-FG) exactly once, then credits the produced quantity. Each production is idempotent and its history is immutable — a retried request never double-deducts or double-credits.",
+        "Example: Recording 1kg of Gravy production consumes 0.3kg Tomato + 0.3kg Butter from real branch inventory right then, and credits 1kg to Gravy's own Semi-FG stock — before this, Gravy's sellable stock is 0."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "4. Stock Check Engine — Direct Raw + Produced Semi-FG Only",
+      "items": [
+        "On Confirm Order, the system checks and atomically deducts ONLY the direct raw materials and any already-PRODUCED Semi-FG stock each line needs — it never walks back into a Semi-FG's own embedded raw ingredients a second time (no recursive/virtual deduction).",
+        "If a dish needs a Semi-FG that hasn't been produced yet, or produced stock is short, the WHOLE order is rejected with a clear message — never a partial sale, and the cashier is told to produce it first.",
+        "Example: Butter Chicken needs 0.1kg Gravy + 0.25kg Chicken per plate. Selling 10 plates needs 1kg Gravy stock (from Step 3's production) + 2.5kg Chicken — Gravy's own Tomato/Butter is never touched again at sale time."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "5. Kitchen KOT + Semi-FG Stock Alert",
+      "items": [
+        "Confirmed sale returns a KOT view containing item names and quantities without prices, alongside the billing receipt. Separate kitchen-device delivery or automatic printing is not claimed.",
+        "Use prepared-stock preview to identify Semi-FG shortage and record another batch. A scheduled automatic low-stock message is not established."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "6. Central + Branch Warehouse",
+      "items": [
+        "The Owner sets up one Central warehouse (bulk stock) and each branch gets its own local warehouse.",
+        "Example: Central dispatches 50 kg Chicken to Branch B2 — this is a paper record only; B2's actual stock has not changed yet."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "7. Receive = the Real Stock Move",
+      "items": [
+        "Dispatch is just a record; branch inventory only changes when the branch confirms Receive.",
+        "Example: B2 receives 48 kg (out of 50 dispatched) — B2's inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "8. Auto Stock Deduction + Low Stock Alert",
+      "items": [
+        "Sale atomically deducts direct raw + already-produced Semi-FG stock. Any shortage rejects the whole sale; embedded Semi-FG raw is not consumed again.",
+        "Inventory min/max badges identify configured raw-stock limits. Purchase & GRN remains an interactive demo; automatic purchase posting or alert sending is not claimed."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "9. POS Receipt — 2 Billing Counters",
+      "items": [
+        "Each order records Counter 1 or Counter 2. Both use the same branch stock and shift rules; this is counter attribution, not a separate independent cash drawer ledger.",
+        "Successful confirmation returns the real receipt and KOT. Displayed sales are today-scoped; latest 200 rows are listed while totals cover all completed sales in the same scope."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "10. GST Invoice — CGST/SGST/IGST Auto-Split",
+      "items": [
+        "When branch and company GST state codes are configured, billing computes GST and splits CGST/SGST or IGST. Unconfigured orders are billed without GST and excluded separately by the export.",
+        "Illustration only: taxable 300 at 5% yields 15 tax; intra-state split is 7.50 + 7.50. Tax configuration and filing review remain the business responsibility."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "11. Multi-Currency — NRI / Export Billing",
+      "items": [
+        "Optional non-INR tender requires an Owner-configured exchange rate. The sale snapshots that rate and payment amount; the invoice amount stays in INR.",
+        "Example: INR 363.20 / 84.50 gives USD 4.30 payment convenience. Later FX edits do not rewrite the saved sale."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "12. Accounts -> GSTR Export - Actual Eligible Sales",
+      "items": [
+        "GSTR Export is a tab inside Accounts, no separate sidebar item. Owner or a branch-scoped user explicitly granted OFFICIAL_SALES_REPORTS can view/download its HSN summary. POS_CASHIER alone is insufficient.",
+        "Owner-only operational orders remain included with every other eligible completed order. Missing GST setup is reported as excluded; privacy never changes tax/invoice totals. CSV is a summary for review, not a claim that filing has occurred."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "13. WhatsApp Thank You Message",
+      "items": [
+        "Optional customer phone triggers a best-effort ChatXFlow Thank You text after the order commits. Provider failure never rolls back the real sale; sent/failed outcome is displayed.",
+        "The text contains order number, total and branch. There is no generated invoice-link delivery implied, and a previously sent message cannot be recalled by later privacy changes."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "14. WhatsApp Offer Campaign",
+      "items": [
+        "Offer preview and send audience derive distinct customer contacts from actual past orders. Non-Owners exclude contacts found only on Owner-only orders; Owner sees the full scoped audience.",
+        "A send is an external side effect, separate from saving an order. This chart update sends no messages and creates no business records."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "15. Shift Setup + Start - Local QA, Not Deployed",
+      "items": [
+        "Owner can configure any branch; Branch Admin with SHIFT_MANAGEMENT only their own. Set 1-12 contiguous IST windows covering 24 hours; one same-start/end window covers a full day.",
+        "Start Shift selects the current window. A branch has one open run. A branch not configured retains legacy POS behavior; setup is required before real shift closing. Old definitions/history survive later edits."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "16. Blind Count -> End Shift -> Next Run",
+      "items": [
+        "Cashier or authorized operational user enters note/coin counts without expected cash. Manual End Shift saves the count and shortage/excess, ends the old run, opens its cyclic successor and creates a PENDING handover atomically.",
+        "Expected closing cash = accepted incoming counted cash + this run CASH sales. Example: received 500, new cash sales 300, count 790 -> expected 800 and shortage 10. The next shift receives physical 790.",
+        "Card/UPI/Other are current-run receipt summaries only, never accumulated bank transfers. Initial cash float and safe withdrawals are not modeled."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "17. Accept Handover -> Repeat the Cycle",
+      "items": [
+        "The incoming first authorized cashier sees actual Cash/Card/UPI/Other totals and must Accept Handover. POS and another closing remain blocked until acceptance; then the same operational cycle repeats.",
+        "A one-window branch opens a NEW run of the same window, never reuses the ended run ID. Time reminders are settings-only; time alone never closes a shift. Unknown closing outcome is not blindly retried."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "18. Owner-only Privacy - Local QA, Not Deployed",
+      "items": [
+        "Only Owner can mark a saved order Owner-only or restore staff visibility, with a reason. Visibility change and its audit entry commit together; repeated same-state requests do not create duplicate audit events.",
+        "Example: two 500 orders -> Owner sees actual 1000 / staff-visible 500 / private 500. Staff API/table returns only the visible order and labels 500 as access-filtered, not actual total."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "19. Actual Accounting Is Never Filtered by Privacy",
+      "items": [
+        "Private operational visibility never deletes sales, changes invoices/GST, reverses stock or reduces actual cash reconciliation. Official Accounts GSTR remains unfiltered under its separate grant.",
+        "Cash custodians and authorized official readers may infer actual aggregate amounts. Past views, printouts, screenshots, downloads and sent receipts cannot be revoked. Existing sample dashboards/reports are not live privacy-aware sales totals."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "20. Real Accounts + Workforce Modules",
+      "items": [
+        "Accounts stores categorized expenses and final payroll costs. Attendance, approved leave, employee rate history and payroll finalization have real DB-backed paths; branch and module grants control access.",
+        "Payroll uses actual calendar days, no weekly-off concept. Only approved paid ON_ROLL leave is paid; OFF_ROLL earns worked days. Missing attendance blocks finalization. P&L does not invent sales/COGS/net profit when those sources are unconnected."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "21. System Boundaries + Release Status",
+      "items": [
+        "Users/access, branches, branding, inventory, menu/recipes, Semi-FG production, warehouse receive, POS and provider settings have real persistence. Guide Book explains permissions and practice examples in English/Hinglish.",
+        "Dashboard, Reports, MIS, Tasks/Checklists and Purchase/GRN still include labelled sample/demo flows. Do not confuse their charts/actions with live accounting or automated task/PO engines.",
+        "Recipe Builder/Semi-FG release was deployed earlier. GSTR tab move, shifts and Owner-only privacy are current local changes; privacy migration 0009 is QA-only and main local DB still needs it. Full interactive browser acceptance has known tooling gaps. No deployment, migration, commit or push is done by updating this chart."
+      ]
+    }
   ]
 }

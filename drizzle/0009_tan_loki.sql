@@ -1,0 +1,1 @@
+ALTER TABLE "pos_orders" ADD COLUMN "owner_only" boolean DEFAULT false NOT NULL;

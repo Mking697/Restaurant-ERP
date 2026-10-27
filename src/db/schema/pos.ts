@@ -41,16 +41,27 @@ export const posOrders = pgTable(
     tenderCurrencyAmount: numeric("tender_currency_amount", { precision: 12, scale: 2 }).notNull().default("0"),
     tenderType: text("tender_type").notNull(), // CASH, UPI, CARD, SWIGGY, ZOMATO
     status: orderStatusEnum("status").notNull().default("COMPLETED"),
+    // Operational confidentiality only. Never exclude this order from tax,
+    // inventory or actual cash reconciliation because of this flag.
+    ownerOnly: boolean("owner_only").notNull().default(false),
     voidReason: text("void_reason").notNull().default(""),
     cashierId: text("cashier_id")
       .notNull()
       .references(() => users.id),
+    // Which operational shift run (src/db/schema/shifts.ts) this order fell
+    // under — plain text, not a FK, so pos.ts never needs to import
+    // shifts.ts (shifts.ts already imports pos.ts for cashDrops, avoiding a
+    // circular module dependency). Empty string means "no shift system
+    // configured for this branch yet" — legacy/back-compat, never blocks a
+    // sale on its own.
+    shiftRunId: text("shift_run_id").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("pos_orders_branch_order_number_unique").on(table.branchId, table.orderNumber),
     index("pos_orders_branch_created_idx").on(table.branchId, table.createdAt),
+    index("pos_orders_shift_run_id_idx").on(table.shiftRunId),
   ]
 );
 
@@ -106,6 +117,11 @@ export const cashDrops = pgTable(
     coinsInr: numeric("coins_inr", { precision: 10, scale: 2 }).notNull().default("0"),
     countedCashInr: numeric("counted_cash_inr", { precision: 10, scale: 2 }).notNull(), // computed
     shortageExcessInr: numeric("shortage_excess_inr", { precision: 10, scale: 2 }).notNull(),
+    // Which shift run (src/db/schema/shifts.ts) this count was taken for —
+    // plain text (see pos_orders.shiftRunId comment for why, same reason).
+    // Set when this drop is the CLOSING count submitted as part of ending a
+    // shift; empty for an ordinary mid-shift/off-cycle cash count.
+    shiftRunId: text("shift_run_id").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -115,6 +131,7 @@ export const cashDrops = pgTable(
       table.shiftDate
     ),
     index("cash_drops_branch_id_idx").on(table.branchId),
+    index("cash_drops_shift_run_id_idx").on(table.shiftRunId),
   ]
 );
 

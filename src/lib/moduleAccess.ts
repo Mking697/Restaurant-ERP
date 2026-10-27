@@ -17,6 +17,7 @@ export const MODULE_KEYS = [
   "TASKS_DELEGATION", // one-time delegation
   "CHECKLISTS", // multi-step checklist templates/runs (opening/closing, audits)
   "POS_CASHIER", // POS billing
+  "OFFICIAL_SALES_REPORTS", // unfiltered official GSTR/accounting sales exports; not operational visibility
   "CASH_DROP", // blind cash drop entry
   "PETTY_CASH", // petty cash ledger
   "AGGREGATOR_RECON", // Swiggy/Zomato reconciliation
@@ -28,6 +29,7 @@ export const MODULE_KEYS = [
   "ATTENDANCE", // branch daily attendance marking
   "LEAVE_APPROVAL", // branch leave review (never own leave)
   "LEAVE_SELF", // linked employee self-service applications
+  "SHIFT_MANAGEMENT", // configure branch shift windows; end-shift/accept-handover cycle
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];

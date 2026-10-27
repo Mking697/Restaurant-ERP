@@ -6,11 +6,11 @@
   "status": "pass",
   "visualReview": "not-requested",
   "provenance": "current",
-  "deliveryReceiptId": "83b0f954-efb5-49b8-a8f7-2051db8c9321",
+  "deliveryReceiptId": "2e8310c1-388a-42e6-8ac3-64b1b61d5709",
   "artifact": {
-    "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
-    "sha256": "dbe89444de4f94ac383dc6b480ea0d5b0576c0e5dca8c8fa801e4a1257e20391",
-    "bytes": 868827
+    "path": "D:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+    "sha256": "bcbc87bf322e812bec72891561a317ab0721e54ffd83d28300fd0701c7093512",
+    "bytes": 804421
   },
   "state": {
     "detail": "read",
@@ -18,7 +18,7 @@
   },
   "chrome": {
     "status": "available",
-    "executable": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+    "executable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
   },
   "diagnostics": [],
   "containment": {
@@ -32,102 +32,122 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1151,
+        "scrollHeight": 1075,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1376,
-        "diagramWidth": 1346,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 12,
-          "headerPx": 78,
+          "headerPx": 115,
           "diagramChromePx": 78,
-          "svgPx": 982,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 141,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 84,
-            "spaceAboveNodesPx": 51,
-            "spaceBelowNodesPx": 6
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 131,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 131,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -150,102 +170,122 @@
         "innerWidth": 1600,
         "innerHeight": 1000,
         "scrollWidth": 1600,
-        "scrollHeight": 1333,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1536,
-        "diagramWidth": 1506,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1099,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 158,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 94,
-            "spaceAboveNodesPx": 57,
-            "spaceBelowNodesPx": 7
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 147,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 147,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -268,102 +308,122 @@
         "innerWidth": 1920,
         "innerHeight": 1080,
         "scrollWidth": 1920,
-        "scrollHeight": 1425,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1856,
-        "diagramWidth": 1632,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1191,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -386,102 +446,122 @@
         "innerWidth": 2048,
         "innerHeight": 1320,
         "scrollWidth": 2048,
-        "scrollHeight": 1443,
+        "scrollHeight": 1320,
         "overflowX": false,
-        "overflowY": true,
-        "verticalScrollAccepted": true,
-        "overflowDisposition": "readable-vertical-scroll",
+        "overflowY": false,
+        "verticalScrollAccepted": false,
+        "overflowDisposition": "contained",
         "readerLayout": "adaptive",
-        "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerOverflow": null,
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1920,
-        "diagramWidth": 1632,
+        "readerWidth": 968,
+        "diagramWidth": 918,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 94,
+          "headerPx": 131,
           "diagramChromePx": 94,
-          "svgPx": 1191,
+          "svgPx": 1018,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 224,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 119,
+            "spaceAboveNodesPx": 102,
+            "spaceBelowNodesPx": 4
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 162,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 128,
+            "spaceAboveNodesPx": 31,
+            "spaceBelowNodesPx": 4
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 7.026441351888668,
+        "minimumProjectedNonEdgeTextPx": 7.026441351888668,
+        "minimumProjectedEdgeTextPx": 7.300198807157058,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -557,102 +637,122 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1151,
+        "scrollHeight": 1075,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1376,
-        "diagramWidth": 1346,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 12,
-          "headerPx": 78,
+          "headerPx": 115,
           "diagramChromePx": 78,
-          "svgPx": 982,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 141,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 84,
-            "spaceAboveNodesPx": 51,
-            "spaceBelowNodesPx": 6
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 131,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 131,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -675,102 +775,122 @@
         "innerWidth": 1600,
         "innerHeight": 1000,
         "scrollWidth": 1600,
-        "scrollHeight": 1333,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1536,
-        "diagramWidth": 1506,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1099,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 158,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 94,
-            "spaceAboveNodesPx": 57,
-            "spaceBelowNodesPx": 7
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 147,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 147,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -793,102 +913,122 @@
         "innerWidth": 1920,
         "innerHeight": 1080,
         "scrollWidth": 1920,
-        "scrollHeight": 1425,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1856,
-        "diagramWidth": 1632,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1191,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -911,102 +1051,122 @@
         "innerWidth": 2048,
         "innerHeight": 1320,
         "scrollWidth": 2048,
-        "scrollHeight": 1443,
+        "scrollHeight": 1320,
         "overflowX": false,
-        "overflowY": true,
-        "verticalScrollAccepted": true,
-        "overflowDisposition": "readable-vertical-scroll",
+        "overflowY": false,
+        "verticalScrollAccepted": false,
+        "overflowDisposition": "contained",
         "readerLayout": "adaptive",
-        "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerOverflow": null,
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1920,
-        "diagramWidth": 1632,
+        "readerWidth": 968,
+        "diagramWidth": 918,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 94,
+          "headerPx": 131,
           "diagramChromePx": 94,
-          "svgPx": 1191,
+          "svgPx": 1018,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 224,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 119,
+            "spaceAboveNodesPx": 102,
+            "spaceBelowNodesPx": 4
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 162,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 128,
+            "spaceAboveNodesPx": 31,
+            "spaceBelowNodesPx": 4
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 7.026441351888668,
+        "minimumProjectedNonEdgeTextPx": 7.026441351888668,
+        "minimumProjectedEdgeTextPx": 7.300198807157058,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -1034,102 +1194,122 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1151,
+        "scrollHeight": 1075,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1376,
-        "diagramWidth": 1346,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 12,
-          "headerPx": 78,
+          "headerPx": 115,
           "diagramChromePx": 78,
-          "svgPx": 982,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 141,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 84,
-            "spaceAboveNodesPx": 51,
-            "spaceBelowNodesPx": 6
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 131,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 131,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 131,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 64,
-            "spaceAboveNodesPx": 52,
-            "spaceBelowNodesPx": 15
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -1152,102 +1332,122 @@
         "innerWidth": 1600,
         "innerHeight": 1000,
         "scrollWidth": 1600,
-        "scrollHeight": 1333,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1536,
-        "diagramWidth": 1506,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1099,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 158,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 94,
-            "spaceAboveNodesPx": 57,
-            "spaceBelowNodesPx": 7
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 147,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 147,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 147,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 72,
-            "spaceAboveNodesPx": 58,
-            "spaceBelowNodesPx": 17
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -1270,102 +1470,122 @@
         "innerWidth": 1920,
         "innerHeight": 1080,
         "scrollWidth": 1920,
-        "scrollHeight": 1425,
+        "scrollHeight": 1141,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
         "overflowDisposition": "readable-vertical-scroll",
         "readerLayout": "adaptive",
         "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1856,
-        "diagramWidth": 1632,
+        "readerWidth": 960,
+        "diagramWidth": 784,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 86,
+          "headerPx": 123,
           "diagramChromePx": 84,
-          "svgPx": 1191,
+          "svgPx": 870,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 192,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 101,
+            "spaceAboveNodesPx": 87,
+            "spaceBelowNodesPx": 3
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 139,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 109,
+            "spaceAboveNodesPx": 26,
+            "spaceBelowNodesPx": 3
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 81,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 81,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 41,
+            "spaceAboveNodesPx": 32,
+            "spaceBelowNodesPx": 9
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 6.00079522862823,
+        "minimumProjectedNonEdgeTextPx": 6.00079522862823,
+        "minimumProjectedEdgeTextPx": 6.2345924453280315,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,
@@ -1388,102 +1608,122 @@
         "innerWidth": 2048,
         "innerHeight": 1320,
         "scrollWidth": 2048,
-        "scrollHeight": 1443,
+        "scrollHeight": 1320,
         "overflowX": false,
-        "overflowY": true,
-        "verticalScrollAccepted": true,
-        "overflowDisposition": "readable-vertical-scroll",
+        "overflowY": false,
+        "verticalScrollAccepted": false,
+        "overflowDisposition": "contained",
         "readerLayout": "adaptive",
-        "readerOverflow": "authored",
-        "readerFit": "width-first",
+        "readerOverflow": null,
+        "readerFit": "intrinsic-height",
         "ok": true,
-        "readerWidth": 1920,
-        "diagramWidth": 1632,
+        "readerWidth": 968,
+        "diagramWidth": 918,
         "pageComposition": {
           "bodyPaddingPx": 64,
-          "headerPx": 94,
+          "headerPx": 131,
           "diagramChromePx": 94,
-          "svgPx": 1191,
+          "svgPx": 1018,
           "cardsPx": 0,
-          "viewBoxHeight": 794
+          "viewBoxHeight": 1116
         },
-        "viewBoxWidth": 1088,
+        "viewBoxWidth": 1006,
         "workflowLanes": [
           {
-            "frameId": "lane-1",
-            "heightPx": 171,
-            "nodeCount": 3,
+            "frameId": "lane-4",
+            "heightPx": 224,
+            "nodeCount": 4,
             "nodeIds": [
-              "n_bom",
-              "n_kot",
-              "n_semifg_alert"
+              "n_pos_receipt",
+              "n_payment_invoice",
+              "n_gstr_export",
+              "n_thankyou"
             ],
-            "nodeSpanPx": 102,
-            "spaceAboveNodesPx": 62,
-            "spaceBelowNodesPx": 8
+            "nodeSpanPx": 119,
+            "spaceAboveNodesPx": 102,
+            "spaceBelowNodesPx": 4
+          },
+          {
+            "frameId": "lane-5",
+            "heightPx": 162,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_owner_privacy",
+              "n_visibility_audit",
+              "n_actual_records",
+              "n_staff_view",
+              "n_official_access"
+            ],
+            "nodeSpanPx": 128,
+            "spaceAboveNodesPx": 31,
+            "spaceBelowNodesPx": 4
           },
           {
             "frameId": "lane-0",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 6,
+            "nodeIds": [
+              "n_shift_setup",
+              "n_shift_start",
+              "n_shift_gate",
+              "n_blind_count",
+              "n_shift_next",
+              "n_accept_handover"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-1",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_table",
               "n_items",
               "n_confirm"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           },
           {
             "frameId": "lane-2",
-            "heightPx": 159,
+            "heightPx": 95,
+            "nodeCount": 5,
+            "nodeIds": [
+              "n_recipe",
+              "n_produce",
+              "n_stock_check",
+              "n_kot",
+              "n_semifg_alert"
+            ],
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
+          },
+          {
+            "frameId": "lane-3",
+            "heightPx": 95,
             "nodeCount": 3,
             "nodeIds": [
               "n_central_wh",
               "n_stock_deduct",
               "n_low_stock"
             ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-3",
-            "heightPx": 159,
-            "nodeCount": 3,
-            "nodeIds": [
-              "n_pos_receipt",
-              "n_payment_invoice",
-              "n_gstr_export"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
-          },
-          {
-            "frameId": "lane-4",
-            "heightPx": 159,
-            "nodeCount": 4,
-            "nodeIds": [
-              "n_offer_owner",
-              "n_offer_broadcast",
-              "n_customer_offer",
-              "n_thankyou"
-            ],
-            "nodeSpanPx": 78,
-            "spaceAboveNodesPx": 63,
-            "spaceBelowNodesPx": 18
+            "nodeSpanPx": 47,
+            "spaceAboveNodesPx": 37,
+            "spaceBelowNodesPx": 10
           }
         ],
-        "minimumProjectedNodeTextPx": 7.3,
-        "minimumProjectedNonEdgeTextPx": 7.3,
-        "minimumProjectedEdgeTextPx": 8,
-        "minimumProjectedNodeText": "To kitchen + billing",
+        "minimumProjectedNodeTextPx": 7.026441351888668,
+        "minimumProjectedNonEdgeTextPx": 7.026441351888668,
+        "minimumProjectedEdgeTextPx": 7.300198807157058,
+        "minimumProjectedNodeText": "Current IST window",
         "minimumProjectedNodeTextDetail": "context",
         "minimumProjectedNodeTextOwner": {
           "kind": "node",
-          "id": "n_confirm"
+          "id": "n_shift_start"
         },
         "minimumRequiredNodeTextPx": 6,
         "readabilityOk": true,

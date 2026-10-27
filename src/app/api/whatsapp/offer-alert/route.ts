@@ -6,6 +6,7 @@ import { requireIdentity } from "@/lib/server/auth";
 import { api, assertSameOrigin, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { offerMessage } from "@/lib/server/whatsapp-triggers";
+import { operationalOrderVisibility } from "@/lib/server/order-visibility";
 import { sendWhatsAppBatch } from "@/lib/chatxflow";
 
 export const runtime = "nodejs";
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     const customerRows = await db
       .selectDistinct({ phone: posOrders.customerPhone })
       .from(posOrders)
-      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
+      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, operationalOrderVisibility(actor), isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
     const phones = customerRows.map((r) => r.phone).filter((p): p is string => !!p);
     if (!phones.length) throw new HttpError(400, "No past customers with a WhatsApp number in this scope yet");
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
     const customerRows = await db
       .selectDistinct({ phone: posOrders.customerPhone })
       .from(posOrders)
-      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
+      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, operationalOrderVisibility(actor), isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
     return json({ targetCount: customerRows.length });
   });
 }

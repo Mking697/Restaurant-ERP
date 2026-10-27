@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { menuItems } from "@/db/schema/menu";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, numeric, string } from "@/lib/server/http";
-import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
+import { assertModule, branchScope, hasModule, HttpError } from "@/lib/server/permissions";
 import { lockRecipeBranch, OUTPUT_UNITS, replaceRecipe } from "@/lib/server/recipe-write";
 
 export const runtime = "nodejs";
@@ -26,12 +26,15 @@ const columns = {
 export async function GET(request: Request) {
   return api(async () => {
     const actor = await requireIdentity(request);
-    assertModule(actor, "MENU_BOM");
+    const recipeAccess = hasModule(actor, "MENU_BOM");
+    // Billing needs sellable menu options, not recipe-edit authority. POST
+    // remains MENU_BOM-only; cashier reads never expose inactive/Semi-FG rows.
+    if (!recipeAccess) assertModule(actor, "POS_CASHIER");
     const scope = branchScope(actor, new URL(request.url).searchParams.get("branchId"));
     const items = await db
       .select(columns)
       .from(menuItems)
-      .where(scope ? eq(menuItems.branchId, scope) : undefined)
+      .where(and(scope ? eq(menuItems.branchId, scope) : undefined, recipeAccess ? undefined : and(eq(menuItems.isActive, true), eq(menuItems.isSellable, true))))
       .orderBy(menuItems.name);
     return json({ menuItems: items });
   });

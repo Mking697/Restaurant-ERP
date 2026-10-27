@@ -1,7 +1,8 @@
-import { protectedPage } from "@/components/protected-page";
-import PageContent from "./page-content";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-export default async function Page() {
-  return protectedPage("/gst-export", () => <PageContent />);
+export default function Page() {
+  // GSTR-1 export now lives inside /accounts as its own tab, not a
+  // standalone nav item — redirect any old link/bookmark there.
+  redirect("/accounts");
 }

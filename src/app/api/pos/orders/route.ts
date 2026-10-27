@@ -1,17 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
-import { db } from "@/db/client";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { menuItems } from "@/db/schema/menu";
 import { posOrderLines, posOrders } from "@/db/schema/pos";
 import { branches } from "@/db/schema/platform";
 import { settings } from "@/db/schema/settings";
 import { currencyRates } from "@/db/schema/currency";
-import { mutate, requireIdentity } from "@/lib/server/auth";
+import { locked, mutate, requireIdentity } from "@/lib/server/auth";
+import { operationalOrderVisibility, salesSummaryFor } from "@/lib/server/order-visibility";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { deductStock, lockRecipeStock, readStockRecipe } from "@/lib/server/production";
 import { directRequirements } from "@/lib/server/production-quantity";
 import { gstInvoiceSummary } from "@/lib/server/gst";
+import { requireOperableShift } from "@/lib/server/shifts";
 import { thankYouMessage, validOptionalPhone } from "@/lib/server/whatsapp-triggers";
 import { sendWhatsAppMessage } from "@/lib/chatxflow";
 
@@ -26,19 +27,29 @@ const POS_COUNTERS = ["COUNTER_1", "COUNTER_2"] as const;
 // can pass ?branchId= or omit for all). Line items are summarized as a
 // comma-joined label so the POS table stays one row per order.
 export async function GET(request: Request) {
-  return api(async () => {
-    const actor = await requireIdentity(request);
+  return api(() => locked(async tx => {
+    // Shares the privacy mutation lock: list and totals represent one consistent
+    // visibility state; queued reads recheck live identity after acquisition.
+    const actor = await requireIdentity(request, tx);
     assertModule(actor, "POS_CASHIER");
     const scope = branchScope(actor, new URL(request.url).searchParams.get("branchId"));
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const orders = await db
-      .select({ id: posOrders.id, branchId: posOrders.branchId, orderNumber: posOrders.orderNumber, channel: posOrders.channel, tableNo: posOrders.tableNo, counterNo: posOrders.counterNo, totalAmount: posOrders.totalAmount, tenderType: posOrders.tenderType, tenderCurrencyCode: posOrders.tenderCurrencyCode, tenderCurrencyAmount: posOrders.tenderCurrencyAmount, status: posOrders.status, createdAt: posOrders.createdAt })
+    const window = and(scope ? eq(posOrders.branchId, scope) : undefined, gte(posOrders.createdAt, startOfDay));
+    const permitted = operationalOrderVisibility(actor);
+    const orders = await tx
+      .select({ id: posOrders.id, branchId: posOrders.branchId, orderNumber: posOrders.orderNumber, channel: posOrders.channel, tableNo: posOrders.tableNo, counterNo: posOrders.counterNo, totalAmount: posOrders.totalAmount, tenderType: posOrders.tenderType, tenderCurrencyCode: posOrders.tenderCurrencyCode, tenderCurrencyAmount: posOrders.tenderCurrencyAmount, status: posOrders.status, createdAt: posOrders.createdAt, ...(actor.role === "SUPER_ADMIN" ? { ownerOnly: posOrders.ownerOnly } : {}) })
       .from(posOrders)
-      .where(and(scope ? eq(posOrders.branchId, scope) : undefined, gte(posOrders.createdAt, startOfDay)))
+      .where(and(window, permitted))
       .orderBy(desc(posOrders.createdAt))
       .limit(200);
-    return json({ orders });
-  });
+    // Totals cover all COMPLETED orders in the same daily scope, not just the
+    // latest 200 displayed rows. Non-Owners never receive a hidden count/total.
+    const [totals] = await tx.select({
+      actualTotal: sql<string>`coalesce(sum(${posOrders.totalAmount}), 0)::numeric(20,2)::text`,
+      visibleTotal: sql<string>`coalesce(sum(case when ${posOrders.ownerOnly} = false then ${posOrders.totalAmount} else 0 end), 0)::numeric(20,2)::text`,
+    }).from(posOrders).where(and(window, permitted, eq(posOrders.status, "COMPLETED")));
+    return json({ orders, visibilityScope: actor.role === "SUPER_ADMIN" ? "actual" : "access-filtered", salesSummary: salesSummaryFor(actor, totals) });
+  }));
 }
 
 
@@ -62,6 +73,7 @@ export async function POST(request: Request) {
     const result = await mutate(request, async (tx, actor) => {
       assertModule(actor, "POS_CASHIER");
       const input = await body(request);
+      if (["ownerOnly", "owner_only", "visibility"].some(key => key in input)) throw new HttpError(400, "Order visibility can only be changed by the Owner using the visibility action");
       const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);
       if (!branchId) throw new HttpError(400, "Select a branch");
       if (!(CHANNELS as readonly string[]).includes(input.channel as string)) throw new HttpError(400, "Invalid channel");
@@ -91,6 +103,7 @@ export async function POST(request: Request) {
         return { menuItemId, qty };
       });
       await lockRecipeStock(tx, branchId);
+      const { shiftRunId } = await requireOperableShift(tx, branchId);
       const menuItemIds = [...new Set(lines.map((l) => l.menuItemId))];
       const items = await tx
         .select({ id: menuItems.id, branchId: menuItems.branchId, name: menuItems.name, price: menuItems.price, isActive: menuItems.isActive, isSellable: menuItems.isSellable, gstRatePercent: menuItems.gstRatePercent, hsnSacCode: menuItems.hsnSacCode })
@@ -157,6 +170,7 @@ export async function POST(request: Request) {
         tenderCurrencyAmount,
         tenderType: input.tenderType as string,
         cashierId: actor.id,
+        shiftRunId,
       });
       await tx.insert(posOrderLines).values(
         lines.map((line) => ({ id: randomUUID(), orderId, menuItemId: line.menuItemId, qty: line.qty, price: itemById.get(line.menuItemId)!.price }))

@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "receiptId": "83b0f954-efb5-49b8-a8f7-2051db8c9321",
+  "receiptId": "2e8310c1-388a-42e6-8ac3-64b1b61d5709",
   "status": "current",
   "command": "deliver",
   "type": "workflow",
-  "input": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
-  "output": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+  "input": "D:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+  "output": "D:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
   "specification": {
-    "sha256": "13a67c658640fe819a86dded376ca9bbcca3b365d1558cea6dbfd642cacac748",
-    "bytes": 13171
+    "sha256": "0e2daaad45981080a19edaeab124ed51c1b69272bc249f641e31477fc0ee675b",
+    "bytes": 24881
   },
   "artifact": {
-    "sha256": "dbe89444de4f94ac383dc6b480ea0d5b0576c0e5dca8c8fa801e4a1257e20391",
-    "bytes": 868827
+    "sha256": "bcbc87bf322e812bec72891561a317ab0721e54ffd83d28300fd0701c7093512",
+    "bytes": 804421
   }
 }

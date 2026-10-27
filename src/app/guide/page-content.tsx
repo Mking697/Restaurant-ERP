@@ -15,11 +15,11 @@ export default function GuideBookPage() {
   const uiText = useUiCopy();
   const { t, language } = useTranslation();
   const user = useCurrentUser();
-  const [openKey, setOpenKey] = React.useState<string | null>(null);
+  const [openKey, setOpenKey] = React.useState<number | null>(null);
 
   const visible = getGuideModules(t).filter((m) => canNavigate(user, m.route, m.module));
-  const open = visible.find(m => m.module === openKey);
-  const walkthrough = open ? getGuideExample(open.route, language) : undefined;
+  const open = openKey !== null ? visible[openKey] : undefined;
+  const walkthrough = open ? getGuideExample(open.exampleKey ?? open.route, language) : undefined;
   const hiddenCount = GUIDE_MODULES.length - visible.length;
 
   return (
@@ -49,10 +49,10 @@ export default function GuideBookPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((m) => (
+        {visible.map((m, i) => (
           <button
-            key={m.module}
-            onClick={() => setOpenKey(m.module)}
+            key={`${m.module}-${m.route}`}
+            onClick={() => setOpenKey(i)}
             className={`rounded-xl border p-4 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lg ${CAT_CLASS[m.cat]}`}
           >
             <div className="mb-2 flex items-start justify-between">

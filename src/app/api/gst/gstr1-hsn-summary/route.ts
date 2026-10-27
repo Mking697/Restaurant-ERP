@@ -24,7 +24,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export async function GET(request: Request) {
   return api(async () => {
     const actor = await requireIdentity(request);
-    assertModule(actor, "POS_CASHIER");
+    // Official export always includes every eligible sale, including Owner-only
+    // operational orders. POS access alone must not expose this unfiltered view.
+    assertModule(actor, "OFFICIAL_SALES_REPORTS");
     const url = new URL(request.url);
     const branchId = branchScope(actor, url.searchParams.get("branchId"));
     const from = url.searchParams.get("from") ?? "";

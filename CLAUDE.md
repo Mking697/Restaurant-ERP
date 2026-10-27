@@ -11,6 +11,125 @@ first every time work resumes on this project.
 
 ---
 
+## CURRENT PROCESS FLOW CHART — local implementation map updated
+
+Updated the existing `.archify/workflow-restaurant-erp-process-flow-20261027-143000/`
+`candidate.json` and `restaurant-erp-process-flow.html` in place. Preserved all
+15 original node IDs and 14 original edge IDs; the current map has 6 lanes,
+26 nodes, 25 edges, 5 guided views and 21 explanatory cards.
+
+- Added branch shift configuration/start, operational gate, manual blind count,
+  next run and explicit Accept Handover cycle. Incoming counted cash is carried;
+  electronic receipts are current-run summaries, not cumulative cash transfers.
+- Added Owner-only operational visibility, reason/audit, staff-filtered view,
+  unchanged actual GST/stock/cash and separate OFFICIAL_SALES_REPORTS access.
+  GSTR remains inside Accounts. Shift/privacy are labelled local QA, not deployed.
+- Preserved Recipe Builder -> real Semi-FG production -> direct stock deduction,
+  warehouse receive and billing flows. Added honest accounts/workforce scope and
+  release-boundary cards; removed unsupported invoice-link/filing-ready wording.
+- Archify showcase finalize passes validate/deliver/check/browser-check. Fresh
+  visual-check passes with current provenance and no diagnostics at 1440, 1600,
+  1920 and 2048 desktop widths; light/dark captures pass. Opened the exact offline
+  HTML in a real browser and inspected a full-height screenshot including all
+  21 explanation cards. No mobile interactive acceptance is claimed.
+- This update changes only chart artifacts and this checkpoint: no application
+  deployment, DB migration, commit or push was performed.
+
+## LOCAL IMPLEMENTATION — Owner-only operational order visibility
+
+User approved confidentiality only, NOT false official sales. No commit/push/
+production migration/deploy authorized. Preserve previous uncommitted Shift/GSTR
+work. Contract: `docs/order-visibility-contract.md`.
+
+- Parent implemented `pos_orders.owner_only` default false; generated/reviewed
+  additive `0009_tan_loki.sql` (one column). Applied ONLY to disposable QA DB
+  `restaurant_erp_recipe_qa_20261027`; checked all 10 ordered migration hashes/
+  timestamps match. Main local DB has NOT received 0009; migrate it deliberately
+  before using the changed app against it. Production untouched.
+- Parent added Owner-role-only PATCH `/api/pos/orders/[id]/visibility`, strict
+  boolean + reason, atomic `POS_ORDER_VISIBILITY_CHANGED` audit, idempotent
+  same-desired-state no-op. It changes no amounts/status/stock/tax.
+- POS GET SQL filters operational rows/totals for all non-Owners; only Owner gets
+  ownerOnly flags and actual/visible/private summary. Staff gets visibleTotal and
+  access-filtered label. Read shares mutation lock for consistent list+summary.
+- GSTR is deliberately UNFILTERED, now gated by OFFICIAL_SALES_REPORTS rather
+  than POS_CASHIER; Accounts API/page/nav updated. No grants auto-assigned. Shift
+  actual custody remains unfiltered and labelled as actual reconciliation.
+- Parent final verification: **148/148 unit/regression tests pass**, full
+  `tsc --noEmit --incremental false` and production build pass. Privacy HTTP/PG
+  suite **12/12** passed on dev AND freshly built `next start`; shift **24/24**,
+  Semi-FG **9/9**, POS **21/21**, BOM **17/17** passed (83 HTTP checks across
+  the five suites). Scoped audit-failure trigger proves rollback; concurrent
+  desired-state toggles create one audit only. Guide/offline parity passes.
+- Real browser screenshots: Owner view shows Actual 1000 / Staff-visible 500 /
+  Private 500 and both per-order visibility actions. Staff 390px view shows only
+  QA-ORDER-1 / 500, no private row or controls; document width 390 (no overflow).
+  Browser action chooser lacked a key, so dialog-click/submit acceptance was NOT
+  performed through browser; its logic is exercised by eight UI tests and real
+  PATCH HTTP tests. Later browser navigation became unstable; do not claim full
+  interactive/multi-device browser acceptance.
+- Found pre-existing POS-only cashier menu-read denial during browser QA; fixed
+  read-only menu GET to allow own-branch active sellable billing items with
+  POS_CASHIER. MENU_BOM-only create/edit authority was not widened. Captured
+  RED 403 and GREEN HTTP checks including denied cashier menu writes.
+- Both own QA servers stopped, exact HTTP/browser fixtures and temporary audit
+  trigger/function removed, scratch session JSON and `.next-qa` removed.
+  tsconfig.json/next-env.d.ts diff-clean after restoring default references.
+- Guide Book/offline guidance updated for confidentiality vs true official
+  accounting, new OFFICIAL_SALES_REPORTS grant, and no retroactive recall of
+  prior copies. No external messages sent. Main local DB still lacks 0009;
+  production untouched and nothing staged/committed/pushed.
+
+## LOCAL SHIFT MANAGEMENT — implemented, final acceptance gaps (October 27, 2026)
+
+Current working root is `D:\restaurant erp` (older G: references below are historical).
+User approved branch shifts + manual blind closing + explicit incoming acceptance.
+No commit/push/deployment or production migration is authorized for this stage.
+
+- Added `branch_shifts`, `shift_runs`, `shift_handovers`; additive migration
+  `0008_glamorous_mother_askani.sql` was applied to local/QA only during this
+  stage. Production remains at the previous deployed migration.
+- Owner/Branch Admin with SHIFT_MANAGEMENT configures 1–12 contiguous full-day
+  IST windows; admin is own-branch-only. Even a cashier granted that module
+  cannot configure windows. Definitions are deactivated, not deleted on edits.
+- First run uses the current IST window. Manual Cash Drop closing atomically
+  records denominations/variance, closes the run, opens its cyclic successor
+  and creates a pending handover. POS and further closing deny until accepted.
+- Fixed opening-cash loss: expected closing cash includes accepted incoming
+  COUNTED cash plus current run CASH sales. Card/UPI/Other are current-run
+  receipt summaries only, never cumulative bank transfers. Paise coins work.
+- POS/end/start/config/accept use the existing global auth mutation lock;
+  POS eligibility also acquires the shared branch shift lock. No claim of a
+  reproduced HTTP race: existing global locking already serialized requests.
+- Fixed stale branch/user reads and forms; operational UI fails closed while
+  loading/unreadable/pending. Closing result stays visible outside the incoming
+  gate. Retained per-tab write journal blocks unknown-outcome duplicate changes;
+  no automatic retry/unlock. Administrator reconciliation is required. Scope is
+  one tab/session; not a cross-tab protocol, initial cash float/safe withdrawal
+  accounting is not implemented. Settings-only due reminder is manual, not cron.
+- Parent final full unit/regression suite **135/135 passed**, including retained
+  UI stale-response/journal/gating harness and paise-input checks. Parent
+  `tsc --noEmit --incremental false` passed after guide sync; `npm run build`
+  passed before the final guide-only synchronization,
+  with `/admin/settings/shifts` and all new APIs included. Built-app real QA
+  HTTP/Postgres suites: shift handover 24/24, Semi-FG 9/9, POS 21/21, BOM 17/17
+  (71 checks total). All suite-owned fixtures cleaned in finally.
+- Browser: earlier basic DOM configure/start/end/accept lifecycle succeeded.
+  Final hardened editor screenshot checked at 390x844, loaded inputs stacked
+  correctly and document width exactly 390 (no horizontal overflow). Subsequent
+  interactive/other-size acceptance is NOT complete: Jev chooser returned
+  `no_key`, then browser daemon refused connection. Do not claim laptop/tablet
+  or full hardened UI click-through acceptance. Exact final browser fixture IDs
+  were cleaned and scratch session JSON deleted.
+- QA dev and production-mode QA servers were stopped after verification;
+  own `.next-qa` output removed. Generated tsconfig/next-env references restored.
+- Guide Book and standalone HTML synced: 17 bilingual chapters including Shift
+  Management, real local Cash Drop and POS acceptance gate. Parent final suite
+  verifies full MODULES/EXAMPLES parity and real-write warnings. Contract:
+  `docs/shift-management-contract.md`. Remaining acceptance gap is the hardened
+  multi-device interactive browser workflow blocked by automation availability;
+  no production/deploy claim is made.
+
 ## RESUMED — Recipe Builder + real Semi-FG stock (October 27, 2026, same day)
 
 User said "pending kaam shuru kro" — resumed from the paused checkpoint below.
@@ -1004,7 +1123,131 @@ this is the index.
 
 ---
 
-## PHASE 1 — ARCHITECTURE DIAGRAM (Archify) — ✅ DONE (superseded by interactive guide below)
+## PROCESS FLOW CHART — fully rebuilt for current system (same day)
+
+User asked to fully update the Process Flow Chart based on the whole
+current system ("Abhi pure System ke base pr Flow Chat Fully Update kro").
+The existing chart at
+`.archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html`
+still described the OLD, now-removed "virtual/recursive Semi-FG raw
+deduction at sale time" model — completely wrong after the Recipe Builder +
+real Semi-FG production rebuild above. Rebuilt via the Archify workflow
+diagram CLI (`archify-diagrams` skill), editing
+`.archify/workflow-restaurant-erp-process-flow-20261027-143000/candidate.json`
+in place (same output path, so the delivered HTML stays at the same URL).
+
+What changed in the diagram:
+- Added "Recipe Builder" and "Semi-FG Batch" (production) as real nodes
+  feeding into "Stock Check" — making explicit that a Semi-FG must be
+  PRODUCED (crediting real stock) before Stock Check will ever let it be
+  sold, replacing the old virtual-deduction description.
+- "Stock Check" node (was "n_bom"/BOM explode) now explicitly says "Raw +
+  Semi-FG only" — direct raw + already-produced Semi-FG stock, never a
+  Semi-FG's own embedded raw a second time.
+- Added a "Semi-FG Alert" node (produced stock running low → produce
+  again) off the KOT step.
+- Dropped the dedicated WhatsApp lane/sub-flow nodes (Owner Creates Offer →
+  Broadcast → Customer) to fit Archify's desktop-readability + aspect-ratio
+  layout budgets at this node count — that behavior is still fully
+  documented in card 14 text, just not drawn as separate diagram nodes.
+  "Thank You" (order-confirmation WhatsApp message, which IS on the main
+  order-to-invoice path) was kept as a real node, moved into the Billing
+  lane next to GST Invoice/GSTR-1 Export.
+- Cards expanded from 12 to 14, renumbered, with Recipe Builder (card 2)
+  and Semi-FG Production (card 3) as new dedicated cards with worked
+  examples (Gravy: 0.3kg Tomato + 0.3kg Butter → 1kg produced stock), and
+  the Stock Check / KOT cards rewritten to match the real no-double-
+  deduction contract.
+- Real layout-fight resolved during this pass: Archify's installed
+  validator enforces both a per-node label/sublabel width-fit check AND a
+  separate whole-diagram desktop-readability downscale budget (~930px
+  "legacy" available width at a 1440 viewport) AND a showcase-only
+  composition/viewport-height aspect-ratio check (wide ratio ≥1.55, or
+  height ≤713 at the resulting width) — these three interact: widening
+  nodes to fix label-fit blew the width budget; widening further for
+  aspect-ratio then re-blew the width budget the other way. Node
+  "height"/"width" tweaks and dropping `groups`/`tag` had ZERO effect on
+  total diagram height (confirmed empirically) — only LANE COUNT drives
+  total height in this renderer. Fixed by shortening every long label to
+  fit the default node width AND dropping the diagram from 5 lanes to 4
+  (per the exact pattern in this skill's own pitfall notes: "when
+  something doesn't fit, drop it and describe in a card instead" — applied
+  here to a whole sub-flow, not just one edge). All 4 Archify gates
+  (validate/deliver/check/browser-check) pass clean with zero diagnostics.
+- Verified visually via `browser_exec` against the finalized
+  `restaurant-erp-process-flow.html` opened over `file://` — full 4-lane
+  flow renders correctly (Recipe Builder → Semi-FG Batch → Stock Check →
+  KOT/Stock Deduct → POS Receipt → GST Invoice → Thank You/GSTR-1 Export),
+  all 14 numbered cards render with their worked examples.
+- This is a local, offline HTML artifact only — nothing was committed,
+  pushed, or deployed as part of this diagram update; ask separately if
+  it should also be committed to the repo or shared with the client.
+
+## GSTR EXPORT MOVED INTO ACCOUNTS — no longer a separate nav item (same day)
+
+User asked: "GSTR Export ko Accounts Section me Hi shift kro Alag se na Dikho
+Left side Panel Me" — GSTR-1 HSN Export is no longer its own left-sidebar nav
+item; it is now a tab inside the Accounts page.
+
+- `src/app/accounts/page-content.tsx` — added a `GSTR Export` tab (gated on
+  `POS_CASHIER` module access, same permission the standalone page used) with
+  the full existing export UI (From/To date range, Generate, HSN-wise table,
+  Export CSV) ported in as `GstrExportPanel`, reading the page's own branch
+  selector instead of its own.
+- `src/lib/nav.ts` — removed the `/gst-export` entry; left sidebar no longer
+  shows it separately.
+- `src/app/gst-export/page.tsx` — now a plain redirect to `/accounts` (old
+  bookmarks/links still work); `page-content.tsx` for that route deleted
+  (dead code, fully superseded by the Accounts tab).
+- `src/lib/server/page-access.ts` — `/accounts` rule now also accepts
+  `POS_CASHIER` (so a POS-only user can reach the GSTR tab); removed the
+  standalone `/gst-export` rule and its `isPersistedPath` entry.
+- `src/components/app-shell.tsx` — removed the now-dead `/gst-export` entry
+  from the Hinglish nav-title map.
+- **Real pre-existing bug found and fixed while doing this**: the in-app
+  Guide Book (`/guide`) keyed its card grid AND its open-dialog state purely
+  by `module`, and the old GSTR module entry already shared `module:
+  "POS_CASHIER"` with the actual POS/Cashier guide card — a duplicate React
+  key, and `visible.find(m => m.module === openKey)` meant clicking the GSTR
+  card could silently show the POS card's content instead (or vice versa).
+  Fixed `src/app/guide/page-content.tsx` to key by array index instead of by
+  module string. The exact same duplicate-key pattern existed in the
+  hand-written standalone `docs/restaurant-erp-archify.html` JS
+  (`MODULES.find(m=>m.module===openKey)`) — fixed there too, keyed by
+  `module+"|"+route`. Since GSTR's guide route is now `/accounts` — which
+  the Accounts module's OWN guide card already uses — a second collision
+  would have hit `GUIDE_EXAMPLES` (two entries both keyed `/accounts`, one
+  silently overwriting the other). Fixed by adding an explicit
+  `exampleKey?: string` field to `GuideModule` (`src/lib/guide-content.ts`),
+  set to `/accounts-gstr` on the GSTR entry only, with
+  `getGuideExample(open.exampleKey ?? open.route, ...)` as the lookup — same
+  pattern applied in the standalone HTML (`EXAMPLES[m.exampleKey||m.route]`)
+  and in `tests/guide-examples.test.cjs`'s route/key assertions.
+  `docs/restaurant-erp-archify.html`'s `MODULES`/`EXAMPLES` consts
+  re-synced from the TS source via the same small Node script used before.
+
+### Verified
+- `npx tsc --noEmit` — 0 errors. `npx next build` — clean (two transient
+  Windows `fstat`/worker-exit errors on the first two attempts were pure
+  filesystem flakiness, not code — a third plain rebuild succeeded clean).
+  `npm test` (in a clean env, unset leaked `APP_ORIGIN`/`PG*` from earlier
+  `source .env` calls this session, same known contamination risk as
+  before) — **115/115 pass**, including `node --test
+  tests/guide-examples.test.cjs tests/menu-ui.test.cjs` (5/5, updated for
+  the `exampleKey` lookup and the standalone-HTML regex change).
+- Real browser, isolated QA app/DB (disposable owner session injected via
+  cookie, no password typed): left sidebar confirmed NO standalone "GSTR
+  Export" item; opened `/accounts`, confirmed a 4th tab "GSTR Export" next
+  to Expenses/Profit & Loss/Other accounts; clicked it (via AX-tree + CDP
+  box-model click, since Radix `Tabs` doesn't respond to a synthetic JS
+  `.click()`), confirmed the tab switches and the GSTR panel loads live
+  (`0 GST-compliant order(s)` on the empty QA DB, HSN table header
+  rendered, Export CSV button present). Navigated to `/gst-export` directly
+  — confirmed it redirects to `/accounts`. QA fixture (disposable owner
+  user/session) and the leftover `.next-qa` `tsconfig.json`/`next-env.d.ts`
+  artifacts were cleaned up again, same recurring gotcha as every prior QA
+  round on this project — always diff those two files before any commit.
+- Nothing committed or pushed yet — ask before doing either.
 
 File: `docs/restaurant-erp-archify.html` — **REPLACED** this session with a
 hand-built interactive module guide (see "INTERACTIVE MODULE GUIDE" section
