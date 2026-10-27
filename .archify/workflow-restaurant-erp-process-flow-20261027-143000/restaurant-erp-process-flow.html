@@ -5764,45 +5764,132 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>BOM + Semi-FG (Built, verified)</h3>
+          <h3>1. Order Capture — Waiter Tablet</h3>
         </div>
         <ul>
-          <li>Dish ka BOM recursive: Semi-FG (gravy/sauce/marinade) khud ek chhota recipe hai jo raw material se banta, phir final dish me ingredient ki tarah use hota</li>
-          <li>Order confirm par BOM explode hoke 3 jagah split hota hai: Kitchen (KOT), Billing (POS price), Inventory (stock minus) — insufficient stock par poora order reject (409)</li>
+          <li>Waiter apni tablet se table/takeaway chunta hai, menu se items add karta hai, phir Confirm Order dabata hai.</li>
+          <li>Example: Table T-12, Counter 1 — 2x Butter Chicken + 1x Garlic Naan add karke confirm kiya.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>2. BOM Explode Engine — Dish ki Asli Recipe</h3>
+        </div>
+        <ul>
+          <li>Har dish ka BOM (Bill of Materials) recursive hai: ek dish Semi-FG (gravy/sauce/marinade) use kar sakti hai, jo khud raw material se banti hai.</li>
+          <li>Example: Butter Chicken = 1 unit Gravy (Semi-FG) + 200g Chicken. Gravy khud Tomato + Butter + Spices se banti hai — confirm karte hi system dono level ko explode karke saari real raw material quantity nikalta hai.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>3. Kitchen KOT + Semi-FG Alert</h3>
+        </div>
+        <ul>
+          <li>Kitchen ko sirf item + qty wali ticket milti hai (KOT) — price nahi dikhti, taaki kitchen staff price se distract na ho.</li>
+          <li>Example: KOT par &#39;Butter Chicken x2, Garlic Naan x1&#39; print hota hai. Agar Gravy ka batch stock minimum se neeche ho, kitchen ko turant &#39;prep now&#39; alert bhi milta hai.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Inventory + Warehouse (Built, verified)</h3>
+          <h3>4. Central + Branch Warehouse</h3>
         </div>
         <ul>
-          <li>2-level: Central Warehouse -&gt; Branch Store; dispatch sirf audit record hai, receive hi real inventory move karta hai, shortfall variance track hoti hai</li>
-          <li>Raw + Semi-FG dono auto-minus order confirm par; Semi-FG khatam ho to batch-prep alert kitchen ko</li>
+          <li>Owner ek Central warehouse (bulk stock) aur har branch ka apna local warehouse banata hai.</li>
+          <li>Example: Central se Branch B2 ko 50 kg Chicken dispatch hui — yeh sirf ek paper record hai, B2 ki actual stock abhi nahi badli.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>5. Receive = Real Stock Move</h3>
+        </div>
+        <ul>
+          <li>Dispatch sirf record hai; jab branch &#39;Receive&#39; confirm karti hai tabhi real inventory badalti hai.</li>
+          <li>Example: B2 ne 48 kg receive ki (50 mein se) — ab B2 ki inventory mein +48 kg aaya, aur 2 kg ka shortfall alag se record ho gaya (dhoka chhupaya nahi gaya).</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>6. Auto Stock Deduction + Low Stock Alert</h3>
+        </div>
+        <ul>
+          <li>Order confirm hote hi raw material + Semi-FG dono branch ki real inventory se minus hote hain. Stock kam ho to poora order reject ho jaata hai (kabhi aadha order nahi jaata).</li>
+          <li>Example: Chicken stock minimum 20 kg se neeche gaya to turant Purchase team ko Low Stock Alert milta hai — order karne se pehle hi pata chal jaata hai.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot violet"></div>
-          <h3>Billing, GST, Multi-Currency &amp; GSTR (Built, verified)</h3>
+          <h3>7. POS Receipt — 2 Billing Counters</h3>
         </div>
         <ul>
-          <li>Har branch pe 2 billing counters (Counter 1/2); ek hi company GSTIN, CGST+SGST ya IGST auto-split, HSN/SAC per item</li>
-          <li>Multi-currency: export/NRI billing me FX rate sale-time par lock hoti (baad me rate badlo to purana order nahi badalta), GST invoice hamesha INR me</li>
-          <li>GSTR-1 HSN Summary: date-range + branch scope se CSV export, GST-unconfigured orders automatically filing se exclude</li>
+          <li>Har branch mein 2 alag billing counters hote hain (Counter 1 aur Counter 2), dono independently same time par bill bana sakte hain — rush hours mein line nahi lagti.</li>
+          <li>Example: Counter 1 par dine-in customer ka bill, Counter 2 par ek saath takeaway customer ka bill — dono alag-alag chalte hain, koi conflict nahi.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>8. GST Invoice — CGST/SGST/IGST Auto-Split</h3>
+        </div>
+        <ul>
+          <li>Ek hi company GSTIN, har branch invoice usi ke under. Same state ho to CGST+SGST aadha-aadha split hota hai; alag state ho to poora IGST lagta hai — HSN/SAC code bhi per item.</li>
+          <li>Example: ₹300 ka item 5% GST par — same state mein CGST ₹7.50 + SGST ₹7.50; agar customer dusre state ka ho to IGST ₹15.00 ek saath.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>9. Multi-Currency — NRI/Export Billing</h3>
+        </div>
+        <ul>
+          <li>Foreign currency mein payment accept kar sakte ho; exchange rate SALE ke time lock hoti hai — baad mein rate badle to purana order kabhi nahi badalta. GST invoice hamesha INR mein hi rehta hai (legal requirement).</li>
+          <li>Example: ₹363.20 ka bill, customer ne USD mein pay kiya — receipt dikhati hai &#39;Payable in USD: $4.30 (rate ₹84.50 lock)&#39;. Agar kal rate ₹85 ho jaaye, yeh purana bill nahi badlega.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>10. GSTR-1 HSN Export — Filing Ready</h3>
+        </div>
+        <ul>
+          <li>Owner/Accountant date-range aur branch chunkar ek click mein HSN-wise GST summary CSV download kar sakte hain — GST portal ke offline tool mein seedha paste hoti hai.</li>
+          <li>Example: October ke 2 orders dono HSN 2106 @ 5% ke — export unhe ek row mein merge karta hai: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Jin branch ka GST setup nahi hua, unke orders alag se &#39;excluded&#39; count mein dikhte hain — kabhi chhupaye nahi jaate.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>WhatsApp Automation (Built, verified)</h3>
+          <h3>11. WhatsApp Thank You Message</h3>
         </div>
         <ul>
-          <li>Order complete -&gt; auto Thank You message customer ko (phone diya ho to hi, best-effort — fail hone par order block nahi hota)</li>
-          <li>Owner offer banaye to WhatsApp Offer Alert broadcast — target list real hai: sirf jin customers ne pehle order diya aur number diya</li>
+          <li>Order confirm hote hi customer ke WhatsApp par turant Thank You message jaata hai (agar number diya ho) — koi manual kaam nahi.</li>
+          <li>Example: &#39;Namaste Rahul! Aapka order #ORD-4821 confirm ho gaya — Total ₹420. Dhanyawad, phir se aaiyega! 🙏&#39;</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>12. WhatsApp Offer Campaign</h3>
+        </div>
+        <ul>
+          <li>Owner naya offer banaye to ek click mein saare REAL customers ko WhatsApp par broadcast ho jaata hai — list fake nahi, sirf un logon ko jaate hai jinhone pehle order diya aur apna number diya.</li>
+          <li>Example: &#39;Saket Branch: 20% off all starters today! Valid tak 31 Oct&#39; — 45 past customers ko ek saath bhej diya, sent/failed count turant dikhta hai.</li>
         </ul>
       </div>
     </div>

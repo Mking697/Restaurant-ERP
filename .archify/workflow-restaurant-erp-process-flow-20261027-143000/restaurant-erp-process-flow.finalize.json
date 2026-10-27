@@ -5,16 +5,16 @@
   "status": "pass",
   "type": "workflow",
   "quality": "showcase",
-  "startedAt": "2026-10-27T11:48:24.963Z",
+  "startedAt": "2026-10-27T12:04:07.327Z",
   "specification": {
     "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
-    "sha256": "15b3b8f2c59a9e7505c76a2c9c4e79f79142a52a21276c98ea7b15db4cac7df9",
-    "bytes": 8621
+    "sha256": "911c210bc0b55dc0f69bd40e89961cc1053d02a122f372d7e6d12f0d52480228",
+    "bytes": 12148
   },
   "artifact": {
     "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
-    "sha256": "309181cbad8920b73090905afbc88e47a824c4a8851eadf0a2cda6d6a4dc010f",
-    "bytes": 863014
+    "sha256": "97442dbd8d03e6c125754add743b3a2026678aff987f1999775c3ce27f90a256",
+    "bytes": 867575
   },
   "stages": {
     "validate": {
@@ -38,8 +38,8 @@
         "ok": true,
         "command": "validate",
         "specification": {
-          "sha256": "15b3b8f2c59a9e7505c76a2c9c4e79f79142a52a21276c98ea7b15db4cac7df9",
-          "bytes": 8621
+          "sha256": "911c210bc0b55dc0f69bd40e89961cc1053d02a122f372d7e6d12f0d52480228",
+          "bytes": 12148
         },
         "validation": {
           "checksPassed": 9,
@@ -54,7 +54,7 @@
     "deliver": {
       "status": "pass",
       "exitCode": 0,
-      "durationMs": 2316,
+      "durationMs": 6366,
       "command": [
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
@@ -68,19 +68,19 @@
       ],
       "receipt": {
         "schemaVersion": 1,
-        "receiptId": "bf66d89a-4bc6-4e0a-bfdd-55a3642b7ca2",
+        "receiptId": "8f21b551-42c9-43f6-b4e2-8f8fe76633b7",
         "ok": true,
         "command": "deliver",
         "type": "workflow",
         "input": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
         "output": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
         "specification": {
-          "sha256": "15b3b8f2c59a9e7505c76a2c9c4e79f79142a52a21276c98ea7b15db4cac7df9",
-          "bytes": 8621
+          "sha256": "911c210bc0b55dc0f69bd40e89961cc1053d02a122f372d7e6d12f0d52480228",
+          "bytes": 12148
         },
         "artifact": {
-          "sha256": "309181cbad8920b73090905afbc88e47a824c4a8851eadf0a2cda6d6a4dc010f",
-          "bytes": 863014
+          "sha256": "97442dbd8d03e6c125754add743b3a2026678aff987f1999775c3ce27f90a256",
+          "bytes": 867575
         },
         "validation": {
           "checksPassed": 9,
@@ -106,7 +106,7 @@
     "check": {
       "status": "pass",
       "exitCode": 0,
-      "durationMs": 876,
+      "durationMs": 1928,
       "command": [
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
@@ -118,8 +118,8 @@
         "ok": true,
         "file": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
         "artifact": {
-          "sha256": "309181cbad8920b73090905afbc88e47a824c4a8851eadf0a2cda6d6a4dc010f",
-          "bytes": 863014
+          "sha256": "97442dbd8d03e6c125754add743b3a2026678aff987f1999775c3ce27f90a256",
+          "bytes": 867575
         },
         "checks": [
           {
@@ -236,13 +236,13 @@
           "issues": []
         },
         "provenance": "current",
-        "deliveryReceiptId": "bf66d89a-4bc6-4e0a-bfdd-55a3642b7ca2"
+        "deliveryReceiptId": "8f21b551-42c9-43f6-b4e2-8f8fe76633b7"
       }
     },
     "browser-check": {
       "status": "pass",
       "exitCode": 0,
-      "durationMs": 7126,
+      "durationMs": 15550,
       "command": [
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
         "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
@@ -260,11 +260,11 @@
         "status": "pass",
         "visualReview": "not-requested",
         "provenance": "current",
-        "deliveryReceiptId": "bf66d89a-4bc6-4e0a-bfdd-55a3642b7ca2",
+        "deliveryReceiptId": "8f21b551-42c9-43f6-b4e2-8f8fe76633b7",
         "artifact": {
           "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
-          "sha256": "309181cbad8920b73090905afbc88e47a824c4a8851eadf0a2cda6d6a4dc010f",
-          "bytes": 863014
+          "sha256": "97442dbd8d03e6c125754add743b3a2026678aff987f1999775c3ce27f90a256",
+          "bytes": 867575
         },
         "state": {
           "detail": "read",
@@ -1778,8 +1778,8 @@
     "browserCheckReceipt": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.browser-check.json"
   },
   "visualReview": "not-requested",
-  "finishedAt": "2026-10-27T11:48:40.573Z",
-  "durationMs": 15610,
+  "finishedAt": "2026-10-27T12:04:34.821Z",
+  "durationMs": 27494,
   "update": {
     "status": "current",
     "installedVersion": "3.2.0",
