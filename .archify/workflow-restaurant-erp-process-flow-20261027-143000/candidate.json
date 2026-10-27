@@ -3,7 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Restaurant ERP - Current Process Flow",
-    "subtitle": "Order + real stock | Shift handover | Owner-only privacy | Actual GST/accounts preserved. New shift/privacy: local QA, not deployed.",
+    "subtitle": "Order + real stock | Shift handover | Owner-only privacy | Tasks, Purchase, Admin, MIS - every module mapped. Shift/privacy local QA; Tasks/Purchase/Dashboard/Reports/MIS are demo UI, not yet DB-wired.",
     "visual_preset": "signal-flow",
     "quality_profile": "showcase",
     "output": ".archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html",
@@ -37,7 +37,22 @@
           "n_visibility_audit",
           "n_staff_view",
           "n_actual_records",
-          "n_official_access"
+          "n_official_access",
+          "n_task_recurring",
+          "n_task_delegate",
+          "n_task_mark_done",
+          "n_task_checklist",
+          "n_purchase_indent",
+          "n_purchase_approve",
+          "n_purchase_po",
+          "n_purchase_grn",
+          "n_purchase_return",
+          "n_admin_user",
+          "n_admin_grants",
+          "n_admin_branch",
+          "n_insights_dashboard",
+          "n_insights_reports",
+          "n_insights_mis"
         ],
         "note": "Current code map. Shift/privacy are QA-tested locally, not deployed; sample dashboard/report modules are not live totals."
       },
@@ -68,8 +83,8 @@
         "note": "Receipt and optional FX/GST; Accounts GSTR includes every eligible sale. WhatsApp is optional, best-effort text after commit."
       },
       {
-        "id": "shift_view",
-        "label": "Shift + Cash Handover",
+        "id": "shift_privacy_view",
+        "label": "Shift + Owner Privacy",
         "focus": [
           "n_shift_setup",
           "n_shift_start",
@@ -77,14 +92,7 @@
           "n_blind_count",
           "n_shift_next",
           "n_accept_handover",
-          "n_confirm"
-        ],
-        "note": "Manual closing opens next run. Accept handover before sale. Cash carries forward; digital receipts are per-run, not bank transfers."
-      },
-      {
-        "id": "privacy_view",
-        "label": "Owner Privacy + Actual Accounts",
-        "focus": [
+          "n_confirm",
           "n_owner_privacy",
           "n_visibility_audit",
           "n_staff_view",
@@ -92,7 +100,29 @@
           "n_official_access",
           "n_gstr_export"
         ],
-        "note": "Only operational reads are filtered. Owner and authorized official accounts retain actual records; cash reconciliation stays actual."
+        "note": "Manual shift handover cycle and Owner-only operational privacy. Local QA only; actual GST/stock/cash stay unfiltered."
+      },
+      {
+        "id": "ops_admin_view",
+        "label": "Tasks, Purchase & Admin",
+        "focus": [
+          "n_task_recurring",
+          "n_task_delegate",
+          "n_task_mark_done",
+          "n_task_checklist",
+          "n_purchase_indent",
+          "n_purchase_approve",
+          "n_purchase_po",
+          "n_purchase_grn",
+          "n_purchase_return",
+          "n_admin_user",
+          "n_admin_grants",
+          "n_admin_branch",
+          "n_insights_dashboard",
+          "n_insights_reports",
+          "n_insights_mis"
+        ],
+        "note": "Users/Branches/Grants are real. Tasks, Purchase&GRN, Dashboard/Reports/MIS are demo UI on mock data, not DB-wired yet."
       }
     ]
   },
@@ -120,6 +150,22 @@
     {
       "id": "privacy",
       "label": "Owner Privacy / Accounts"
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks: Recurring + Delegation"
+    },
+    {
+      "id": "purchase",
+      "label": "Purchase & GRN"
+    },
+    {
+      "id": "admin",
+      "label": "Users, Branches & Access"
+    },
+    {
+      "id": "insights",
+      "label": "Dashboard, Reports & MIS"
     }
   ],
   "groups": [],
@@ -346,6 +392,128 @@
       "label": "Accounts GSTR",
       "sublabel": "Separate grant",
       "yOffset": 44
+    },
+    {
+      "id": "n_task_recurring",
+      "lane": "tasks",
+      "col": 0,
+      "type": "frontend",
+      "label": "Recurring Task",
+      "sublabel": "Frequency + anchor",
+      "yOffset": -40
+    },
+    {
+      "id": "n_task_delegate",
+      "lane": "tasks",
+      "col": 0,
+      "type": "frontend",
+      "label": "Delegate Task",
+      "sublabel": "One-time, assignee",
+      "yOffset": 40
+    },
+    {
+      "id": "n_task_mark_done",
+      "lane": "tasks",
+      "col": 1,
+      "type": "frontend",
+      "label": "Mark Done",
+      "sublabel": "Proof if one-time"
+    },
+    {
+      "id": "n_task_checklist",
+      "lane": "tasks",
+      "col": 2,
+      "type": "frontend",
+      "label": "Checklist Step",
+      "sublabel": "Chained outcome"
+    },
+    {
+      "id": "n_purchase_indent",
+      "lane": "purchase",
+      "col": 0,
+      "type": "frontend",
+      "label": "Raise Indent",
+      "sublabel": "Branch + qty"
+    },
+    {
+      "id": "n_purchase_approve",
+      "lane": "purchase",
+      "col": 1,
+      "type": "security",
+      "label": "Approve Indent",
+      "sublabel": "Manager action"
+    },
+    {
+      "id": "n_purchase_po",
+      "lane": "purchase",
+      "col": 2,
+      "type": "frontend",
+      "label": "Purchase Order",
+      "sublabel": "3-step tracking"
+    },
+    {
+      "id": "n_purchase_grn",
+      "lane": "purchase",
+      "col": 3,
+      "type": "frontend",
+      "label": "GRN Quality",
+      "sublabel": "Pass/Fail/Partial"
+    },
+    {
+      "id": "n_purchase_return",
+      "lane": "purchase",
+      "col": 4,
+      "type": "database",
+      "label": "Material Rtn",
+      "sublabel": "Refund entry"
+    },
+    {
+      "id": "n_admin_user",
+      "lane": "admin",
+      "col": 0,
+      "type": "frontend",
+      "label": "Create User",
+      "sublabel": "Role + branch"
+    },
+    {
+      "id": "n_admin_grants",
+      "lane": "admin",
+      "col": 1,
+      "type": "security",
+      "label": "Module Grants",
+      "sublabel": "Per-module access"
+    },
+    {
+      "id": "n_admin_branch",
+      "lane": "admin",
+      "col": 2,
+      "type": "database",
+      "label": "Branch Setup",
+      "sublabel": "Clone wizard UI"
+    },
+    {
+      "id": "n_insights_dashboard",
+      "lane": "insights",
+      "col": 0,
+      "type": "frontend",
+      "label": "Dashboard",
+      "sublabel": "KPI cards"
+    },
+    {
+      "id": "n_insights_reports",
+      "lane": "insights",
+      "col": 1,
+      "type": "frontend",
+      "label": "Reports",
+      "sublabel": "6 report types"
+    },
+    {
+      "id": "n_insights_mis",
+      "lane": "insights",
+      "col": 2,
+      "type": "frontend",
+      "label": "MIS Score",
+      "sublabel": "Score + rank"
     }
   ],
   "edges": [
@@ -518,6 +686,76 @@
       "label": "next run ready",
       "role": "return",
       "variant": "dashed"
+    },
+    {
+      "id": "e_task_recurring_done",
+      "from": "n_task_recurring",
+      "to": "n_task_mark_done",
+      "variant": "default"
+    },
+    {
+      "id": "e_task_delegate_done",
+      "from": "n_task_delegate",
+      "to": "n_task_mark_done",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_task_done_checklist",
+      "from": "n_task_mark_done",
+      "to": "n_task_checklist",
+      "label": "chained step",
+      "variant": "default"
+    },
+    {
+      "id": "e_purchase_indent_approve",
+      "from": "n_purchase_indent",
+      "to": "n_purchase_approve",
+      "variant": "default"
+    },
+    {
+      "id": "e_purchase_approve_po",
+      "from": "n_purchase_approve",
+      "to": "n_purchase_po",
+      "variant": "default"
+    },
+    {
+      "id": "e_purchase_po_grn",
+      "from": "n_purchase_po",
+      "to": "n_purchase_grn",
+      "variant": "default"
+    },
+    {
+      "id": "e_purchase_grn_return",
+      "from": "n_purchase_grn",
+      "to": "n_purchase_return",
+      "label": "fail/partial",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_admin_user_grants",
+      "from": "n_admin_user",
+      "to": "n_admin_grants",
+      "variant": "default"
+    },
+    {
+      "id": "e_admin_grants_branch",
+      "from": "n_admin_grants",
+      "to": "n_admin_branch",
+      "label": "scopes access",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_insights_dashboard_reports",
+      "from": "n_insights_dashboard",
+      "to": "n_insights_reports",
+      "variant": "default"
+    },
+    {
+      "id": "e_insights_reports_mis",
+      "from": "n_insights_reports",
+      "to": "n_insights_mis",
+      "label": "scorecard",
+      "variant": "dashed"
     }
   ],
   "cards": [
@@ -531,28 +769,28 @@
     },
     {
       "dot": "amber",
-      "title": "2. Recipe Builder — Define the Dish's Real Recipe (one-time setup)",
+      "title": "2. Recipe Builder \u2014 Define the Dish's Real Recipe (one-time setup)",
       "items": [
-        "Before anything can be sold, its recipe is saved once in Recipe Builder: the dish/Semi-FG name, branch, output unit (portion/kg/ltr/pcs), batch yield, and every ingredient row — each either a raw material OR an existing same-branch Semi-FG. The whole dish + recipe saves atomically in one go; saving a recipe never touches stock.",
+        "Before anything can be sold, its recipe is saved once in Recipe Builder: the dish/Semi-FG name, branch, output unit (portion/kg/ltr/pcs), batch yield, and every ingredient row \u2014 each either a raw material OR an existing same-branch Semi-FG. The whole dish + recipe saves atomically in one go; saving a recipe never touches stock.",
         "Example: Butter Chicken's recipe = 0.1kg Gravy (Semi-FG) + 0.25kg Chicken per portion. Gravy's own recipe = 0.3kg Tomato + 0.3kg Butter per 1kg produced. A cycle (Gravy needing itself, directly or through another Semi-FG) is rejected at save time."
       ]
     },
     {
       "dot": "amber",
-      "title": "3. Semi-FG Production — Real Prepared Stock, Not Virtual",
+      "title": "3. Semi-FG Production \u2014 Real Prepared Stock, Not Virtual",
       "items": [
-        "A Semi-FG only becomes real, sellable stock after it is actually PRODUCED on the Production panel — pick the Semi-FG and an output quantity, Record production. This is the ONLY action that credits real prepared stock in Postgres (semi_fg_stock).",
-        "Production consumes the Semi-FG's OWN direct raw materials (and any nested Semi-FG) exactly once, then credits the produced quantity. Each production is idempotent and its history is immutable — a retried request never double-deducts or double-credits.",
-        "Example: Recording 1kg of Gravy production consumes 0.3kg Tomato + 0.3kg Butter from real branch inventory right then, and credits 1kg to Gravy's own Semi-FG stock — before this, Gravy's sellable stock is 0."
+        "A Semi-FG only becomes real, sellable stock after it is actually PRODUCED on the Production panel \u2014 pick the Semi-FG and an output quantity, Record production. This is the ONLY action that credits real prepared stock in Postgres (semi_fg_stock).",
+        "Production consumes the Semi-FG's OWN direct raw materials (and any nested Semi-FG) exactly once, then credits the produced quantity. Each production is idempotent and its history is immutable \u2014 a retried request never double-deducts or double-credits.",
+        "Example: Recording 1kg of Gravy production consumes 0.3kg Tomato + 0.3kg Butter from real branch inventory right then, and credits 1kg to Gravy's own Semi-FG stock \u2014 before this, Gravy's sellable stock is 0."
       ]
     },
     {
       "dot": "cyan",
-      "title": "4. Stock Check Engine — Direct Raw + Produced Semi-FG Only",
+      "title": "4. Stock Check Engine \u2014 Direct Raw + Produced Semi-FG Only",
       "items": [
-        "On Confirm Order, the system checks and atomically deducts ONLY the direct raw materials and any already-PRODUCED Semi-FG stock each line needs — it never walks back into a Semi-FG's own embedded raw ingredients a second time (no recursive/virtual deduction).",
-        "If a dish needs a Semi-FG that hasn't been produced yet, or produced stock is short, the WHOLE order is rejected with a clear message — never a partial sale, and the cashier is told to produce it first.",
-        "Example: Butter Chicken needs 0.1kg Gravy + 0.25kg Chicken per plate. Selling 10 plates needs 1kg Gravy stock (from Step 3's production) + 2.5kg Chicken — Gravy's own Tomato/Butter is never touched again at sale time."
+        "On Confirm Order, the system checks and atomically deducts ONLY the direct raw materials and any already-PRODUCED Semi-FG stock each line needs \u2014 it never walks back into a Semi-FG's own embedded raw ingredients a second time (no recursive/virtual deduction).",
+        "If a dish needs a Semi-FG that hasn't been produced yet, or produced stock is short, the WHOLE order is rejected with a clear message \u2014 never a partial sale, and the cashier is told to produce it first.",
+        "Example: Butter Chicken needs 0.1kg Gravy + 0.25kg Chicken per plate. Selling 10 plates needs 1kg Gravy stock (from Step 3's production) + 2.5kg Chicken \u2014 Gravy's own Tomato/Butter is never touched again at sale time."
       ]
     },
     {
@@ -568,7 +806,7 @@
       "title": "6. Central + Branch Warehouse",
       "items": [
         "The Owner sets up one Central warehouse (bulk stock) and each branch gets its own local warehouse.",
-        "Example: Central dispatches 50 kg Chicken to Branch B2 — this is a paper record only; B2's actual stock has not changed yet."
+        "Example: Central dispatches 50 kg Chicken to Branch B2 \u2014 this is a paper record only; B2's actual stock has not changed yet."
       ]
     },
     {
@@ -576,7 +814,7 @@
       "title": "7. Receive = the Real Stock Move",
       "items": [
         "Dispatch is just a record; branch inventory only changes when the branch confirms Receive.",
-        "Example: B2 receives 48 kg (out of 50 dispatched) — B2's inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden."
+        "Example: B2 receives 48 kg (out of 50 dispatched) \u2014 B2's inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden."
       ]
     },
     {
@@ -589,7 +827,7 @@
     },
     {
       "dot": "violet",
-      "title": "9. POS Receipt — 2 Billing Counters",
+      "title": "9. POS Receipt \u2014 2 Billing Counters",
       "items": [
         "Each order records Counter 1 or Counter 2. Both use the same branch stock and shift rules; this is counter attribution, not a separate independent cash drawer ledger.",
         "Successful confirmation returns the real receipt and KOT. Displayed sales are today-scoped; latest 200 rows are listed while totals cover all completed sales in the same scope."
@@ -597,7 +835,7 @@
     },
     {
       "dot": "violet",
-      "title": "10. GST Invoice — CGST/SGST/IGST Auto-Split",
+      "title": "10. GST Invoice \u2014 CGST/SGST/IGST Auto-Split",
       "items": [
         "When branch and company GST state codes are configured, billing computes GST and splits CGST/SGST or IGST. Unconfigured orders are billed without GST and excluded separately by the export.",
         "Illustration only: taxable 300 at 5% yields 15 tax; intra-state split is 7.50 + 7.50. Tax configuration and filing review remain the business responsibility."
@@ -605,7 +843,7 @@
     },
     {
       "dot": "violet",
-      "title": "11. Multi-Currency — NRI / Export Billing",
+      "title": "11. Multi-Currency \u2014 NRI / Export Billing",
       "items": [
         "Optional non-INR tender requires an Owner-configured exchange rate. The sale snapshots that rate and payment amount; the invoice amount stays in INR.",
         "Example: INR 363.20 / 84.50 gives USD 4.30 payment convenience. Later FX edits do not rewrite the saved sale."
@@ -691,6 +929,38 @@
         "Users/access, branches, branding, inventory, menu/recipes, Semi-FG production, warehouse receive, POS and provider settings have real persistence. Guide Book explains permissions and practice examples in English/Hinglish.",
         "Dashboard, Reports, MIS, Tasks/Checklists and Purchase/GRN still include labelled sample/demo flows. Do not confuse their charts/actions with live accounting or automated task/PO engines.",
         "Recipe Builder/Semi-FG release was deployed earlier. GSTR tab move, shifts and Owner-only privacy are current local changes; privacy migration 0009 is QA-only and main local DB still needs it. Full interactive browser acceptance has known tooling gaps. No deployment, migration, commit or push is done by updating this chart."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "22. Tasks \u2014 Recurring + Delegation (Demo UI)",
+      "items": [
+        "Recurring Task (fixed D/W/15D/M/Q/Y frequency) and Delegate Task (one-time, assignee + due date) both open a dialog and add a row to the on-screen list; Checklist is the same engine as Recurring, not a separate system.",
+        "Mark Done blocks submission for a one-time task with no attachment, optional for recurring. This whole module runs on page-local mock data today \u2014 no Postgres table backs it yet, same gap flagged across the project."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "23. Purchase & GRN \u2014 Indent to Quality Check (Demo UI)",
+      "items": [
+        "Raise Indent (raw material + branch + qty) -> manager Approve/Reject -> Purchase Order 3-step (Bought / Bill / Material Received) -> GRN Quality Check PASS/FAIL/PARTIAL, with a fail/partial return + refund note.",
+        "All of this is real click-through UI state, but PASS does not yet post quantity into the live Inventory table \u2014 that cross-module stock-posting wire-up is still open, same as the rest of this lane."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "24. Users, Branches & Access \u2014 Real, DB-backed",
+      "items": [
+        "Create User sets role + branch + moduleAccess grants; grants decide which nav items and API actions a user can reach, including gating Shift configuration to Owner/Branch Admin. Module Grants also gates Shift configuration (Owner/Branch Admin only).",
+        "Branch Setup covers add/edit branches and the Clone-Branch-Wizard button in the UI; the actual multi-step clone flow (copy menu/BOM/checklists into a new branch) is UI-only today, not a backend job yet."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "25. Dashboard, Reports & MIS Leaderboard (Demo UI)",
+      "items": [
+        "Owner Dashboard KPI cards, the 6-report picker (sales trend, MIS scorecard, food cost, inventory variance, cash reconciliation, aggregator recon) and the MIS Leaderboard all render from src/lib/mock-data.ts today, not live branch totals.",
+        "The branch selector in the topbar does not yet filter this data. Treat every chart/number on these three screens as illustrative, not an accounting source \u2014 Accounts/GSTR/Inventory/POS are the real numbers elsewhere in this chart."
       ]
     }
   ]

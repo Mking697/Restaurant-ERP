@@ -279,6 +279,13 @@ export interface PurchaseOrderRow {
   billUploaded: boolean; // Step 2 — optional
   materialReceived: boolean; // Step 3
   createdAt: string;
+  // Present only for store (non-general) purchases, so GRN Quality PASS can
+  // post the received quantity into the real Inventory table. General
+  // purchases (office supplies etc.) have no raw material to post.
+  branchId?: string;
+  rawMaterialId?: string;
+  qty?: number;
+  unit?: string;
 }
 
 export function getPurchaseOrders(): PurchaseOrderRow[] {
@@ -301,6 +308,12 @@ export interface GrnRow {
   uom: string;
   receivedBy: string;
   createdAt: string;
+  // Carried from the PO for store purchases only — lets Quality Check PASS/
+  // PARTIAL post the passed quantity into the real Inventory table.
+  branchId?: string;
+  rawMaterialId?: string;
+  qtyReceived?: number;
+  inventoryPosted?: boolean;
 }
 
 export function getGrns(): GrnRow[] {

@@ -11,29 +11,202 @@ first every time work resumes on this project.
 
 ---
 
-## CURRENT PROCESS FLOW CHART — local implementation map updated
+## CURRENT PROCESS FLOW CHART — now covers the entire system, all modules
 
-Updated the existing `.archify/workflow-restaurant-erp-process-flow-20261027-143000/`
-`candidate.json` and `restaurant-erp-process-flow.html` in place. Preserved all
-15 original node IDs and 14 original edge IDs; the current map has 6 lanes,
-26 nodes, 25 edges, 5 guided views and 21 explanatory cards.
+User asked the chart to leave nothing out: Tasks (Recurring + Delegation),
+Purchase & GRN, Users/Branches/Access, Dashboard/Reports/MIS were missing from
+the first update and have now been added. Updated the same existing
+`.archify/workflow-restaurant-erp-process-flow-20261027-143000/candidate.json`
+and `restaurant-erp-process-flow.html` in place again. Preserved all 15
+original node IDs and 14 original edge IDs from the very first chart; the map
+now has 10 lanes, 41 nodes, 36 edges, 5 guided views (schema caps views at 5 —
+merged Shift+Privacy into one view and Tasks/Purchase/Admin/Insights into
+another) and 25 explanatory cards.
 
-- Added branch shift configuration/start, operational gate, manual blind count,
-  next run and explicit Accept Handover cycle. Incoming counted cash is carried;
-  electronic receipts are current-run summaries, not cumulative cash transfers.
-- Added Owner-only operational visibility, reason/audit, staff-filtered view,
-  unchanged actual GST/stock/cash and separate OFFICIAL_SALES_REPORTS access.
-  GSTR remains inside Accounts. Shift/privacy are labelled local QA, not deployed.
-- Preserved Recipe Builder -> real Semi-FG production -> direct stock deduction,
-  warehouse receive and billing flows. Added honest accounts/workforce scope and
-  release-boundary cards; removed unsupported invoice-link/filing-ready wording.
-- Archify showcase finalize passes validate/deliver/check/browser-check. Fresh
-  visual-check passes with current provenance and no diagnostics at 1440, 1600,
-  1920 and 2048 desktop widths; light/dark captures pass. Opened the exact offline
-  HTML in a real browser and inspected a full-height screenshot including all
-  21 explanation cards. No mobile interactive acceptance is claimed.
-- This update changes only chart artifacts and this checkpoint: no application
-  deployment, DB migration, commit or push was performed.
+- Added 4 new lanes: Tasks: Recurring + Delegation; Purchase & GRN; Users,
+  Branches & Access; Dashboard, Reports & MIS — one node chain each, matching
+  the real current UI flow (Indent→Approve→PO→GRN Quality→Return;
+  Recurring/Delegate→Mark Done→Checklist Step; Create User→Module
+  Grants→Branch Setup; Dashboard→Reports→MIS Score).
+- Labelled honestly per this file's own known gaps: Users/Branches/Grants are
+  real DB-backed; Tasks, Purchase & GRN, Dashboard, Reports and MIS Leaderboard
+  are still interactive demo UI on `mock-data.ts`, not wired to Postgres —
+  cards 22/23/25 say this explicitly, matching the "Known remaining gaps" notes
+  already in this file. Did not draw a cross-lane edge from Module Grants to
+  Shift Setup after Archify's visual-review flagged it as a 3-bend detour
+  across the whole diagram; folded that real relationship into card 24's text
+  instead (grants gate Shift configuration to Owner/Branch Admin).
+- All 4 Archify gates (validate/deliver/check/browser-check) pass with zero
+  diagnostics after fixing: views-count schema cap (5 max), a node-overlap in
+  the new Tasks lane (fixed with yOffset spacing), 3 node labels wider than
+  their node width (shortened), and the recurring stale browser-check receipt
+  ownership conflict (moved the old receipt aside before re-finalizing, same
+  pattern as every prior pass on this artifact).
+- Verified in a real browser: full-page screenshot shows all 25 cards and a
+  zoomed crop of the 4 new lanes shows no overlap/clipping, correct per-lane
+  labels, and the legend's node-type counts match the new total.
+- This pass only changes chart artifacts; no deployment, migration, commit or
+  push was performed by this update.
+- (First pass of this chart, superseded above: 6 lanes/26 nodes/21 cards
+  covering Order→Recipe/Semi-FG→Stock→Billing/GST→Shift→Privacy only.)
+
+## FULL SYSTEM PROCESS FLOW — hand-built, no Archify (all modules, nothing left out)
+
+User explicitly said no Archify this time, and wanted every module included —
+Tasks, Purchase, Users/Branches, MIS/Reports/Dashboard, Workforce, WhatsApp —
+nothing missing. Built a new standalone hand-crafted dark-theme HTML artifact
+(same visual language as the `architecture-diagram` skill's design system,
+written directly, not run through Archify's validator):
+
+`docs/restaurant-erp-full-process-flow.html` (NEW, ~35KB, self-contained,
+works fully offline via `file://`, no build step).
+
+- 12 flow lanes, 49 step chips, rendered as plain flexbox rows with → arrows
+  (no SVG path routing, so no layout-engine fights): Branch Shift Cycle,
+  Branch POS, Recipe/Semi-FG/Kitchen, Inventory & Warehouse, Billing & GST,
+  WhatsApp (Thank You + Offer Campaign), Owner Privacy/Accounts, Tasks
+  (Recurring + Delegation), Purchase & GRN, Workforce (attendance/leave/
+  payroll — new, not in the Archify version), Users/Branches/Access,
+  Dashboard/Reports/MIS.
+- Each chip is colour-coded by type (frontend/backend/database/security/
+  message) with a small legend; cross-lane relationships that matter (e.g.
+  Confirm Order → Stock Check, Shift Gate → sale allowed, Module Grants →
+  gates Shift Setup) render as a dashed note under the source chip instead of
+  a drawn arrow across lanes, kept deliberately simple and accurate.
+- 27 explanation cards below the flow, reusing the previously-authored
+  Archify card content (1–25) plus 2 new Workforce cards (Attendance+Leave
+  real-manager-review rule, Payroll Finalize immutability) — same honesty
+  convention as everywhere else in this file: Users/Branches/Grants are real
+  DB-backed; Tasks, Purchase & GRN, Dashboard, Reports, MIS Leaderboard stay
+  labelled as demo UI on mock data, not wired to Postgres.
+- Verified in a real browser: `document.querySelectorAll` confirms exactly
+  12 lanes / 49 chips / 27 cards render; full-page and zoomed-header
+  screenshots show no overlap, legible text, correct legend/arrow alignment.
+- The Archify-generated chart at `.archify/workflow-.../restaurant-erp-process-flow.html`
+  was left untouched by this pass — this is a separate, additional artifact.
+- No deployment, migration, commit or push was performed by this update.
+
+## CHART RENDER-BUG FIX + SYSTEM REVIEW — text hidden behind cards
+
+User caught a real rendering bug with screenshots: in the connected flowchart,
+edge labels and sublabel text were partially hidden behind neighbouring boxes
+("card ke peeche text chupp raha hai") — e.g. fragments like "ck re", "chen c"
+visible at box edges. Root cause found and fixed, plus a system-wide gap
+review as asked.
+
+- **Root cause**: the SVG drew edges+labels BEFORE boxes, so any label whose
+  position landed near/under a box got mostly covered, leaving only edge
+  fragments peeking out. Also, after the earlier lane reorder (Purchase moved
+  next to Inventory), two edges — `Stock Deduct -> POS Receipt` and
+  `Payroll Finalize -> Actual Records` — ended up spanning 2 lanes each,
+  dragging their labels and paths visibly through an unrelated lane's boxes.
+- **Fix**: reordered the SVG so boxes are drawn FIRST and all edges/arrows/
+  labels are drawn on top (foreground layer) — labels can now never be hidden
+  by a box, by construction. Converted both 2-lane-spanning edges into small
+  italic connector notes on each endpoint box instead of a drawn line (same
+  "long-distance relationship = annotate, don't draw" rule already used for
+  Module Grants -> Shift Setup). Widened the column grid (185px -> 225px) and
+  moved same-row (intra-lane) edge labels to float in the lane's own top
+  padding instead of sitting on the arrow line at box height, so they never
+  crowd a neighbouring box even when adjacent columns are close together.
+  Re-verified via real browser + zoomed screenshots across every lane —
+  every label and connector note is now fully legible, nothing hidden/cut.
+- **System-wide gap review** (`search_files` across `src/` for "not
+  wired"/"not connected"/"not implemented"/"TODO"/"not saved to database"):
+  confirms every other instance is an intentionally-labelled demo boundary
+  already documented throughout this file (Tasks/Dashboard/Reports/MIS/
+  Purchase money-tracking/Clone Branch Wizard run on `mock-data.ts`, GST
+  auto-split scaffolding in `src/lib/server/gst.ts` not wired into POS yet) —
+  not a hidden bug, a deliberate and already-honestly-labelled scope boundary.
+  No second silent gap of the "claims a real action but doesn't do it" kind
+  (the actual class of bug the GRN fix closed) was found elsewhere in this
+  pass. Full regression re-run clean after all edits: `tsc --noEmit
+  --incremental false` and `next build` both clean.
+- Browser automation (`browser_exec`) hit repeated daemon timeouts during this
+  pass for an extra interactive click-through of the changed Purchase page —
+  recovered partway through for the chart screenshots, but the Purchase page
+  UI itself was NOT re-driven click-by-click this round; its correctness
+  rests on the clean `tsc`/build and the real HTTP+Postgres checks from the
+  prior GRN-posting pass, not a fresh interactive screenshot. Flagging this
+  gap honestly rather than claiming full UI acceptance.
+- QA fixtures/server/`.next-reviewqa` dist dir and the disposable QA database
+  used for this pass were all cleaned up; `tsconfig.json`/`next-env.d.ts`
+  restored to default references again (same recurring gotcha every QA round
+  on this project hits — always diff those two files before any commit).
+
+## REAL FEATURE — GRN Quality PASS/PARTIAL now posts to Inventory (known gap closed)
+
+User flagged the known gap called out on the earlier chart ("GRN Quality PASS
+— Inventory posting on PASS is not yet wired") and asked it be resolved, not
+just documented. Implemented for real, not mocked:
+
+- `src/app/api/inventory/receive/route.ts` (NEW) — `POST { branchId,
+  rawMaterialId, qty }`, `INVENTORY` module + same-origin + the shared
+  `mutate`/xact-lock pattern every other write uses. Atomically increments
+  `inventory_stock.qtyOnHand` for an existing branch+material row, or creates
+  it (min/max 0 = not configured) on the first-ever receipt. Never decreases
+  stock, never touches min/max par levels.
+- `src/app/purchase/page-content.tsx` — the New Purchase dialog's Branch field
+  is now a real branch `<select>` (`useBranches()`, same hook Inventory uses)
+  instead of free text; store (non-general) purchases now also require a real
+  Raw Material select (`GET /api/raw-materials`) and an ordered quantity.
+  These carry through PO -> GRN (`src/lib/mock-data.ts` `PurchaseOrderRow`/
+  `GrnRow` gained optional `branchId`/`rawMaterialId`/`qty`/`unit` fields).
+  Quality Check PASS posts the full received qty; PARTIAL posts
+  `received - failQty`; FAIL posts nothing. On success the GRN row gets a
+  real "Posted ✓" badge and the toast shows the real new on-hand qty read
+  back from Postgres. General purchases (no raw material) correctly post
+  nothing and say so. Indent approval, PO money-tracking, and the FAIL/PARTIAL
+  vendor-return + Accounts-refund side are still demo-only — only the
+  Inventory-posting half of this module is now real, labelled accordingly.
+- Verified with real HTTP+Postgres against a disposable QA database
+  (`restaurant_erp_grn_qa_20261028`, migrated, dropped after): first receive
+  creates a row at 20.000kg, a second receive on the same branch+material
+  atomically increments to 25.500kg (not overwritten), zero/negative qty
+  rejected 400, unknown branch/material rejected 400, no-auth-cookie rejected
+  401 — 7/7 checks passed. Re-read via the real `GET /api/inventory` and
+  confirmed the same 25.500kg row is what the actual Inventory page would
+  show. QA fixtures, server, `.next-grnqa` dist dir and the QA database were
+  all cleaned up after; `tsconfig.json`/`next-env.d.ts` restored to their
+  default (non-QA) references same as every prior QA round.
+- Full regression: 148/148 unit tests, `tsc --noEmit --incremental false`
+  clean, `next build` clean (`/purchase` now includes the new endpoint).
+
+## HAND-BUILT CONNECTED PROCESS FLOW CHART — no Archify, real drawn arrows
+
+User rejected the earlier chip-grid chart ("Archify use na kro... Process Flow
+Chart aise chahiye connected") and wanted a genuinely connected flowchart —
+real arrows drawn between every box across the whole system, like a classic
+process-flow diagram, not isolated per-module groups with text-only
+cross-references. Rebuilt `docs/restaurant-erp-full-process-flow.html`
+in place (same file, no Archify involved):
+
+- One large hand-computed SVG (Python-generated absolute x/y grid: lane =
+  row, step = column) with 49 node boxes and 44 real drawn, arrow-headed
+  connections — intra-lane sequential flow AND the cross-lane relationships
+  that matter (Confirm Order -> Stock Check -> Stock Deduct -> POS Receipt,
+  Shift Gate -> sale allowed -> Confirm Order, GST Invoice -> optional
+  WhatsApp Thank You, Payroll Finalize -> Actual Records, and the new GRN
+  Quality -> Central WH real-posting edge), color-coded solid/dashed/emphasis
+  by edge kind with a legend.
+- Reordered lanes so Purchase & GRN sits directly under Inventory & Warehouse
+  — keeps the new real GRN->Inventory arrow short and legible instead of
+  spanning the whole page. The one genuinely far-apart relationship (Module
+  Grants gating Shift Setup, top and near-bottom lanes) is shown as a small
+  italic connector note on each of the two boxes instead of one ugly
+  page-spanning line — same "don't force an ugly long edge, annotate it
+  instead" principle used throughout this project's diagram work.
+- Reused the same 27 explanation cards as the chip-grid version, with cards
+  8 and 23 rewritten to state the GRN->Inventory gap is now closed (not just
+  flagged) and to cite the real verification numbers (20kg create, +5.5kg ->
+  25.5kg).
+- Verified in a real browser: `document.querySelectorAll` confirms 44 drawn
+  edges / 27 cards; zoomed screenshots confirm the Shift Gate->Confirm Order
+  and the new GRN Quality->Central WH arrows render short, legible, and
+  correctly directed with no overlapping text.
+- No commit, push, deploy or production migration was performed by either
+  change in this pass; the inventory/receive feature IS new application code
+  (not just a chart) and has not been committed — ask before committing.
 
 ## LOCAL IMPLEMENTATION — Owner-only operational order visibility
 

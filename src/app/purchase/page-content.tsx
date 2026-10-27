@@ -29,6 +29,10 @@ import {
 } from "@/lib/mock-data";
 import { formatInr } from "@/lib/utils";
 import { Plus, Check, X, Upload, PackageCheck, FlaskConical } from "lucide-react";
+import { requestJson } from "@/lib/current-user";
+import { useBranches } from "@/lib/current-branch";
+
+interface RawMaterialOption { id: string; name: string; unit: string; }
 
 const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "destructive" | "outline"> = {
   DRAFT: "secondary",
@@ -40,6 +44,13 @@ const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "dest
 
 export default function PurchasePage() {
   const uiText = useUiCopy();
+  const { branches } = useBranches();
+  const [materials, setMaterials] = React.useState<RawMaterialOption[]>([]);
+  React.useEffect(() => {
+    requestJson<{ rawMaterials: RawMaterialOption[] }>("/api/raw-materials")
+      .then((data) => setMaterials(data.rawMaterials))
+      .catch(() => setMaterials([]));
+  }, []);
   const [indents, setIndents] = React.useState<IndentRow[]>(getIndents());
   const [pos, setPos] = React.useState<PurchaseOrderRow[]>(getPurchaseOrders());
   const [grns, setGrns] = React.useState<GrnRow[]>(getGrns());
@@ -48,14 +59,18 @@ export default function PurchasePage() {
   const [qualityGrn, setQualityGrn] = React.useState<GrnRow | null>(null);
   const [qualityResult, setQualityResult] = React.useState<"PASS" | "FAIL" | "PARTIAL">("PASS");
   const [failQty, setFailQty] = React.useState("");
+  const [qualityBusy, setQualityBusy] = React.useState(false);
+  const [qualityError, setQualityError] = React.useState("");
   const { notify, ToastHost } = useToast();
 
   const [indentForm, setIndentForm] = React.useState({ branch: "", raisedBy: "", lineCount: "1" });
   const [poForm, setPoForm] = React.useState({
     isGeneral: false,
-    branch: "",
+    branchId: "",
     vendor: "",
     itemOrMaterial: "",
+    rawMaterialId: "",
+    qty: "",
     amountInr: "",
   });
 
@@ -93,12 +108,15 @@ export default function PurchasePage() {
   }
 
   function addPurchase() {
-    if (!poForm.branch.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim()) return;
+    if (!poForm.branchId.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim()) return;
+    if (!poForm.isGeneral && !poForm.rawMaterialId) return;
     const poNumber = `PO-${5522 + pos.length}`;
+    const branchName = branches.find((b) => b.id === poForm.branchId)?.name ?? poForm.branchId;
+    const material = materials.find((m) => m.id === poForm.rawMaterialId);
     setPos((prev) => [
       {
         poNumber,
-        branch: poForm.branch.trim(),
+        branch: branchName,
         vendor: poForm.vendor.trim(),
         isGeneralPurchase: poForm.isGeneral,
         amountInr: Number(poForm.amountInr) || 0,
@@ -106,11 +124,15 @@ export default function PurchasePage() {
         billUploaded: false,
         materialReceived: false,
         createdAt: "Just now",
+        branchId: poForm.isGeneral ? undefined : poForm.branchId,
+        rawMaterialId: poForm.isGeneral ? undefined : poForm.rawMaterialId,
+        qty: poForm.isGeneral ? undefined : Number(poForm.qty) || 0,
+        unit: poForm.isGeneral ? undefined : material?.unit,
       },
       ...prev,
     ]);
     notify(uiText(`Demo ${poNumber} created (Step 1: Buy). Not saved to database.`, `Demo ${poNumber} bana (Step 1: Buy). Database mein save nahi hua.`));
-    setPoForm({ isGeneral: false, branch: "", vendor: "", itemOrMaterial: "", amountInr: "" });
+    setPoForm({ isGeneral: false, branchId: "", vendor: "", itemOrMaterial: "", rawMaterialId: "", qty: "", amountInr: "" });
     setPoOpen(false);
   }
 
@@ -130,9 +152,13 @@ export default function PurchasePage() {
         status: "PENDING",
         qualityResult: "PENDING",
         qtyFailed: 0,
-        uom: "kg",
+        uom: po.unit ?? "kg",
         receivedBy: "You",
         createdAt: "Just now",
+        branchId: po.branchId,
+        rawMaterialId: po.rawMaterialId,
+        qtyReceived: po.qty,
+        inventoryPosted: false,
       },
       ...prev,
     ]);
@@ -143,28 +169,53 @@ export default function PurchasePage() {
     setQualityGrn(grn);
     setQualityResult("PASS");
     setFailQty("");
+    setQualityError("");
   }
 
-  function submitQualityCheck() {
+  async function submitQualityCheck() {
     if (!qualityGrn) return;
-    const qty = qualityResult === "PASS" ? 0 : Number(failQty) || 0;
-    if (qualityResult !== "PASS" && qty <= 0) return;
-    setGrns((prev) =>
-      prev.map((g) =>
-        g.id === qualityGrn.id
-          ? { ...g, qualityResult, qtyFailed: qty, status: qualityResult === "FAIL" ? "QUALITY_HOLD" : "APPROVED" }
-          : g
-      )
-    );
-    if (qualityResult === "PASS") {
-      notify(uiText(`Demo ${qualityGrn.id}: Quality PASS. Live inventory was not updated.`, `Demo ${qualityGrn.id}: Quality PASS. Live inventory update nahi hui.`));
-    } else {
-      const refund = qty * 450; // illustrative rate for the toast only
-      notify(
-        uiText(`Demo ${qualityGrn.id}: ${qualityResult}, failed ${qty} ${qualityGrn.uom}, illustrative refund ${formatInr(refund)}. No vendor return or Accounts refund was posted.`, `Demo ${qualityGrn.id}: ${qualityResult}, failed ${qty} ${qualityGrn.uom}, sample refund ${formatInr(refund)}. Vendor return ya Accounts refund post nahi hua.`)
+    const failedQty = qualityResult === "PASS" ? 0 : Number(failQty) || 0;
+    if (qualityResult !== "PASS" && failedQty <= 0) return;
+    const totalQty = qualityGrn.qtyReceived ?? 0;
+    const passQty = qualityResult === "PASS" ? totalQty : qualityResult === "PARTIAL" ? Math.max(0, totalQty - failedQty) : 0;
+    const canPostToInventory = passQty > 0 && !!qualityGrn.branchId && !!qualityGrn.rawMaterialId;
+
+    setQualityError("");
+    setQualityBusy(true);
+    try {
+      let posted = false;
+      let newQtyOnHand: string | undefined;
+      if (canPostToInventory) {
+        const result = await requestJson<{ item: { qtyOnHand: string; unit: string } }>("/api/inventory/receive", {
+          method: "POST",
+          body: JSON.stringify({ branchId: qualityGrn.branchId, rawMaterialId: qualityGrn.rawMaterialId, qty: passQty }),
+        });
+        posted = true;
+        newQtyOnHand = result.item.qtyOnHand;
+      }
+      setGrns((prev) =>
+        prev.map((g) =>
+          g.id === qualityGrn.id
+            ? { ...g, qualityResult, qtyFailed: failedQty, inventoryPosted: posted, status: qualityResult === "FAIL" ? "QUALITY_HOLD" : "APPROVED" }
+            : g
+        )
       );
+      if (posted) {
+        notify(uiText(
+          `${qualityGrn.id}: Quality ${qualityResult}. ${passQty} ${qualityGrn.uom} posted to real Inventory — new on-hand ${newQtyOnHand} ${qualityGrn.uom}.`,
+          `${qualityGrn.id}: Quality ${qualityResult}. ${passQty} ${qualityGrn.uom} real Inventory mein post hua — naya on-hand ${newQtyOnHand} ${qualityGrn.uom}.`
+        ));
+      } else if (qualityResult === "PASS") {
+        notify(uiText(`${qualityGrn.id}: Quality PASS, but this GRN has no linked raw material (general purchase), so nothing was posted to Inventory.`, `${qualityGrn.id}: Quality PASS, lekin is GRN ka koi linked raw material nahi hai (general purchase), isliye Inventory mein kuchh post nahi hua.`));
+      } else {
+        notify(uiText(`${qualityGrn.id}: ${qualityResult}, failed ${failedQty} ${qualityGrn.uom}. No vendor return or Accounts refund entry was posted (demo only).`, `${qualityGrn.id}: ${qualityResult}, failed ${failedQty} ${qualityGrn.uom}. Vendor return ya Accounts refund entry post nahi hua (demo hi hai).`));
+      }
+      setQualityGrn(null);
+    } catch (err) {
+      setQualityError(err instanceof Error ? err.message : "Could not post to Inventory. Quality result was not saved.");
+    } finally {
+      setQualityBusy(false);
     }
-    setQualityGrn(null);
   }
 
   return (
@@ -193,12 +244,16 @@ export default function PurchasePage() {
                 />
                 {uiText(" General purchase (store/raw-material se related nahi — no Indent needed) ")}</label>
               <Field label={uiText("Branch")}>
-                <input
+                <select
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={poForm.branch}
-                  onChange={(e) => setPoForm({ ...poForm, branch: e.target.value })}
-                  placeholder={uiText("Gurugram")}
-                />
+                  value={poForm.branchId}
+                  onChange={(e) => setPoForm({ ...poForm, branchId: e.target.value })}
+                >
+                  <option value="">{uiText("Select branch (required)")}</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
+                  ))}
+                </select>
               </Field>
               <Field label={uiText("Vendor")}>
                 <input
@@ -216,6 +271,33 @@ export default function PurchasePage() {
                   placeholder={poForm.isGeneral ? uiText("Office chair repair") : uiText("Chicken (boneless) — 20kg")}
                 />
               </Field>
+              {!poForm.isGeneral && (
+                <>
+                  <Field label={uiText("Raw material (links to real Inventory)")}>
+                    <select
+                      className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                      value={poForm.rawMaterialId}
+                      onChange={(e) => setPoForm({ ...poForm, rawMaterialId: e.target.value })}
+                    >
+                      <option value="">{uiText("Select material (required)")}</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={uiText("Quantity ordered")}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                      value={poForm.qty}
+                      onChange={(e) => setPoForm({ ...poForm, qty: e.target.value })}
+                      placeholder={uiText("20")}
+                    />
+                  </Field>
+                </>
+              )}
               <Field label={uiText("Amount (₹)")}>
                 <input
                   type="number"
@@ -231,7 +313,7 @@ export default function PurchasePage() {
                 {uiText(" Cancel ")}</Button>
               <Button
                 onClick={addPurchase}
-                disabled={!poForm.branch.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim()}
+                disabled={!poForm.branchId.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim() || (!poForm.isGeneral && !poForm.rawMaterialId)}
               >
                 {uiText(" Create (Step 1: Buy) ")}</Button>
             </DialogFooter>
@@ -409,6 +491,7 @@ export default function PurchasePage() {
                     <TableHead>{uiText("Received By")}</TableHead>
                     <TableHead>{uiText("Quality Result")}</TableHead>
                     <TableHead>{uiText("Fail Qty")}</TableHead>
+                    <TableHead>{uiText("Inventory")}</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -436,6 +519,15 @@ export default function PurchasePage() {
                       </TableCell>
                       <TableCell>{g.qtyFailed > 0 ? `${g.qtyFailed} ${g.uom}` : "—"}</TableCell>
                       <TableCell>
+                        {g.inventoryPosted ? (
+                          <Badge variant="success">{uiText("Posted ✓")}</Badge>
+                        ) : g.qualityResult === "PENDING" ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <Badge variant="outline">{uiText("Not posted")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {g.qualityResult === "PENDING" && (
                           <Button size="sm" variant="outline" onClick={() => openQualityCheck(g)}>
                             <FlaskConical className="size-3.5" /> {uiText(" Quality Check ")}</Button>
@@ -450,46 +542,52 @@ export default function PurchasePage() {
         </TabsContent>
       </Tabs>
 
-      {/* Quality check dialog — Pass posts to inventory; Fail/Partial records a return + accounts refund entry */}
-      <Dialog open={!!qualityGrn} onOpenChange={(open) => !open && setQualityGrn(null)}>
+      {/* Quality check dialog — PASS/PARTIAL post the passed qty to real Inventory; FAIL/PARTIAL fail-qty is demo-only return+refund */}
+      <Dialog open={!!qualityGrn} onOpenChange={(open) => !open && !qualityBusy && setQualityGrn(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{uiText("Quality Check — ")}{qualityGrn?.id}</DialogTitle>
             <DialogDescription>
-              {uiText(" Pass → material Inventory Stock mein chala jaata hai. Fail/Partial → fail qty return hoti hai aur uska amount Accounts mein refund entry ban jaata hai. ")}</DialogDescription>
+              {qualityGrn?.rawMaterialId
+                ? uiText(" Pass/Partial → passed quantity posts to the real Inventory table right now. Fail/Partial fail-qty return + Accounts refund entry is still demo-only. ", " Pass/Partial → passed quantity turant real Inventory table mein post hoti hai. Fail/Partial ki fail-qty return + Accounts refund entry abhi bhi demo hi hai. ")
+                : uiText(" This GRN is a general purchase with no linked raw material — nothing will post to Inventory. ", " Ye GRN ek general purchase hai, koi linked raw material nahi — Inventory mein kuchh post nahi hoga. ")}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="flex gap-2">
-              {(["PASS", "PARTIAL", "FAIL"] as const).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setQualityResult(opt)}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
-                    qualityResult === opt ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card"
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-            {qualityResult !== "PASS" && (
-              <Field label={uiText(`Fail quantity (${qualityGrn?.uom ?? "UOM"})`, `Fail quantity (${qualityGrn?.uom ?? "UOM"})`)}>
-                <input
-                  type="number"
-                  className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={failQty}
-                  onChange={(e) => setFailQty(e.target.value)}
-                  placeholder={uiText("2.5")}
-                />
-              </Field>
-            )}
+            {qualityError && <p role="alert" className="text-sm text-destructive">{uiText(qualityError)}</p>}
+            <fieldset disabled={qualityBusy} className="space-y-3">
+              <div className="flex gap-2">
+                {(["PASS", "PARTIAL", "FAIL"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setQualityResult(opt)}
+                    className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                      qualityResult === opt ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {qualityResult !== "PASS" && (
+                <Field label={uiText(`Fail quantity (${qualityGrn?.uom ?? "UOM"})`, `Fail quantity (${qualityGrn?.uom ?? "UOM"})`)}>
+                  <input
+                    type="number"
+                    className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                    value={failQty}
+                    onChange={(e) => setFailQty(e.target.value)}
+                    placeholder={uiText("2.5")}
+                  />
+                </Field>
+              )}
+            </fieldset>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setQualityGrn(null)}>
+            <Button variant="outline" onClick={() => setQualityGrn(null)} disabled={qualityBusy}>
               {uiText(" Cancel ")}</Button>
-            <Button onClick={submitQualityCheck} disabled={qualityResult !== "PASS" && !failQty.trim()}>
-              {uiText(" Submit ")}</Button>
+            <Button onClick={submitQualityCheck} disabled={qualityBusy || (qualityResult !== "PASS" && !failQty.trim())}>
+              {qualityBusy ? uiText(" Submitting… ") : uiText(" Submit ")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
