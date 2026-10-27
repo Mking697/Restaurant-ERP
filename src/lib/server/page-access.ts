@@ -7,8 +7,11 @@ const RULES: Array<[string, ModuleKey[]]> = [
  ["/dashboard", ["DASHBOARD_OWNER"]], ["/reports", ["REPORTS"]],
  ["/performance", ["MIS_PERFORMANCE"]],
  ["/tasks", ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"]],
+ ["/menu", ["MENU_BOM"]],
  ["/purchase", ["PURCHASE_INDENT", "PURCHASE_ORDER"]],
  ["/inventory", ["INVENTORY"]], ["/pos", ["POS_CASHIER"]],
+ ["/warehouse", ["INVENTORY"]],
+ ["/gst-export", ["POS_CASHIER"]],
  ["/cash-drop", ["CASH_DROP"]], ["/accounts", ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL"]],
  ["/workforce", ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"]],
 ];
@@ -23,5 +26,5 @@ export function canOpenPath(user: Identity, path: string) {
 // No mock business records are exposed as if persisted and branch-isolated.
 // Enable each remaining route only after its DB-backed acceptance is complete.
 export function isPersistedPath(path: string) {
- return ["/", "/guide", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/admin/settings/whatsapp", "/admin/settings/restaurant"].includes(path);
+ return ["/", "/guide", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/gst-export", "/admin/settings/whatsapp", "/admin/settings/restaurant"].includes(path);
 }

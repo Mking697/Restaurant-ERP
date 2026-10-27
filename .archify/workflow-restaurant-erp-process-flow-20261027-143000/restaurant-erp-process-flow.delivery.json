@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "4129b23f-956e-421c-affa-e507f8906381",
+  "status": "current",
+  "command": "deliver",
+  "type": "workflow",
+  "input": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+  "output": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+  "specification": {
+    "sha256": "245e5deae53b53ba1ce0f3f6cee4feebda9bdea0cda18d8e031e615b752f347d",
+    "bytes": 7795
+  },
+  "artifact": {
+    "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
+    "bytes": 860140
+  }
+}

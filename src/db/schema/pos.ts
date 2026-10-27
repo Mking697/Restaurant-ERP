@@ -16,11 +16,29 @@ export const posOrders = pgTable(
     orderNumber: text("order_number").notNull(),
     channel: orderChannelEnum("channel").notNull(),
     tableNo: text("table_no").notNull().default(""),
+    // 2 billing counters per branch (confirmed scope). Validated at the API
+    // layer against POS_COUNTERS — plain text, not an enum, so adding a 3rd
+    // counter later is additive, no enum-migration needed.
+    counterNo: text("counter_no").notNull().default("COUNTER_1"),
+    // Optional — captured when the cashier types it in for the WhatsApp
+    // Thank You message / Offer Alert targeting (src/lib/server/whatsapp-
+    // triggers.ts). Empty means "no WhatsApp contact for this order", never
+    // required to complete a sale.
+    customerPhone: text("customer_phone").notNull().default(""),
+    customerName: text("customer_name").notNull().default(""),
     subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
     discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
     discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
     taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }).notNull().default("0"),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
+    // Multi-currency (confirmed scope: NRI/export billing). totalAmount
+    // above is ALWAYS the GST invoice-of-record in INR — these three
+    // columns are an optional "what the customer actually paid in their
+    // currency" snapshot, locked in at sale time from currency_rates, never
+    // recomputed later even if the rate changes afterwards.
+    tenderCurrencyCode: text("tender_currency_code").notNull().default("INR"),
+    fxRateToInr: numeric("fx_rate_to_inr", { precision: 12, scale: 6 }).notNull().default("1.000000"),
+    tenderCurrencyAmount: numeric("tender_currency_amount", { precision: 12, scale: 2 }).notNull().default("0"),
     tenderType: text("tender_type").notNull(), // CASH, UPI, CARD, SWIGGY, ZOMATO
     status: orderStatusEnum("status").notNull().default("COMPLETED"),
     voidReason: text("void_reason").notNull().default(""),

@@ -12,3 +12,5 @@ export * from "./expenses";
 export * from "./workforce";
 export * from "./mis";
 export * from "./whatsapp";
+export * from "./warehouses";
+export * from "./currency";

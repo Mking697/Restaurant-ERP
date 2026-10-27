@@ -1,0 +1,1781 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "workflow",
+  "quality": "showcase",
+  "startedAt": "2026-10-27T08:56:47.134Z",
+  "specification": {
+    "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+    "sha256": "245e5deae53b53ba1ce0f3f6cee4feebda9bdea0cda18d8e031e615b752f347d",
+    "bytes": 7795
+  },
+  "artifact": {
+    "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+    "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
+    "bytes": 860140
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
+        "deliver",
+        "workflow",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "245e5deae53b53ba1ce0f3f6cee4feebda9bdea0cda18d8e031e615b752f347d",
+          "bytes": 7795
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 1319,
+      "command": [
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
+        "deliver",
+        "workflow",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "4129b23f-956e-421c-affa-e507f8906381",
+        "ok": true,
+        "command": "deliver",
+        "type": "workflow",
+        "input": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
+        "output": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "specification": {
+          "sha256": "245e5deae53b53ba1ce0f3f6cee4feebda9bdea0cda18d8e031e615b752f347d",
+          "bytes": 7795
+        },
+        "artifact": {
+          "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
+          "bytes": 860140
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 336,
+      "command": [
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
+        "check",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "artifact": {
+          "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
+          "bytes": 860140
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 41,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 6.106941838649155,
+            "maxBends": 0,
+            "routesOverSuggestedBends": 0,
+            "maxStretch": 1,
+            "routesOverSuggestedStretch": 0,
+            "minSegmentPx": 8,
+            "minInteriorSegmentPx": null,
+            "shortSegmentCount": 2,
+            "shortEndpointSegmentCount": 2,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": []
+          },
+          "leadingSpace": {
+            "measured": false,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "legacy-930",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 930,
+            "actualBudgetPx": 930,
+            "limit": "legacy",
+            "requestedTargetPx": null,
+            "requestedTargetMet": null,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "node",
+              "id": "n_confirm"
+            },
+            "minimumSourceTextPx": 7,
+            "minimumProjectedTextPx": 6.106941838649155,
+            "semanticTextCount": 38
+          },
+          "issues": []
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "4129b23f-956e-421c-affa-e507f8906381"
+      }
+    },
+    "browser-check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 5960,
+      "command": [
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\tools\\node-26.7.0-win32-x64\\node.exe",
+        "C:\\Users\\Admin\\AppData\\Local\\hermes\\skills\\creative\\archify\\bin\\archify.mjs",
+        "browser-check",
+        "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "pass",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "4129b23f-956e-421c-affa-e507f8906381",
+        "artifact": {
+          "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
+          "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
+          "bytes": 860140
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        },
+        "diagnostics": [],
+        "containment": {
+          "status": "pass",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1171,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 78,
+                "diagramChromePx": 78,
+                "svgPx": 1003,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 144,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 86,
+                  "spaceAboveNodesPx": 52,
+                  "spaceBelowNodesPx": 6
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 134,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 134,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1356,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1122,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 161,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 96,
+                  "spaceAboveNodesPx": 58,
+                  "spaceBelowNodesPx": 7
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 150,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 150,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1425,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1443,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 94,
+                "diagramChromePx": 94,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "themeStates": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            }
+          ]
+        },
+        "readability": {
+          "status": "pass",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1171,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 78,
+                "diagramChromePx": 78,
+                "svgPx": 1003,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 144,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 86,
+                  "spaceAboveNodesPx": 52,
+                  "spaceBelowNodesPx": 6
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 134,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 134,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1356,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1122,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 161,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 96,
+                  "spaceAboveNodesPx": 58,
+                  "spaceBelowNodesPx": 7
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 150,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 150,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1425,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1443,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 94,
+                "diagramChromePx": 94,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "viewerChrome": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1171,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 78,
+                "diagramChromePx": 78,
+                "svgPx": 1003,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 144,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 86,
+                  "spaceAboveNodesPx": 52,
+                  "spaceBelowNodesPx": 6
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 134,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 134,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 134,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 66,
+                  "spaceAboveNodesPx": 53,
+                  "spaceBelowNodesPx": 15
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1356,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1122,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 161,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 96,
+                  "spaceAboveNodesPx": 58,
+                  "spaceBelowNodesPx": 7
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 150,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 150,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 150,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 73,
+                  "spaceAboveNodesPx": 59,
+                  "spaceBelowNodesPx": 17
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1425,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 86,
+                "diagramChromePx": 84,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1443,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "width-first",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1599,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 94,
+                "diagramChromePx": 94,
+                "svgPx": 1191,
+                "cardsPx": 0,
+                "viewBoxHeight": 794
+              },
+              "viewBoxWidth": 1066,
+              "workflowLanes": [
+                {
+                  "frameId": "lane-1",
+                  "heightPx": 171,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_bom",
+                    "n_kot",
+                    "n_semifg_alert"
+                  ],
+                  "nodeSpanPx": 102,
+                  "spaceAboveNodesPx": 62,
+                  "spaceBelowNodesPx": 8
+                },
+                {
+                  "frameId": "lane-0",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_table",
+                    "n_items",
+                    "n_confirm"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-2",
+                  "heightPx": 159,
+                  "nodeCount": 3,
+                  "nodeIds": [
+                    "n_central_wh",
+                    "n_stock_deduct",
+                    "n_low_stock"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-3",
+                  "heightPx": 159,
+                  "nodeCount": 2,
+                  "nodeIds": [
+                    "n_pos_receipt",
+                    "n_payment_invoice"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                },
+                {
+                  "frameId": "lane-4",
+                  "heightPx": 159,
+                  "nodeCount": 4,
+                  "nodeIds": [
+                    "n_offer_owner",
+                    "n_offer_broadcast",
+                    "n_customer_offer",
+                    "n_thankyou"
+                  ],
+                  "nodeSpanPx": 78,
+                  "spaceAboveNodesPx": 63,
+                  "spaceBelowNodesPx": 18
+                }
+              ],
+              "minimumProjectedNodeTextPx": 7,
+              "minimumProjectedNonEdgeTextPx": 7,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "To kitchen + billing",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "n_confirm"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "restaurant-erp-process-flow.browser-check.json",
+          "files": []
+        }
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.finalize.json",
+    "summaryReceipt": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.finalize-summary.json",
+    "browserCheckReceipt": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-10-27T08:56:56.344Z",
+  "durationMs": 9210,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-27T08:53:51.200Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

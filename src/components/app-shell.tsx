@@ -4,7 +4,7 @@ import { RestaurantBrand } from "@/components/branding-provider";
 import Link from "next/link";
 import { PreferencesControls } from "@/components/preferences-controls";
 import { useTranslation } from "@/lib/i18n";
-import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, Menu, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetCloseButton } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { clearCurrentUser, hasCurrentModule, refreshCurrentUser, requestJson, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId, setSelectedBranchId } from "@/lib/current-branch";
-const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck };
+const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, WarehouseIcon };
 export function canNavigate(user: CurrentUser, href: string, module: string) {
   if (!user.ready || !user.authenticated) return false;
   if (href === "/admin/users" || href === "/admin/branches") return ["SUPER_ADMIN", "BRANCH_MANAGER"].includes(user.role);
@@ -28,7 +28,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
 function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/performance": "MIS Ranking",
-  "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN",
+  "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer", "/gst-export": "GSTR Export",
   "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
   "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/guide": "Guide Book",
 };

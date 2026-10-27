@@ -1,0 +1,91 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Restaurant ERP - Order to Invoice Process Flow (Planned)",
+    "subtitle": "BOM/Semi-FG split, 2-level warehouse, GST + multi-currency billing, WhatsApp automation",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "output": ".archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html",
+    "views": [
+      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Order se Invoice tak pura planned flow" },
+      { "id": "bom_view", "label": "BOM & Kitchen Split", "focus": ["n_confirm","n_bom","n_kot","n_stock_deduct","n_pos_receipt","n_semifg_alert"], "note": "Order confirm hote hi BOM explode: Kitchen ko KOT, Billing ko price, Inventory se raw+semi-FG minus" },
+      { "id": "inventory_view", "label": "Warehouse & Stock Alerts", "focus": ["n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert"], "note": "2-level warehouse: Central -> Branch store; low stock aur semi-FG batch dono alert karte hain" },
+      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_thankyou"], "note": "Multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> WhatsApp Thank You" },
+      { "id": "offer_view", "label": "WhatsApp Offer Campaign", "focus": ["n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Owner offer banata hai, WhatsApp batch broadcast customer ko" }
+    ]
+  },
+  "lanes": [
+    { "id": "order", "label": "Waiter / Tablet POS" },
+    { "id": "kitchen", "label": "Kitchen & BOM Engine" },
+    { "id": "inventory", "label": "Inventory & Warehouse" },
+    { "id": "billing", "label": "Billing & GST" },
+    { "id": "whatsapp", "label": "WhatsApp Automation" }
+  ],
+  "phases": [
+    { "id": "phase_capture", "label": "Order Capture", "fromCol": 0, "toCol": 1 },
+    { "id": "phase_explode", "label": "BOM Explode", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
+    { "id": "phase_fulfil", "label": "Fulfilment Split", "fromCol": 3, "toCol": 3 },
+    { "id": "phase_settle", "label": "Settle, Invoice & WhatsApp", "fromCol": 4, "toCol": 4, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "grp_bom", "label": "BOM + Semi-FG Engine", "lane": "kitchen", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
+    { "id": "grp_wh", "label": "Central + Branch Warehouse", "lane": "inventory", "fromCol": 2, "toCol": 4, "variant": "default" },
+    { "id": "grp_offer", "label": "Offer Campaign (parallel)", "lane": "whatsapp", "fromCol": 0, "toCol": 2, "variant": "dashed" }
+  ],
+  "mainPath": ["n_table", "n_items", "n_confirm", "n_bom", "n_stock_deduct", "n_pos_receipt", "n_payment_invoice", "n_thankyou"],
+  "nodes": [
+    { "id": "n_table", "lane": "order", "col": 0, "type": "frontend", "label": "Table / Takeaway Select", "sublabel": "Waiter tablet" },
+    { "id": "n_items", "lane": "order", "col": 1, "type": "frontend", "label": "Add Items to Order", "sublabel": "Menu + modifiers" },
+    { "id": "n_confirm", "lane": "order", "col": 2, "type": "frontend", "label": "Confirm Order", "sublabel": "To kitchen + billing" },
+
+    { "id": "n_bom", "lane": "kitchen", "col": 2, "type": "backend", "label": "BOM Explode Engine", "sublabel": "Dish -> Semi-FG -> Raw", "tag": "recursive recipe tree" },
+    { "id": "n_kot", "lane": "kitchen", "col": 3, "type": "frontend", "label": "KOT Ticket", "sublabel": "Qty+notes, no price" },
+    { "id": "n_semifg_alert", "lane": "kitchen", "col": 4, "type": "security", "label": "Semi-FG Batch Alert", "sublabel": "Below par, prep now" },
+
+    { "id": "n_central_wh", "lane": "inventory", "col": 2, "type": "database", "label": "Central Warehouse", "sublabel": "Bulk raw stock" },
+    { "id": "n_stock_deduct", "lane": "inventory", "col": 3, "type": "database", "label": "Auto Stock Deduction", "sublabel": "Raw+Semi-FG minus" },
+    { "id": "n_low_stock", "lane": "inventory", "col": 4, "type": "security", "label": "Low Stock Alert", "sublabel": "To Purchase" },
+
+    { "id": "n_pos_receipt", "lane": "billing", "col": 3, "type": "frontend", "label": "POS Receipt", "sublabel": "Price copy" },
+    { "id": "n_payment_invoice", "lane": "billing", "col": 4, "type": "database", "label": "Payment + GST Invoice", "sublabel": "FX lock, CGST/SGST/IGST" },
+
+    { "id": "n_offer_owner", "lane": "whatsapp", "col": 0, "type": "frontend", "label": "Owner Creates Offer", "sublabel": "Text + validity" },
+    { "id": "n_offer_broadcast", "lane": "whatsapp", "col": 1, "type": "messagebus", "label": "Offer Alert Broadcast", "sublabel": "Batch fan-out" },
+    { "id": "n_customer_offer", "lane": "whatsapp", "col": 2, "type": "external", "label": "Customer WhatsApp", "sublabel": "Receives offer" },
+    { "id": "n_thankyou", "lane": "whatsapp", "col": 4, "type": "messagebus", "label": "WhatsApp Thank You", "sublabel": "Invoice link" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "n_table", "to": "n_items", "variant": "default" },
+    { "id": "e2", "from": "n_items", "to": "n_confirm", "variant": "default" },
+    { "id": "e3", "from": "n_confirm", "to": "n_bom", "variant": "emphasis" },
+    { "id": "e4", "from": "n_bom", "to": "n_kot", "label": "kitchen copy", "variant": "default", "role": "branch" },
+    { "id": "e5", "from": "n_bom", "to": "n_stock_deduct", "label": "raw+semiFG qty", "variant": "emphasis" },
+    { "id": "e6", "from": "n_stock_deduct", "to": "n_pos_receipt", "label": "price copy", "variant": "emphasis" },
+    { "id": "e7", "from": "n_central_wh", "to": "n_stock_deduct", "label": "replenish", "variant": "dashed" },
+    { "id": "e8", "from": "n_kot", "to": "n_semifg_alert", "label": "par check", "variant": "dashed", "role": "branch" },
+    { "id": "e9", "from": "n_stock_deduct", "to": "n_low_stock", "label": "below min", "variant": "dashed", "role": "branch" },
+    { "id": "e10", "from": "n_pos_receipt", "to": "n_payment_invoice", "label": "tax split", "variant": "default" },
+    { "id": "e11", "from": "n_payment_invoice", "to": "n_thankyou", "label": "invoice link", "variant": "emphasis" },
+    { "id": "e13", "from": "n_offer_owner", "to": "n_offer_broadcast", "variant": "default" },
+    { "id": "e14", "from": "n_offer_broadcast", "to": "n_customer_offer", "variant": "default" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "BOM + Semi-FG (Planned)", "items": [
+      "Dish ka BOM recursive hoga: Semi-FG (gravy/sauce/marinade) khud ek chhota recipe hai jo raw material se banta, phir final dish me ingredient ki tarah use hota",
+      "Order confirm par BOM explode hoke 3 jagah split hota hai: Kitchen (KOT), Billing (POS price), Inventory (stock minus)"
+    ] },
+    { "dot": "emerald", "title": "Inventory + Warehouse (Planned)", "items": [
+      "2-level: Central Warehouse (bulk) -> Branch Store (local); stock transfer dispatch/receive verify hota",
+      "Raw + Semi-FG dono auto-minus order confirm par; Semi-FG khatam ho to batch-prep alert kitchen ko"
+    ] },
+    { "dot": "violet", "title": "Billing, GST & Multi-Currency (Planned)", "items": [
+      "Ek hi company GSTIN, har branch invoice usi ke under; CGST+SGST ya IGST auto-split, HSN/SAC per item",
+      "Multi-currency: export/NRI billing me FX rate invoice time par lock hoti, Accounts base INR me hi consolidate"
+    ] },
+    { "dot": "rose", "title": "WhatsApp Automation (Planned)", "items": [
+      "Order complete -> auto Thank You message + invoice link customer ko",
+      "Owner offer banaye to WhatsApp Offer Alert broadcast saare target customers ko (sendWhatsAppBatch)"
+    ] }
+  ]
+}
