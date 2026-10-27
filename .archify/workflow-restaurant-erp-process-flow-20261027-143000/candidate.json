@@ -8,11 +8,11 @@
     "quality_profile": "showcase",
     "output": ".archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html",
     "views": [
-      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Order se GSTR filing export tak pura built-and-verified flow — 12 detailed steps neeche cards mein, har ek ka real example ke saath" },
-      { "id": "bom_view", "label": "BOM & Kitchen Split", "focus": ["n_confirm","n_bom","n_kot","n_stock_deduct","n_pos_receipt","n_semifg_alert"], "note": "Confirm par BOM explode: Kitchen KOT (price nahi), Billing price, Inventory minus — Butter Chicken example cards 1-3" },
-      { "id": "inventory_view", "label": "Warehouse & Stock Alerts", "focus": ["n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert"], "note": "2-level: Central -> Branch; dispatch sirf record, Receive hi real stock move karta — low stock alert cards 4-6" },
-      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou"], "note": "2 Counter billing -> Multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> GSTR-1 HSN export -> WhatsApp Thank You — cards 7-11" },
-      { "id": "offer_view", "label": "WhatsApp Offer Campaign", "focus": ["n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Owner offer banata hai, WhatsApp batch broadcast REAL past customers ko — card 12" }
+      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Full built-and-verified flow from order to GSTR filing export — 13 detailed steps below, each with a worked example" },
+      { "id": "bom_view", "label": "BOM & Kitchen Split", "focus": ["n_confirm","n_bom","n_kot","n_stock_deduct","n_pos_receipt","n_semifg_alert"], "note": "On confirm, the BOM explodes: Kitchen gets a KOT (no price), Billing gets the price, Inventory is deducted — see cards 1-3" },
+      { "id": "inventory_view", "label": "Warehouse & Stock Alerts", "focus": ["n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert"], "note": "2-level: Central -> Branch; dispatch is a paper record only, Receive is what actually moves stock — cards 4-6" },
+      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou"], "note": "2-counter billing -> multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> GSTR-1 HSN export -> WhatsApp Thank You — cards 7-11" },
+      { "id": "offer_view", "label": "WhatsApp Offer Campaign", "focus": ["n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Owner creates an offer, WhatsApp broadcasts it to REAL past customers — card 12" }
     ]
   },
   "lanes": [
@@ -74,52 +74,57 @@
   ],
   "cards": [
     { "dot": "cyan", "title": "1. Order Capture — Waiter Tablet", "items": [
-      "Waiter apni tablet se table/takeaway chunta hai, menu se items add karta hai, phir Confirm Order dabata hai.",
-      "Example: Table T-12, Counter 1 — 2x Butter Chicken + 1x Garlic Naan add karke confirm kiya."
+      "The waiter picks the table/takeaway on their own tablet, adds items from the menu, then taps Confirm Order.",
+      "Example: Table T-12, Counter 1 — added 2x Butter Chicken + 1x Garlic Naan and confirmed."
     ] },
-    { "dot": "cyan", "title": "2. BOM Explode Engine — Dish ki Asli Recipe", "items": [
-      "Har dish ka BOM (Bill of Materials) recursive hai: ek dish Semi-FG (gravy/sauce/marinade) use kar sakti hai, jo khud raw material se banti hai.",
-      "Example: Butter Chicken = 1 unit Gravy (Semi-FG) + 200g Chicken. Gravy khud Tomato + Butter + Spices se banti hai — confirm karte hi system dono level ko explode karke saari real raw material quantity nikalta hai."
+    { "dot": "cyan", "title": "2. BOM Explode Engine — the Dish's Real Recipe", "items": [
+      "Every dish's BOM (Bill of Materials) is recursive: a dish can use a Semi-FG (gravy/sauce/marinade) as an ingredient, and that Semi-FG is itself a small recipe made from raw materials.",
+      "Example: Butter Chicken = 1 unit of Gravy (Semi-FG) + 200g Chicken. The Gravy itself is made from Tomato + Butter + Spices — on confirm, the system explodes both levels at once and works out the real raw-material quantity needed."
+    ] },
+    { "dot": "amber", "title": "2b. How Semi-FG Raw Material Is Actually Deducted", "items": [
+      "There is no separate 'batch cooked the gravy today' transaction yet. The system does NOT keep a live stock count for Semi-FG items (no 'how much Gravy is left in the pot' number).",
+      "Instead, every time a dish using that Semi-FG is ordered, the system walks the recipe down to raw materials and deducts Tomato/Butter/Spices from the branch's real inventory at that moment — as if the Gravy were made fresh for that one order.",
+      "Why this is still correct: over a full day, Total Raw Material Used = Total Dishes Sold × Recipe Ratio either way, so the end-of-day inventory numbers come out right regardless of real kitchen batching. What it does NOT yet track is a literal 'we made 10 litres of Gravy this morning' stock entry — that would be a separate future feature (a true Semi-FG production/batch-stock module) if the kitchen wants to track in-progress batches explicitly."
     ] },
     { "dot": "cyan", "title": "3. Kitchen KOT + Semi-FG Alert", "items": [
-      "Kitchen ko sirf item + qty wali ticket milti hai (KOT) — price nahi dikhti, taaki kitchen staff price se distract na ho.",
-      "Example: KOT par 'Butter Chicken x2, Garlic Naan x1' print hota hai. Agar Gravy ka batch stock minimum se neeche ho, kitchen ko turant 'prep now' alert bhi milta hai."
+      "The kitchen only sees a ticket with item + quantity (the KOT) — no price, so kitchen staff are never distracted by billing.",
+      "Example: the KOT prints 'Butter Chicken x2, Garlic Naan x1'. If the Gravy's recent consumption rate suggests the batch is running low, the kitchen also gets a 'prep now' alert."
     ] },
     { "dot": "emerald", "title": "4. Central + Branch Warehouse", "items": [
-      "Owner ek Central warehouse (bulk stock) aur har branch ka apna local warehouse banata hai.",
-      "Example: Central se Branch B2 ko 50 kg Chicken dispatch hui — yeh sirf ek paper record hai, B2 ki actual stock abhi nahi badli."
+      "The Owner sets up one Central warehouse (bulk stock) and each branch gets its own local warehouse.",
+      "Example: Central dispatches 50 kg Chicken to Branch B2 — this is a paper record only; B2's actual stock has not changed yet."
     ] },
-    { "dot": "emerald", "title": "5. Receive = Real Stock Move", "items": [
-      "Dispatch sirf record hai; jab branch 'Receive' confirm karti hai tabhi real inventory badalti hai.",
-      "Example: B2 ne 48 kg receive ki (50 mein se) — ab B2 ki inventory mein +48 kg aaya, aur 2 kg ka shortfall alag se record ho gaya (dhoka chhupaya nahi gaya)."
+    { "dot": "emerald", "title": "5. Receive = the Real Stock Move", "items": [
+      "Dispatch is just a record; branch inventory only changes when the branch confirms Receive.",
+      "Example: B2 receives 48 kg (out of 50 dispatched) — B2's inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden."
     ] },
     { "dot": "emerald", "title": "6. Auto Stock Deduction + Low Stock Alert", "items": [
-      "Order confirm hote hi raw material + Semi-FG dono branch ki real inventory se minus hote hain. Stock kam ho to poora order reject ho jaata hai (kabhi aadha order nahi jaata).",
-      "Example: Chicken stock minimum 20 kg se neeche gaya to turant Purchase team ko Low Stock Alert milta hai — order karne se pehle hi pata chal jaata hai."
+      "The moment an order is confirmed, both raw material and Semi-FG raw-material requirements are deducted from the branch's real inventory. If stock is short, the WHOLE order is rejected (never a partial order).",
+      "Example: Chicken stock drops below the 20 kg minimum — the Purchase team gets a Low Stock Alert immediately, before it becomes a shortage."
     ] },
     { "dot": "violet", "title": "7. POS Receipt — 2 Billing Counters", "items": [
-      "Har branch mein 2 alag billing counters hote hain (Counter 1 aur Counter 2), dono independently same time par bill bana sakte hain — rush hours mein line nahi lagti.",
-      "Example: Counter 1 par dine-in customer ka bill, Counter 2 par ek saath takeaway customer ka bill — dono alag-alag chalte hain, koi conflict nahi."
+      "Each branch has 2 independent billing counters (Counter 1 and Counter 2) that can bill at the same time — no queue during rush hours.",
+      "Example: Counter 1 bills a dine-in customer while Counter 2 bills a takeaway customer at the same moment — no conflict between them."
     ] },
     { "dot": "violet", "title": "8. GST Invoice — CGST/SGST/IGST Auto-Split", "items": [
-      "Ek hi company GSTIN, har branch invoice usi ke under. Same state ho to CGST+SGST aadha-aadha split hota hai; alag state ho to poora IGST lagta hai — HSN/SAC code bhi per item.",
-      "Example: ₹300 ka item 5% GST par — same state mein CGST ₹7.50 + SGST ₹7.50; agar customer dusre state ka ho to IGST ₹15.00 ek saath."
+      "One company GSTIN, every branch invoices under it. Same state → CGST+SGST split evenly; different state → full IGST — with an HSN/SAC code on every item.",
+      "Example: a ₹300 item at 5% GST — same state: CGST ₹7.50 + SGST ₹7.50; a customer from another state instead pays IGST ₹15.00 in one line."
     ] },
-    { "dot": "violet", "title": "9. Multi-Currency — NRI/Export Billing", "items": [
-      "Foreign currency mein payment accept kar sakte ho; exchange rate SALE ke time lock hoti hai — baad mein rate badle to purana order kabhi nahi badalta. GST invoice hamesha INR mein hi rehta hai (legal requirement).",
-      "Example: ₹363.20 ka bill, customer ne USD mein pay kiya — receipt dikhati hai 'Payable in USD: $4.30 (rate ₹84.50 lock)'. Agar kal rate ₹85 ho jaaye, yeh purana bill nahi badlega."
+    { "dot": "violet", "title": "9. Multi-Currency — NRI / Export Billing", "items": [
+      "Payments can be accepted in a foreign currency; the exchange rate is locked at the moment of SALE — if the rate changes later, that past bill never changes. The GST invoice itself always stays in INR (legal requirement).",
+      "Example: a ₹363.20 bill, paid in USD — the receipt shows 'Payable in USD: $4.30 (rate locked at ₹84.50)'. Even if tomorrow's rate becomes ₹85, this bill stays exactly as it was."
     ] },
     { "dot": "violet", "title": "10. GSTR-1 HSN Export — Filing Ready", "items": [
-      "Owner/Accountant date-range aur branch chunkar ek click mein HSN-wise GST summary CSV download kar sakte hain — GST portal ke offline tool mein seedha paste hoti hai.",
-      "Example: October ke 2 orders dono HSN 2106 @ 5% ke — export unhe ek row mein merge karta hai: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Jin branch ka GST setup nahi hua, unke orders alag se 'excluded' count mein dikhte hain — kabhi chhupaye nahi jaate."
+      "The Owner/Accountant picks a date range and branch, and downloads an HSN-wise GST summary CSV in one click — it pastes directly into the GST portal's offline filing tool.",
+      "Example: two October orders both have items under HSN 2106 @ 5% — the export merges them into one row: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Orders from a branch without GST set up are shown separately as 'excluded' — never silently hidden inside the filing."
     ] },
     { "dot": "rose", "title": "11. WhatsApp Thank You Message", "items": [
-      "Order confirm hote hi customer ke WhatsApp par turant Thank You message jaata hai (agar number diya ho) — koi manual kaam nahi.",
-      "Example: 'Namaste Rahul! Aapka order #ORD-4821 confirm ho gaya — Total ₹420. Dhanyawad, phir se aaiyega! 🙏'"
+      "The moment an order is confirmed, a real Thank You message goes to the customer's WhatsApp (if they gave a number) — fully automatic, no manual step.",
+      "Example: 'Hi Rahul! Your order #ORD-4821 is confirmed — Total ₹420. Thank you, see you again! 🙏'"
     ] },
     { "dot": "rose", "title": "12. WhatsApp Offer Campaign", "items": [
-      "Owner naya offer banaye to ek click mein saare REAL customers ko WhatsApp par broadcast ho jaata hai — list fake nahi, sirf un logon ko jaate hai jinhone pehle order diya aur apna number diya.",
-      "Example: 'Saket Branch: 20% off all starters today! Valid tak 31 Oct' — 45 past customers ko ek saath bhej diya, sent/failed count turant dikhta hai."
+      "When the Owner creates a new offer, it broadcasts to every REAL customer in one click — the list is not invented, it's only people who actually ordered before and gave their number.",
+      "Example: 'Saket Branch: 20% off all starters today! Valid until 31 Oct' — sent to 45 past customers at once, with a live sent/failed count."
     ] }
   ]
 }

@@ -5767,19 +5767,31 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>1. Order Capture — Waiter Tablet</h3>
         </div>
         <ul>
-          <li>Waiter apni tablet se table/takeaway chunta hai, menu se items add karta hai, phir Confirm Order dabata hai.</li>
-          <li>Example: Table T-12, Counter 1 — 2x Butter Chicken + 1x Garlic Naan add karke confirm kiya.</li>
+          <li>The waiter picks the table/takeaway on their own tablet, adds items from the menu, then taps Confirm Order.</li>
+          <li>Example: Table T-12, Counter 1 — added 2x Butter Chicken + 1x Garlic Naan and confirmed.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>2. BOM Explode Engine — Dish ki Asli Recipe</h3>
+          <h3>2. BOM Explode Engine — the Dish&#39;s Real Recipe</h3>
         </div>
         <ul>
-          <li>Har dish ka BOM (Bill of Materials) recursive hai: ek dish Semi-FG (gravy/sauce/marinade) use kar sakti hai, jo khud raw material se banti hai.</li>
-          <li>Example: Butter Chicken = 1 unit Gravy (Semi-FG) + 200g Chicken. Gravy khud Tomato + Butter + Spices se banti hai — confirm karte hi system dono level ko explode karke saari real raw material quantity nikalta hai.</li>
+          <li>Every dish&#39;s BOM (Bill of Materials) is recursive: a dish can use a Semi-FG (gravy/sauce/marinade) as an ingredient, and that Semi-FG is itself a small recipe made from raw materials.</li>
+          <li>Example: Butter Chicken = 1 unit of Gravy (Semi-FG) + 200g Chicken. The Gravy itself is made from Tomato + Butter + Spices — on confirm, the system explodes both levels at once and works out the real raw-material quantity needed.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>2b. How Semi-FG Raw Material Is Actually Deducted</h3>
+        </div>
+        <ul>
+          <li>There is no separate &#39;batch cooked the gravy today&#39; transaction yet. The system does NOT keep a live stock count for Semi-FG items (no &#39;how much Gravy is left in the pot&#39; number).</li>
+          <li>Instead, every time a dish using that Semi-FG is ordered, the system walks the recipe down to raw materials and deducts Tomato/Butter/Spices from the branch&#39;s real inventory at that moment — as if the Gravy were made fresh for that one order.</li>
+          <li>Why this is still correct: over a full day, Total Raw Material Used = Total Dishes Sold × Recipe Ratio either way, so the end-of-day inventory numbers come out right regardless of real kitchen batching. What it does NOT yet track is a literal &#39;we made 10 litres of Gravy this morning&#39; stock entry — that would be a separate future feature (a true Semi-FG production/batch-stock module) if the kitchen wants to track in-progress batches explicitly.</li>
         </ul>
       </div>
 
@@ -5789,8 +5801,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>3. Kitchen KOT + Semi-FG Alert</h3>
         </div>
         <ul>
-          <li>Kitchen ko sirf item + qty wali ticket milti hai (KOT) — price nahi dikhti, taaki kitchen staff price se distract na ho.</li>
-          <li>Example: KOT par &#39;Butter Chicken x2, Garlic Naan x1&#39; print hota hai. Agar Gravy ka batch stock minimum se neeche ho, kitchen ko turant &#39;prep now&#39; alert bhi milta hai.</li>
+          <li>The kitchen only sees a ticket with item + quantity (the KOT) — no price, so kitchen staff are never distracted by billing.</li>
+          <li>Example: the KOT prints &#39;Butter Chicken x2, Garlic Naan x1&#39;. If the Gravy&#39;s recent consumption rate suggests the batch is running low, the kitchen also gets a &#39;prep now&#39; alert.</li>
         </ul>
       </div>
 
@@ -5800,19 +5812,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>4. Central + Branch Warehouse</h3>
         </div>
         <ul>
-          <li>Owner ek Central warehouse (bulk stock) aur har branch ka apna local warehouse banata hai.</li>
-          <li>Example: Central se Branch B2 ko 50 kg Chicken dispatch hui — yeh sirf ek paper record hai, B2 ki actual stock abhi nahi badli.</li>
+          <li>The Owner sets up one Central warehouse (bulk stock) and each branch gets its own local warehouse.</li>
+          <li>Example: Central dispatches 50 kg Chicken to Branch B2 — this is a paper record only; B2&#39;s actual stock has not changed yet.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>5. Receive = Real Stock Move</h3>
+          <h3>5. Receive = the Real Stock Move</h3>
         </div>
         <ul>
-          <li>Dispatch sirf record hai; jab branch &#39;Receive&#39; confirm karti hai tabhi real inventory badalti hai.</li>
-          <li>Example: B2 ne 48 kg receive ki (50 mein se) — ab B2 ki inventory mein +48 kg aaya, aur 2 kg ka shortfall alag se record ho gaya (dhoka chhupaya nahi gaya).</li>
+          <li>Dispatch is just a record; branch inventory only changes when the branch confirms Receive.</li>
+          <li>Example: B2 receives 48 kg (out of 50 dispatched) — B2&#39;s inventory now gets +48 kg, and the 2 kg shortfall is recorded separately, never hidden.</li>
         </ul>
       </div>
 
@@ -5822,8 +5834,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>6. Auto Stock Deduction + Low Stock Alert</h3>
         </div>
         <ul>
-          <li>Order confirm hote hi raw material + Semi-FG dono branch ki real inventory se minus hote hain. Stock kam ho to poora order reject ho jaata hai (kabhi aadha order nahi jaata).</li>
-          <li>Example: Chicken stock minimum 20 kg se neeche gaya to turant Purchase team ko Low Stock Alert milta hai — order karne se pehle hi pata chal jaata hai.</li>
+          <li>The moment an order is confirmed, both raw material and Semi-FG raw-material requirements are deducted from the branch&#39;s real inventory. If stock is short, the WHOLE order is rejected (never a partial order).</li>
+          <li>Example: Chicken stock drops below the 20 kg minimum — the Purchase team gets a Low Stock Alert immediately, before it becomes a shortage.</li>
         </ul>
       </div>
 
@@ -5833,8 +5845,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>7. POS Receipt — 2 Billing Counters</h3>
         </div>
         <ul>
-          <li>Har branch mein 2 alag billing counters hote hain (Counter 1 aur Counter 2), dono independently same time par bill bana sakte hain — rush hours mein line nahi lagti.</li>
-          <li>Example: Counter 1 par dine-in customer ka bill, Counter 2 par ek saath takeaway customer ka bill — dono alag-alag chalte hain, koi conflict nahi.</li>
+          <li>Each branch has 2 independent billing counters (Counter 1 and Counter 2) that can bill at the same time — no queue during rush hours.</li>
+          <li>Example: Counter 1 bills a dine-in customer while Counter 2 bills a takeaway customer at the same moment — no conflict between them.</li>
         </ul>
       </div>
 
@@ -5844,19 +5856,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>8. GST Invoice — CGST/SGST/IGST Auto-Split</h3>
         </div>
         <ul>
-          <li>Ek hi company GSTIN, har branch invoice usi ke under. Same state ho to CGST+SGST aadha-aadha split hota hai; alag state ho to poora IGST lagta hai — HSN/SAC code bhi per item.</li>
-          <li>Example: ₹300 ka item 5% GST par — same state mein CGST ₹7.50 + SGST ₹7.50; agar customer dusre state ka ho to IGST ₹15.00 ek saath.</li>
+          <li>One company GSTIN, every branch invoices under it. Same state → CGST+SGST split evenly; different state → full IGST — with an HSN/SAC code on every item.</li>
+          <li>Example: a ₹300 item at 5% GST — same state: CGST ₹7.50 + SGST ₹7.50; a customer from another state instead pays IGST ₹15.00 in one line.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot violet"></div>
-          <h3>9. Multi-Currency — NRI/Export Billing</h3>
+          <h3>9. Multi-Currency — NRI / Export Billing</h3>
         </div>
         <ul>
-          <li>Foreign currency mein payment accept kar sakte ho; exchange rate SALE ke time lock hoti hai — baad mein rate badle to purana order kabhi nahi badalta. GST invoice hamesha INR mein hi rehta hai (legal requirement).</li>
-          <li>Example: ₹363.20 ka bill, customer ne USD mein pay kiya — receipt dikhati hai &#39;Payable in USD: $4.30 (rate ₹84.50 lock)&#39;. Agar kal rate ₹85 ho jaaye, yeh purana bill nahi badlega.</li>
+          <li>Payments can be accepted in a foreign currency; the exchange rate is locked at the moment of SALE — if the rate changes later, that past bill never changes. The GST invoice itself always stays in INR (legal requirement).</li>
+          <li>Example: a ₹363.20 bill, paid in USD — the receipt shows &#39;Payable in USD: $4.30 (rate locked at ₹84.50)&#39;. Even if tomorrow&#39;s rate becomes ₹85, this bill stays exactly as it was.</li>
         </ul>
       </div>
 
@@ -5866,8 +5878,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>10. GSTR-1 HSN Export — Filing Ready</h3>
         </div>
         <ul>
-          <li>Owner/Accountant date-range aur branch chunkar ek click mein HSN-wise GST summary CSV download kar sakte hain — GST portal ke offline tool mein seedha paste hoti hai.</li>
-          <li>Example: October ke 2 orders dono HSN 2106 @ 5% ke — export unhe ek row mein merge karta hai: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Jin branch ka GST setup nahi hua, unke orders alag se &#39;excluded&#39; count mein dikhte hain — kabhi chhupaye nahi jaate.</li>
+          <li>The Owner/Accountant picks a date range and branch, and downloads an HSN-wise GST summary CSV in one click — it pastes directly into the GST portal&#39;s offline filing tool.</li>
+          <li>Example: two October orders both have items under HSN 2106 @ 5% — the export merges them into one row: Qty 3, Taxable ₹400, CGST ₹10 + SGST ₹10, Total ₹420. Orders from a branch without GST set up are shown separately as &#39;excluded&#39; — never silently hidden inside the filing.</li>
         </ul>
       </div>
 
@@ -5877,8 +5889,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>11. WhatsApp Thank You Message</h3>
         </div>
         <ul>
-          <li>Order confirm hote hi customer ke WhatsApp par turant Thank You message jaata hai (agar number diya ho) — koi manual kaam nahi.</li>
-          <li>Example: &#39;Namaste Rahul! Aapka order #ORD-4821 confirm ho gaya — Total ₹420. Dhanyawad, phir se aaiyega! 🙏&#39;</li>
+          <li>The moment an order is confirmed, a real Thank You message goes to the customer&#39;s WhatsApp (if they gave a number) — fully automatic, no manual step.</li>
+          <li>Example: &#39;Hi Rahul! Your order #ORD-4821 is confirmed — Total ₹420. Thank you, see you again! 🙏&#39;</li>
         </ul>
       </div>
 
@@ -5888,8 +5900,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>12. WhatsApp Offer Campaign</h3>
         </div>
         <ul>
-          <li>Owner naya offer banaye to ek click mein saare REAL customers ko WhatsApp par broadcast ho jaata hai — list fake nahi, sirf un logon ko jaate hai jinhone pehle order diya aur apna number diya.</li>
-          <li>Example: &#39;Saket Branch: 20% off all starters today! Valid tak 31 Oct&#39; — 45 past customers ko ek saath bhej diya, sent/failed count turant dikhta hai.</li>
+          <li>When the Owner creates a new offer, it broadcasts to every REAL customer in one click — the list is not invented, it&#39;s only people who actually ordered before and gave their number.</li>
+          <li>Example: &#39;Saket Branch: 20% off all starters today! Valid until 31 Oct&#39; — sent to 45 past customers at once, with a live sent/failed count.</li>
         </ul>
       </div>
     </div>

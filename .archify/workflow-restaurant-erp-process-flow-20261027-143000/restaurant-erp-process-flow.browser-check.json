@@ -6,11 +6,11 @@
   "status": "pass",
   "visualReview": "not-requested",
   "provenance": "current",
-  "deliveryReceiptId": "8f21b551-42c9-43f6-b4e2-8f8fe76633b7",
+  "deliveryReceiptId": "83b0f954-efb5-49b8-a8f7-2051db8c9321",
   "artifact": {
     "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
-    "sha256": "97442dbd8d03e6c125754add743b3a2026678aff987f1999775c3ce27f90a256",
-    "bytes": 867575
+    "sha256": "dbe89444de4f94ac383dc6b480ea0d5b0576c0e5dca8c8fa801e4a1257e20391",
+    "bytes": 868827
   },
   "state": {
     "detail": "read",
@@ -32,7 +32,7 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1150,
+        "scrollHeight": 1151,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
@@ -557,7 +557,7 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1150,
+        "scrollHeight": 1151,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
@@ -1034,7 +1034,7 @@
         "innerWidth": 1440,
         "innerHeight": 900,
         "scrollWidth": 1440,
-        "scrollHeight": 1150,
+        "scrollHeight": 1151,
         "overflowX": false,
         "overflowY": true,
         "verticalScrollAccepted": true,
