@@ -79,14 +79,14 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
   },
   "/pos": {
     en: {
-      scenario: "Create an illustrative dine-in order paid by UPI.",
-      steps: ["Open POS / Cashier and click New Order.", "Branch: Connaught Place; Channel: DINE_IN; Table: T-12.", "Amount: ₹1,840; Tender: UPI. Click Create Order.", "Find the newly added order row and compare its branch, table, amount and tender."],
-      result: "A demo order row appears on this page. It is not a bill, tax invoice or payment receipt; no money is collected and reloading resets the row."
+      scenario: "Place a real dine-in order for a dish with a configured BOM, paid by UPI, in a test branch.",
+      steps: ["Open POS / Cashier, select a test branch and click New Order.", "Channel: DINE_IN; Counter: Counter 1; pick a sellable dish that has at least one BOM line; Qty: 2; Tender: UPI.", "Click Confirm Order. If branch raw material stock is below what the BOM needs, the whole order is rejected with a 409 — top up Inventory first.", "Open Inventory for that branch and confirm the raw material quantity actually decreased by the BOM's recipe amount × 2."],
+      result: "A real pos_orders row is saved with a KOT (item+qty, no price) and a receipt (price+GST if configured). Branch inventory_stock is really deducted — this is not a page-only demo. Reloading does not undo it."
     },
     hinglish: {
-      scenario: "UPI tender wala sample dine-in order banao.",
-      steps: ["POS / Cashier kholo aur New Order dabao.", "Branch: Connaught Place; Channel: DINE_IN; Table: T-12.", "Amount: ₹1,840; Tender: UPI. Create Order dabao.", "Nayi row mein branch, table, amount aur tender milao."],
-      result: "Page par demo order row aayegi. Yeh bill, tax invoice ya payment receipt nahi hai; paisa collect nahi hota aur reload par row reset ho jaati hai."
+      scenario: "Test branch mein BOM-configured dish ka real dine-in order UPI se lagao.",
+      steps: ["POS / Cashier kholo, test branch chuno aur New Order dabao.", "Channel: DINE_IN; Counter: Counter 1; koi sellable dish chuno jiska kam se kam ek BOM line ho; Qty: 2; Tender: UPI.", "Confirm Order dabao. Agar branch ka raw material BOM ki zarurat se kam hai, poora order 409 ke saath reject hoga — pehle Inventory top up karo.", "Us branch ka Inventory kholo aur confirm karo raw material qty BOM ke recipe amount × 2 jitni kam hui."],
+      result: "Real pos_orders row save hoti hai KOT (item+qty, price nahi) aur receipt (price+GST agar configured) ke saath. Branch inventory_stock real mein minus hoti hai — yeh page-only demo nahi. Reload isse undo nahi karta."
     }
   },
   "/cash-drop": {
@@ -179,6 +179,42 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
       scenario: "Owner apne control wale WhatsApp number ki provider settings connect kare.",
       steps: ["Apne ChatXFlow account mein QR flow se WhatsApp number connect karo.", "Owner se WhatsApp Settings kholo aur actual Developer API Token privately token field mein paste karo. Chat ya guide mein kabhi paste mat karo.", "Apna WhatsApp phone set karo, approved Base URL https://chatxflow.online hi rakho aur Save Settings dabao.", "Reload karke saved configuration confirm karo. Baad mein token blank chhodne par existing token retain hota hai."],
       result: "Provider settings real DB mein save hoti hain aur token masked dikhta hai. Sirf Save se message send, reminders, approvals, webhooks ya 8AM summary enable nahi hote."
+    }
+  },
+  "/menu": {
+    en: {
+      scenario: "Build a 2-level BOM: a Semi-FG gravy made from raw materials, then a dish that uses that gravy.",
+      steps: ["Add Item: name Practice Gravy, mark it Semi-FG (not sellable), set a branch and price.", "Open Practice Gravy's BOM and add raw material lines (e.g. Tomato 0.3kg, Butter 0.05kg) with qty per unit.", "Add Item: name Practice Curry (sellable). Open its BOM and add Practice Gravy as a Semi-FG component (qty 1), plus a raw material line.", "Click Explode & Cost on Practice Curry — confirm it shows ALL raw materials from both levels rolled up with a total estimated cost."],
+      result: "A real recursive BOM is saved in Postgres. Explode & Cost correctly walks through the nested Semi-FG to the raw-material leaves; this same BOM is what POS deducts from inventory on every order."
+    },
+    hinglish: {
+      scenario: "2-level BOM banao: raw material se Semi-FG gravy, phir us gravy ko use karne wali dish.",
+      steps: ["Add Item: naam Practice Gravy, Semi-FG mark karo (sellable nahi), branch aur price set karo.", "Practice Gravy ka BOM kholo aur raw material lines add karo (jaise Tomato 0.3kg, Butter 0.05kg) qty per unit ke saath.", "Add Item: naam Practice Curry (sellable). Uska BOM kholo aur Practice Gravy ko Semi-FG component (qty 1) + ek raw material line add karo.", "Practice Curry par Explode & Cost dabao — confirm karo dono level ke saare raw materials rolled up dikh rahe hain total estimated cost ke saath."],
+      result: "Real recursive BOM Postgres mein save hota hai. Explode & Cost nested Semi-FG se hote hue raw-material tak sahi se chalta hai; yahi BOM POS mein har order par inventory se minus hota hai."
+    }
+  },
+  "/warehouse": {
+    en: {
+      scenario: "Dispatch stock from Central to a branch, then confirm receipt with a deliberate shortfall.",
+      steps: ["As Owner, open Warehouse & Transfers and create a CENTRAL warehouse (if none exists) and a BRANCH warehouse for your test branch.", "Click Dispatch Transfer: From Central, To your test branch, pick a raw material, Qty dispatched: 10.", "Check Inventory for that branch — stock has NOT changed yet (dispatch is a paper record only).", "Click Receive on the DISPATCHED row and enter Qty received: 9. Confirm the branch's Inventory now shows +9, and the transfer shows a 1-unit shortfall."],
+      result: "A real stock_transfers row moves DISPATCHED → RECEIVED, and branch inventory_stock only changes at the Receive step — proving dispatch alone never touches live stock, and variance is tracked, not silently dropped."
+    },
+    hinglish: {
+      scenario: "Central se branch ko stock dispatch karo, phir jaan-boojh kar shortfall ke saath receive confirm karo.",
+      steps: ["Owner se Warehouse & Transfers kholo aur CENTRAL warehouse (agar na ho) + apni test branch ka BRANCH warehouse banao.", "Dispatch Transfer dabao: From Central, To apni test branch, koi raw material chuno, Qty dispatched: 10.", "Us branch ka Inventory check karo — stock abhi NAHI badla (dispatch sirf paper record hai).", "DISPATCHED row par Receive dabao aur Qty received: 9 bharo. Confirm karo branch ki Inventory ab +9 dikhti hai, aur transfer mein 1-unit shortfall dikhta hai."],
+      result: "Real stock_transfers row DISPATCHED → RECEIVED move hoti hai, aur branch inventory_stock sirf Receive step par badalti hai — proof ki dispatch akela kabhi live stock nahi chhuta, aur variance track hoti hai, silently drop nahi hoti."
+    }
+  },
+  "/gst-export": {
+    en: {
+      scenario: "Pull a GSTR-1 HSN summary for today covering orders you just placed via POS.",
+      steps: ["Place 1-2 real POS orders in a GST-configured branch (branch and company GST state codes both set).", "Open GSTR-1 HSN Summary Export, set From/To to today, and optionally scope to that branch.", "Click Generate — review the HSN-wise table: rate, qty, taxable value, CGST/SGST/IGST and total.", "Click Export CSV and open the downloaded file; confirm its numbers match the on-screen table."],
+      result: "A real CSV is generated purely from the orders you just placed — no mock numbers. Orders from a branch without GST configured would show up in 'excluded' count instead of silently appearing as compliant."
+    },
+    hinglish: {
+      scenario: "Aaj POS se lagaye orders ka GSTR-1 HSN summary nikaalo.",
+      steps: ["GST-configured branch mein (branch aur company dono ke GST state code set) 1-2 real POS orders lagao.", "GSTR-1 HSN Summary Export kholo, From/To aaj ki date set karo, optional us branch tak scope karo.", "Generate dabao — HSN-wise table dekho: rate, qty, taxable value, CGST/SGST/IGST aur total.", "Export CSV dabao aur downloaded file kholo; confirm numbers on-screen table se milte hain."],
+      result: "Real CSV sirf abhi lagaye orders se banta hai — koi mock numbers nahi. GST-unconfigured branch ke orders 'excluded' count mein dikhenge, compliant jaisa silently nahi."
     }
   }
 };

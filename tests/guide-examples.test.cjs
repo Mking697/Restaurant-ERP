@@ -8,7 +8,7 @@ const { GUIDE_MODULES } = require('../src/lib/guide-content.ts');
 const { GUIDE_EXAMPLES, getGuideExample } = require('../src/lib/guide-examples.ts');
 
 test('every module has a practical scenario, four steps and expected result in both languages', () => {
-  assert.equal(GUIDE_MODULES.length, 13);
+  assert.equal(GUIDE_MODULES.length, 16);
   assert.deepEqual(Object.keys(GUIDE_EXAMPLES).sort(), GUIDE_MODULES.map(m => m.route).sort());
   for (const module of GUIDE_MODULES) {
     for (const language of ['en', 'hinglish']) {
@@ -50,12 +50,12 @@ test('workforce guidance preserves leave identity and states practice permission
 });
 
 test('examples distinguish page-local demos from real writes and never supply credentials', () => {
-  for (const route of ['/tasks', '/purchase', '/pos', '/cash-drop']) {
+  for (const route of ['/tasks', '/purchase', '/cash-drop']) {
     assert.match(GUIDE_EXAMPLES[route].en.result, /demo|page|local/i, route);
     assert.match(GUIDE_EXAMPLES[route].en.result, /not|no |reset|reload/i, route);
   }
-  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce']) {
-    assert.match(GUIDE_EXAMPLES[route].en.result, /real|persist|database/i, route);
+  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce', '/pos', '/menu', '/warehouse', '/gst-export']) {
+    assert.match(GUIDE_EXAMPLES[route].en.result, /real|persist|database|Postgres/i, route);
   }
   const cash = GUIDE_EXAMPLES['/cash-drop'].en;
   assert.equal(500 * 10 + 200 * 5 + 100 * 5 + 50, 6550);

@@ -7,13 +7,13 @@
   "quality": "showcase",
   "specification": {
     "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\candidate.json",
-    "sha256": "245e5deae53b53ba1ce0f3f6cee4feebda9bdea0cda18d8e031e615b752f347d",
-    "bytes": 7795
+    "sha256": "15b3b8f2c59a9e7505c76a2c9c4e79f79142a52a21276c98ea7b15db4cac7df9",
+    "bytes": 8621
   },
   "artifact": {
     "path": "G:\\restaurant erp\\.archify\\workflow-restaurant-erp-process-flow-20261027-143000\\restaurant-erp-process-flow.html",
-    "sha256": "de718b3d4ff9cb2a4376f0a7028da8db394e1b5c4599a8b8fa2c4ebdfc72f819",
-    "bytes": 860140
+    "sha256": "309181cbad8920b73090905afbc88e47a824c4a8851eadf0a2cda6d6a4dc010f",
+    "bytes": 863014
   },
   "gates": {
     "validate": "pass",
@@ -43,7 +43,7 @@
     "noticeText": null
   },
   "visualReview": "not-requested",
-  "durationMs": 9210,
+  "durationMs": 15610,
   "browserCheck": {
     "requested": true,
     "ran": true

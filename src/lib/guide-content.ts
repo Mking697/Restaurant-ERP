@@ -177,26 +177,28 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "route": "/pos",
     "icon": "💳",
     "cat": "frontend",
-    "status": "pending",
+    "status": "live",
     "title": "POS / Cashier",
-    "short": "Create sample order headers across dine-in and delivery channels.",
-    "what": "Orders use mock page state, not a live billing ledger. Line items, payment collection, invoice posting and database persistence are not implemented.",
+    "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
+    "what": "Confirming an order explodes its BOM (including nested Semi-FG) and atomically deducts real branch inventory in PostgreSQL — insufficient stock rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm.",
     "how": [
-      "New Order: enter branch, channel, table if applicable, amount and tender.",
-      "Create Order adds a row to this page.",
-      "Reload to restore the original sample dataset."
+      "New Order: pick channel, counter (1 or 2), items and tender. Customer name/WhatsApp number are optional.",
+      "Confirm Order explodes the real BOM, checks and deducts branch stock, and posts the order — a shortfall rejects the whole order with a 409.",
+      "The receipt shows GST (CGST/SGST or IGST) when the branch and company GST state codes are configured, else it bills tax-free with a clear note.",
+      "Pick a non-INR payment currency (configured via the Owner-only Currency Rates panel) to also show the payable amount in that currency alongside the INR invoice total."
     ],
-    "example": "Illustration: enter a ₹1,840 dine-in order paid by UPI. The demo row is not a real bill or payment receipt.",
+    "example": "Example: 2 plates of Butter Chicken on Counter 2, paid in USD. Receipt shows ₹363.20 (GST invoice, incl. 5% GST) and Payable in USD: $4.30 (rate locked at ₹84.50). Real raw material + Semi-FG gravy stock both deduct from that branch's inventory.",
     "hinglish": {
       "title": "POS / Cashier",
-      "short": "Dine-in aur delivery channels ke sample order headers banao.",
-      "what": "Orders mock page state use karte hain, live billing ledger nahi. Line items, payment collection, invoice posting aur database persistence implement nahi hain.",
+      "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
+      "what": "Order confirm karte hi BOM explode hota hai (nested Semi-FG samet) aur real branch inventory PostgreSQL mein atomically minus hoti hai — stock kam ho to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai.",
       "how": [
-        "New Order mein branch, channel, table (agar ho), amount aur tender bharo.",
-        "Create Order se is page par row aati hai.",
-        "Reload par original sample dataset wapas aata hai."
+        "New Order: channel, counter (1 ya 2), items aur tender chuno. Customer naam/WhatsApp number optional hain.",
+        "Confirm Order real BOM explode karta hai, branch stock check+deduct karta hai aur order post karta hai — kami ho to 409 ke saath poora order reject.",
+        "Receipt GST dikhati hai (CGST/SGST ya IGST) jab branch aur company ke GST state code set hon, warna clear note ke saath tax-free bill ban jaata hai.",
+        "Non-INR payment currency chuno (Owner-only Currency Rates panel se configured) to INR invoice total ke saath us currency mein payable amount bhi dikhta hai."
       ],
-      "example": "Example: ₹1,840 ka dine-in order UPI tender se bharo. Demo row real bill ya payment receipt nahi hai."
+      "example": "Example: 2 plate Butter Chicken Counter 2 par, USD mein payment. Receipt ₹363.20 (GST invoice, 5% GST samet) aur Payable in USD: $4.30 (rate lock ₹84.50) dikhati hai. Real raw material + Semi-FG gravy dono stock us branch ki inventory se minus hote hain."
     }
   },
   {
@@ -361,6 +363,93 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
         "Save Settings dabao. Existing token rakhne ke liye token blank chhodo. Custom hosts allowed nahi hain."
       ],
       "example": "Example: Owner provider settings save karta hai. Isse sirf configuration storage verify hoti hai, automatic reminders ya approval buttons ki delivery nahi."
+    }
+  },
+  {
+    "module": "MENU_BOM",
+    "route": "/menu",
+    "icon": "🍲",
+    "cat": "backend",
+    "status": "live",
+    "title": "Menu & BOM",
+    "short": "Real dish recipes: raw materials and Semi-FG, recursively, with live cost estimate.",
+    "what": "Create menu items (sellable dishes, or Semi-FG bases like gravy/marinade that are not directly orderable) and build each dish's BOM — a recipe can use raw materials OR another Semi-FG item as a component, nested any number of levels deep. A cycle (A needs B needs A) is rejected at save time. Explode & Cost recursively walks the whole tree and estimates per-unit cost from the lowest active vendor rate.",
+    "how": [
+      "Add Item: name, branch, price, and whether it's Semi-FG (base, not sellable) or a sellable dish.",
+      "Open a dish and add BOM lines: pick either a raw material or an existing Semi-FG item as the component, with qty per unit.",
+      "Explode & Cost shows the full recursive ingredient breakdown and an estimated cost — a planning tool, not a GST invoice figure.",
+      "This same BOM is what POS explodes live on every order confirm to deduct inventory and split the kitchen/billing copies."
+    ],
+    "example": "Example: Butter Chicken needs 1 unit of Gravy (Semi-FG) + 200g Chicken. Gravy itself needs Tomato + Butter + Spices. Explode & Cost shows all 4 raw materials rolled up, costing ₹90.80 per plate.",
+    "hinglish": {
+      "title": "Menu aur BOM",
+      "short": "Real dish recipes: raw material aur Semi-FG, recursively, live cost estimate ke saath.",
+      "what": "Menu items banao (sellable dish, ya Semi-FG base jaise gravy/marinade jo directly order nahi hoti) aur har dish ka BOM banao — ek recipe raw material YA kisi aur Semi-FG item ko component ki tarah use kar sakti hai, kitne bhi level nested. Cycle (A ko B chahiye, B ko A chahiye) save time par reject hota hai. Explode & Cost poori tree recursively ghoom kar lowest active vendor rate se per-unit cost estimate deta hai.",
+      "how": [
+        "Add Item: naam, branch, price, aur yeh Semi-FG (base, sellable nahi) hai ya sellable dish.",
+        "Dish kholo aur BOM lines add karo: raw material ya existing Semi-FG item component ki tarah chuno, qty per unit ke saath.",
+        "Explode & Cost poora recursive ingredient breakdown aur estimated cost dikhata hai — yeh planning tool hai, GST invoice figure nahi.",
+        "Yahi BOM POS mein har order confirm par live explode hota hai inventory deduct karne aur kitchen/billing copy split karne ke liye."
+      ],
+      "example": "Example: Butter Chicken ko 1 unit Gravy (Semi-FG) + 200g Chicken chahiye. Gravy khud Tomato + Butter + Spices se banti hai. Explode & Cost saare 4 raw materials rolled up dikhata hai, ₹90.80 per plate cost."
+    }
+  },
+  {
+    "module": "INVENTORY",
+    "route": "/warehouse",
+    "icon": "🏭",
+    "cat": "backend",
+    "status": "live",
+    "title": "Warehouse & Transfers",
+    "short": "Real 2-level stock: Central warehouse dispatches, branch confirms receipt.",
+    "what": "Owner creates one CENTRAL warehouse plus one BRANCH warehouse per branch. Dispatching a stock transfer (Central → Branch only) is a paper/audit record — it does NOT move any quantity by itself, since the central warehouse has no live quantity ledger yet. Receiving is the ONLY step that mutates real branch inventory_stock; any shortfall between dispatched and received quantity is recorded as transit variance.",
+    "how": [
+      "Owner: New Warehouse to create the CENTRAL warehouse and each branch's BRANCH warehouse.",
+      "Dispatch Transfer: pick the Central source, the destination branch, a raw material and quantity dispatched.",
+      "On the branch side, Receive: enter the actual quantity received — this is the step that adds to that branch's real stock.",
+      "A received quantity less than dispatched shows as a shortfall; it's recorded, not auto-blocked or auto-refunded."
+    ],
+    "example": "Example: Central dispatches 50 kg Rice to Branch B2. Branch stock does NOT change yet. B2 receives 48 kg — now B2's real inventory gets +48 kg, and a 2 kg shortfall is recorded against that transfer.",
+    "hinglish": {
+      "title": "Warehouse aur Transfer",
+      "short": "Real 2-level stock: Central warehouse dispatch karta hai, branch receipt confirm karti hai.",
+      "what": "Owner ek CENTRAL warehouse aur har branch ka ek BRANCH warehouse banata hai. Stock transfer dispatch (sirf Central → Branch) ek paper/audit record hai — khud se koi quantity move nahi karta, kyunki central warehouse ka abhi koi live quantity ledger nahi hai. Receive hi aisa step hai jo real branch inventory_stock badalta hai; dispatched aur received quantity ke beech kami transit variance ki tarah record hoti hai.",
+      "how": [
+        "Owner: New Warehouse se CENTRAL warehouse aur har branch ka BRANCH warehouse banao.",
+        "Dispatch Transfer: Central source, destination branch, raw material aur dispatched quantity chuno.",
+        "Branch side par Receive: actual received quantity bharo — yahi step branch ki real stock mein add karta hai.",
+        "Received quantity dispatched se kam ho to shortfall dikhta hai; yeh sirf record hota hai, auto-block ya auto-refund nahi."
+      ],
+      "example": "Example: Central 50 kg Rice Branch B2 ko dispatch karta hai. Branch stock abhi nahi badalti. B2 48 kg receive karta hai — ab B2 ki real inventory mein +48 kg add hota hai, aur 2 kg shortfall us transfer ke against record hoti hai."
+    }
+  },
+  {
+    "module": "POS_CASHIER",
+    "route": "/gst-export",
+    "icon": "🧾",
+    "cat": "finance",
+    "status": "live",
+    "title": "GSTR-1 HSN Summary Export",
+    "short": "Real GSTR-1 Table 12 style HSN-wise export, built from actual completed orders.",
+    "what": "Pick a date range and branch scope; the page pulls every real completed order in range, groups taxable value + CGST/SGST/IGST by HSN/SAC code and rate, and lets you export it as CSV ready for the GST portal's offline tool. Orders from a branch (or before the company) had its GST state code configured are excluded from the summary and counted separately — a GSTR filing never silently includes tax-free sales as if they were GST-compliant.",
+    "how": [
+      "Pick From/To dates and (optionally) a branch, then Generate.",
+      "Review the HSN-wise table: rate, quantity, taxable value, CGST/SGST/IGST, total tax and total value, with a Grand Total row.",
+      "If any orders in range are excluded for missing GST configuration, a clear warning states exactly how many.",
+      "Export CSV downloads the exact on-screen summary."
+    ],
+    "example": "Example: two orders in October both have menu items under HSN 2106 at 5% GST — the export merges them into one row: Qty 3, Taxable ₹400.00, CGST ₹10.00, SGST ₹10.00, Total ₹420.00.",
+    "hinglish": {
+      "title": "GSTR-1 HSN Summary Export",
+      "short": "Real GSTR-1 Table 12 jaisa HSN-wise export, real completed orders se bana.",
+      "what": "Date range aur branch scope chuno; page us range ke saare real completed orders uthati hai, HSN/SAC code aur rate ke hisaab se taxable value + CGST/SGST/IGST group karti hai, aur CSV export deti hai jo GST portal ke offline tool mein seedha ja sake. Jin branch (ya jab tak company) ka GST state code configure nahi tha unke orders summary se exclude hote hain aur alag count hote hain — GSTR filing mein kabhi tax-free sales GST-compliant jaisi silently nahi dikhti.",
+      "how": [
+        "From/To dates aur (optional) branch chuno, phir Generate dabao.",
+        "HSN-wise table dekho: rate, quantity, taxable value, CGST/SGST/IGST, total tax aur total value, saath mein Grand Total row.",
+        "Agar range ke kuch orders GST configuration na hone ki wajah se exclude hue hain, ek clear warning exact count batati hai.",
+        "Export CSV se wahi on-screen summary download hoti hai."
+      ],
+      "example": "Example: October ke 2 orders dono mein HSN 2106 @ 5% GST ke menu items hain — export unhe ek row mein merge karta hai: Qty 3, Taxable ₹400.00, CGST ₹10.00, SGST ₹10.00, Total ₹420.00."
     }
   }
 ];

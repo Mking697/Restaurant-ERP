@@ -2,16 +2,16 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Restaurant ERP - Order to Invoice Process Flow (Planned)",
-    "subtitle": "BOM/Semi-FG split, 2-level warehouse, GST + multi-currency billing, WhatsApp automation",
+    "title": "Restaurant ERP - Order to Invoice Process Flow (Built & Verified)",
+    "subtitle": "BOM/Semi-FG split, 2-counter billing, 2-level warehouse, GST + multi-currency + GSTR export, WhatsApp automation",
     "visual_preset": "signal-flow",
     "quality_profile": "showcase",
     "output": ".archify/workflow-restaurant-erp-process-flow-20261027-143000/restaurant-erp-process-flow.html",
     "views": [
-      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Order se Invoice tak pura planned flow" },
+      { "id": "all", "label": "Full Flow", "focus": ["n_table","n_items","n_confirm","n_bom","n_kot","n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert","n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou","n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Order se GSTR filing export tak pura built-and-verified flow" },
       { "id": "bom_view", "label": "BOM & Kitchen Split", "focus": ["n_confirm","n_bom","n_kot","n_stock_deduct","n_pos_receipt","n_semifg_alert"], "note": "Order confirm hote hi BOM explode: Kitchen ko KOT, Billing ko price, Inventory se raw+semi-FG minus" },
       { "id": "inventory_view", "label": "Warehouse & Stock Alerts", "focus": ["n_central_wh","n_stock_deduct","n_low_stock","n_semifg_alert"], "note": "2-level warehouse: Central -> Branch store; low stock aur semi-FG batch dono alert karte hain" },
-      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_thankyou"], "note": "Multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> WhatsApp Thank You" },
+      { "id": "billing_view", "label": "Billing, GST & WhatsApp", "focus": ["n_pos_receipt","n_payment_invoice","n_gstr_export","n_thankyou"], "note": "Multi-currency FX lock -> GST invoice (CGST/SGST/IGST) -> GSTR-1 HSN export -> WhatsApp Thank You" },
       { "id": "offer_view", "label": "WhatsApp Offer Campaign", "focus": ["n_offer_owner","n_offer_broadcast","n_customer_offer"], "note": "Owner offer banata hai, WhatsApp batch broadcast customer ko" }
     ]
   },
@@ -26,7 +26,7 @@
     { "id": "phase_capture", "label": "Order Capture", "fromCol": 0, "toCol": 1 },
     { "id": "phase_explode", "label": "BOM Explode", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
     { "id": "phase_fulfil", "label": "Fulfilment Split", "fromCol": 3, "toCol": 3 },
-    { "id": "phase_settle", "label": "Settle, Invoice & WhatsApp", "fromCol": 4, "toCol": 4, "variant": "dashed" }
+    { "id": "phase_settle", "label": "Settle, Invoice, GSTR & WhatsApp", "fromCol": 4, "toCol": 5, "variant": "dashed" }
   ],
   "groups": [
     { "id": "grp_bom", "label": "BOM + Semi-FG Engine", "lane": "kitchen", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
@@ -35,7 +35,7 @@
   ],
   "mainPath": ["n_table", "n_items", "n_confirm", "n_bom", "n_stock_deduct", "n_pos_receipt", "n_payment_invoice", "n_thankyou"],
   "nodes": [
-    { "id": "n_table", "lane": "order", "col": 0, "type": "frontend", "label": "Table / Takeaway Select", "sublabel": "Waiter tablet" },
+    { "id": "n_table", "lane": "order", "col": 0, "type": "frontend", "label": "Table / Takeaway Select", "sublabel": "Counter 1 or 2, waiter tablet" },
     { "id": "n_items", "lane": "order", "col": 1, "type": "frontend", "label": "Add Items to Order", "sublabel": "Menu + modifiers" },
     { "id": "n_confirm", "lane": "order", "col": 2, "type": "frontend", "label": "Confirm Order", "sublabel": "To kitchen + billing" },
 
@@ -47,8 +47,9 @@
     { "id": "n_stock_deduct", "lane": "inventory", "col": 3, "type": "database", "label": "Auto Stock Deduction", "sublabel": "Raw+Semi-FG minus" },
     { "id": "n_low_stock", "lane": "inventory", "col": 4, "type": "security", "label": "Low Stock Alert", "sublabel": "To Purchase" },
 
-    { "id": "n_pos_receipt", "lane": "billing", "col": 3, "type": "frontend", "label": "POS Receipt", "sublabel": "Price copy" },
+    { "id": "n_pos_receipt", "lane": "billing", "col": 3, "type": "frontend", "label": "POS Receipt", "sublabel": "Counter 1/2 copy" },
     { "id": "n_payment_invoice", "lane": "billing", "col": 4, "type": "database", "label": "Payment + GST Invoice", "sublabel": "FX lock, CGST/SGST/IGST" },
+    { "id": "n_gstr_export", "lane": "billing", "col": 5, "type": "security", "label": "GSTR-1 HSN Export", "sublabel": "Date-range CSV pull" },
 
     { "id": "n_offer_owner", "lane": "whatsapp", "col": 0, "type": "frontend", "label": "Owner Creates Offer", "sublabel": "Text + validity" },
     { "id": "n_offer_broadcast", "lane": "whatsapp", "col": 1, "type": "messagebus", "label": "Offer Alert Broadcast", "sublabel": "Batch fan-out" },
@@ -66,26 +67,28 @@
     { "id": "e8", "from": "n_kot", "to": "n_semifg_alert", "label": "par check", "variant": "dashed", "role": "branch" },
     { "id": "e9", "from": "n_stock_deduct", "to": "n_low_stock", "label": "below min", "variant": "dashed", "role": "branch" },
     { "id": "e10", "from": "n_pos_receipt", "to": "n_payment_invoice", "label": "tax split", "variant": "default" },
+    { "id": "e12", "from": "n_payment_invoice", "to": "n_gstr_export", "label": "HSN summary", "variant": "dashed", "role": "branch" },
     { "id": "e11", "from": "n_payment_invoice", "to": "n_thankyou", "label": "invoice link", "variant": "emphasis" },
     { "id": "e13", "from": "n_offer_owner", "to": "n_offer_broadcast", "variant": "default" },
     { "id": "e14", "from": "n_offer_broadcast", "to": "n_customer_offer", "variant": "default" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "BOM + Semi-FG (Planned)", "items": [
-      "Dish ka BOM recursive hoga: Semi-FG (gravy/sauce/marinade) khud ek chhota recipe hai jo raw material se banta, phir final dish me ingredient ki tarah use hota",
-      "Order confirm par BOM explode hoke 3 jagah split hota hai: Kitchen (KOT), Billing (POS price), Inventory (stock minus)"
+    { "dot": "cyan", "title": "BOM + Semi-FG (Built, verified)", "items": [
+      "Dish ka BOM recursive: Semi-FG (gravy/sauce/marinade) khud ek chhota recipe hai jo raw material se banta, phir final dish me ingredient ki tarah use hota",
+      "Order confirm par BOM explode hoke 3 jagah split hota hai: Kitchen (KOT), Billing (POS price), Inventory (stock minus) — insufficient stock par poora order reject (409)"
     ] },
-    { "dot": "emerald", "title": "Inventory + Warehouse (Planned)", "items": [
-      "2-level: Central Warehouse (bulk) -> Branch Store (local); stock transfer dispatch/receive verify hota",
+    { "dot": "emerald", "title": "Inventory + Warehouse (Built, verified)", "items": [
+      "2-level: Central Warehouse -> Branch Store; dispatch sirf audit record hai, receive hi real inventory move karta hai, shortfall variance track hoti hai",
       "Raw + Semi-FG dono auto-minus order confirm par; Semi-FG khatam ho to batch-prep alert kitchen ko"
     ] },
-    { "dot": "violet", "title": "Billing, GST & Multi-Currency (Planned)", "items": [
-      "Ek hi company GSTIN, har branch invoice usi ke under; CGST+SGST ya IGST auto-split, HSN/SAC per item",
-      "Multi-currency: export/NRI billing me FX rate invoice time par lock hoti, Accounts base INR me hi consolidate"
+    { "dot": "violet", "title": "Billing, GST, Multi-Currency & GSTR (Built, verified)", "items": [
+      "Har branch pe 2 billing counters (Counter 1/2); ek hi company GSTIN, CGST+SGST ya IGST auto-split, HSN/SAC per item",
+      "Multi-currency: export/NRI billing me FX rate sale-time par lock hoti (baad me rate badlo to purana order nahi badalta), GST invoice hamesha INR me",
+      "GSTR-1 HSN Summary: date-range + branch scope se CSV export, GST-unconfigured orders automatically filing se exclude"
     ] },
-    { "dot": "rose", "title": "WhatsApp Automation (Planned)", "items": [
-      "Order complete -> auto Thank You message + invoice link customer ko",
-      "Owner offer banaye to WhatsApp Offer Alert broadcast saare target customers ko (sendWhatsAppBatch)"
+    { "dot": "rose", "title": "WhatsApp Automation (Built, verified)", "items": [
+      "Order complete -> auto Thank You message customer ko (phone diya ho to hi, best-effort — fail hone par order block nahi hota)",
+      "Owner offer banaye to WhatsApp Offer Alert broadcast — target list real hai: sirf jin customers ne pehle order diya aur number diya"
     ] }
   ]
 }
