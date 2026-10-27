@@ -168,6 +168,44 @@ Responsiveness Pass) already cover the new Recipe Builder correctly.
 QA fixtures (branch/user/session/dish/recipe) and the QA dev server/dist
 dir were removed again after.
 
+## DEPLOYED TO PRODUCTION (same day) — commit 6e58ae8
+
+User explicitly said "Commit+push Deploy kro" after the gaps above were
+closed. Before committing, found and fixed two leftover QA-session
+artifacts that must never ship: `tsconfig.json`'s `include` array had
+accumulated `.next-qa/types/**/*.ts` and `.next-authqa/types/**/*.ts`
+entries (Next.js auto-appends these when `NEXT_DIST_DIR` is overridden for
+isolated QA runs, never cleans up stale ones), and `next-env.d.ts` pointed
+at `.next-qa/types/routes.d.ts` instead of `.next/types/routes.d.ts`. Fixed
+both, rebuilt with the default dist dir, confirmed `git diff` on those two
+files was empty before staging anything.
+
+- Committed `6e58ae8` to `main` (34 files, the full Recipe Builder + real
+  Semi-FG production feature from the sections above). Pushed — Vercel
+  auto-deploy triggered per the existing GitHub integration.
+- **Vercel's own build command is `npm run db:migrate && npm run build`**
+  (`vercel.json`) — this means migration `0007` (adds `semi_fg_stock`,
+  `semi_fg_productions`, `menu_items.output_unit`, additive only) ran
+  against the live Neon production database as part of this deploy, not a
+  separately-approved step. Flagging this because it's a standing risk
+  noted earlier in this file ("be deliberate about what lands on main") —
+  this push was the user's explicit deploy instruction, not an incidental
+  side effect.
+- Verified via GitHub's commit status API: Vercel deployment for `6e58ae8`
+  is `state: success` ("Deployment has completed").
+- Verified via direct `curl` against the live URL
+  `https://restaurant-erp-tau.vercel.app`: `/api/setup` →
+  `{"setupRequired":false}` (the existing Owner account survived the
+  migration, not reset), `/login` → 200, `/` → 307 (auth redirect intact),
+  `/menu` unauthenticated → 307 (still gated, not exposed). Did not log in
+  with the real Owner account or touch any production business data.
+- Did NOT verify the new Recipe Builder UI itself against production data
+  (no production login performed) — the build/deploy succeeding and the
+  DB migration completing cleanly is the evidence here, not an
+  authenticated production click-through. If an authenticated production
+  smoke test is wanted, that needs the user's own Owner login, same
+  vault-safe convention as every other live-credential step in this file.
+
 ## PAUSED AT USER REQUEST — Recipe Builder + real Semi-FG stock (October 27, 2026) — historical, superseded above
 
 This section is the original pause note, kept for history. The "resumed"
