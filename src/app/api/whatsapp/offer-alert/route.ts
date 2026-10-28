@@ -2,8 +2,8 @@ import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { posOrders } from "@/db/schema/pos";
 import { branches } from "@/db/schema/platform";
-import { requireIdentity } from "@/lib/server/auth";
-import { api, assertSameOrigin, body, json } from "@/lib/server/http";
+import { mutate, requireIdentity } from "@/lib/server/auth";
+import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { offerMessage } from "@/lib/server/whatsapp-triggers";
 import { operationalOrderVisibility } from "@/lib/server/order-visibility";
@@ -19,9 +19,7 @@ export const dynamic = "force-dynamic";
 // customer only appears here because they actually ordered and a cashier
 // captured their number.
 export async function POST(request: Request) {
-  return api(async () => {
-    assertSameOrigin(request);
-    const actor = await requireIdentity(request);
+  return api(() => mutate(request, async (tx, actor) => {
     assertModule(actor, "POS_CASHIER");
     const input = await body(request);
     const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);
@@ -29,10 +27,10 @@ export async function POST(request: Request) {
     if (!offerText || offerText.length < 3 || offerText.length > 400) throw new HttpError(400, "Enter offer text (3-400 characters)");
     const validUntil = typeof input.validUntil === "string" ? input.validUntil.slice(0, 40) : "";
 
-    const [branchRow] = branchId ? await db.select({ name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1) : [];
+    const [branchRow] = branchId ? await tx.select({ name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1) : [];
     const branchName = branchId ? branchRow?.name ?? "" : "All Branches";
 
-    const customerRows = await db
+    const customerRows = await tx
       .selectDistinct({ phone: posOrders.customerPhone })
       .from(posOrders)
       .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, operationalOrderVisibility(actor), isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
@@ -42,7 +40,7 @@ export async function POST(request: Request) {
     const message = offerMessage({ offerText, validUntil, branchName });
     const outcome = await sendWhatsAppBatch(phones.map((phone) => ({ phone, message, relatedEntityType: "OfferAlert", relatedEntityId: branchId || "ALL" })));
     return json({ message, targeted: phones.length, ...outcome }, 201);
-  });
+  }));
 }
 
 // Preview the target audience size before sending (no side effect).

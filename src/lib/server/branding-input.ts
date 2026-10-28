@@ -35,6 +35,8 @@ export async function normalizeLogo(value: unknown): Promise<string> {
   } catch { throw invalid(); }
 }
 export async function brandingInput(input: Record<string, unknown>, setup = false) {
+  const unknown = Object.keys(input).find((k) => !["restaurantName", "logo"].includes(k));
+  if (unknown) throw new HttpError(400, `Unexpected field: ${unknown}`);
   const name = restaurantName(input.restaurantName);
   // undefined preserves the existing logo on edit; null explicitly removes it.
   const logo = input.logo === undefined ? (setup ? "" : undefined) : input.logo === null ? "" : await normalizeLogo(input.logo);

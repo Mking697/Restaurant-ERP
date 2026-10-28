@@ -1,4 +1,4 @@
-import { boolean, index, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { branches } from "./platform";
 
 /**
@@ -50,3 +50,15 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("sessions_user_id_idx").on(table.userId), index("sessions_expires_at_idx").on(table.expiresAt)]);
+
+// Shared (cross-instance) login brute-force throttle — Postgres-backed so it
+// works across multiple server processes/containers, replacing a per-process
+// in-memory Map (security audit H2). Keyed either "phone:<e164>" or
+// "ip:<address>" so a credential-stuffing spray across many phone numbers
+// from one source is also capped (audit L1), not just repeats on one phone.
+export const loginAttempts = pgTable("login_attempts", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(1),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  blockedUntil: timestamp("blocked_until", { withTimezone: true }),
+});

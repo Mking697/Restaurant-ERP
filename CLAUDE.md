@@ -11,6 +11,98 @@ first every time work resumes on this project.
 
 ---
 
+## PHASE 1 — DUMMY DATA CLEANUP + SECURITY AUDIT (October 28, 2026)
+
+User asked to go fully live: remove dummy data, run security/audit/review,
+then build out all remaining mock-data modules phase-wise, with explicit
+approval before every schema change/migration/production deploy.
+
+Ground-truth re-audit (code, not notes): confirmed via grep which pages
+still import `mock-data.ts` — exactly 6: Dashboard, Reports
+(`/reports/[report]`), Performance/MIS leaderboard, Tasks & Checklists,
+Purchase (money/Indent/PO — GRN→Inventory stock posting is already real),
+and `accounts/legacy-demos.tsx` (Petty Cash/Aggregator Recon/Balance Sheet
+tabs). POS is NOT on this list — it is already real/DB-backed (confirmed:
+schema+API exist from the earlier Owner-only-order-privacy work). Schema
+already exists for Tasks/Purchase/Accounts-ledger but NO API routes exist
+yet for them — that is the real Phase 2/3 scope, not yet started.
+
+Production Neon check before any change: 0 real `pos_orders` exist yet —
+only the seeded demo fixtures (6 demo branches, 12 demo inventory rows,
+3 demo-staff users) plus the one real Owner account ("Manoj"). Deleted the
+3 demo-staff users (Rahul Sharma/Priya Nair/Amit Kumar) from production —
+user explicitly approved keeping the 6 seeded branches + 12 inventory rows
+as-is for the Owner to edit via the UI later, not deleting them.
+
+Dispatched a read-only security-audit subagent across the whole codebase;
+full report at `docs/security-audit-phase1.md`. Verdict: auth/session core
+(scrypt+timing-safe passwords, httpOnly/sameSite cookies, SHA-256 session
+hash at rest, tokenVersion revocation, single advisory-lock mutate()
+pattern, branchScope() isolation, Drizzle-parameterized queries only, no
+secrets in tree or git history) was already solid. Found 3 HIGH / 5 MEDIUM
+/ 4 LOW findings.
+
+**Fixed this pass** (all verified with real HTTP checks against an isolated
+QA build, not just read): H2 (login brute-force throttle moved from a
+per-process in-memory Map to a new Postgres-backed `login_attempts` table —
+migration `0010_stiff_virginia_dare.sql`, additive-only, applied to LOCAL
+DB only so far); L1 (added a secondary IP-keyed throttle alongside the
+existing phone-keyed one); L2 (opportunistic cleanup of stale throttle
+rows). M1 (`/api/admin/settings/whatsapp` now routes through the shared
+`body()` helper and rejects unknown fields). M2 (`/api/currency-rates` POST
+now uses the shared `mutate()` transaction instead of an unlocked
+select-then-upsert). M3 (`/api/whatsapp/offer-alert` POST now uses
+`mutate()` too, for consistency/defence-in-depth). M4 (added
+`next.config.ts` `headers()`: X-Frame-Options DENY, X-Content-Type-Options
+nosniff, Referrer-Policy, Permissions-Policy, a `frame-ancestors 'none'`
+CSP — closes the clickjacking gap). M5 (`brandingInput()` now rejects
+unknown fields, same allowlist convention as every other parser).
+
+**Two real bugs found and fixed DURING verification of the H2 fix itself**
+(not in the original audit — found by actually exercising the throttle with
+real repeated login attempts, not just reading the code): (1) the first
+version recorded throttle increments inside the SAME Postgres transaction
+as credential verification — a wrong password threw an error that rolled
+back that transaction, which silently undid the attempt-counter write too,
+making the throttle a complete no-op for every failed login. Fixed by
+moving the throttle check into its own transaction that always commits,
+decided/thrown only after it commits. (2) Even after that split, the
+block-flag write (`blockedUntil`) was set in the same transaction as the
+`return true`/throw path and a `throw` inside `checkLoginThrottle` itself
+rolled back that very write too. Fixed by making `checkLoginThrottle` never
+throw internally — it only returns a boolean after its own write commits;
+the caller (`login/route.ts`) throws 429 only after that transaction has
+already committed. Verified end-to-end with real repeated curl requests
+against a live isolated QA server+DB: 10 failed attempts on one phone pass
+(401), the 11th and 12th correctly return 429 and stay 429 across the
+block window, a different phone number from the same IP is unaffected until
+its own/the IP's separate cap, and `login_attempts` rows persist correctly
+with real `blocked_until` timestamps (not silently rolled back).
+
+**Not fixed yet, flagged for a separate approval** (breaking dependency
+upgrades, each needs its own tested pass): H1 (`drizzle-orm@^0.36.0` has an
+unpatched HIGH SQL-injection advisory, fix needs ≥0.45.2, breaking); H3
+(`next@^15.0.0` pulls a HIGH-severity `postcss` path-traversal advisory via
+a transitive dep, fix needs a Next major bump). L4 (branches DELETE has no
+pre-check listing linked data before attempting delete — cosmetic UX only,
+not a security issue, low priority).
+
+**Verification after all fixes**: `npx tsc --noEmit --incremental false` —
+0 errors. `npm test` — 148/148 passed. `npx next build` — clean, same
+routes. Migration `0010` applied cleanly to local Docker Postgres
+(`restaurant-erp-local-db`). Full regression run on a live isolated QA
+server+DB confirmed every M1–M5 fix behaves correctly end-to-end (security
+headers present on every response, unknown-field rejection returns 400,
+legit writes still succeed, currency-rate upsert still works).
+
+**NOT done yet**: migration `0010` has NOT been applied to production
+Neon — ask before that. `0009` (Owner-only order privacy, from an earlier
+session) also still hasn't reached production. H1/H3 dependency upgrades
+not attempted — ask before doing a breaking major-version bump. Nothing
+committed/pushed this pass.
+
+---
+
 ## CURRENT PROCESS FLOW CHART — now covers the entire system, all modules
 
 User asked the chart to leave nothing out: Tasks (Recurring + Delegation),

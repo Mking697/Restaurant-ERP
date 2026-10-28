@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { approvedChatXFlowBaseUrl, DEFAULT_CHATXFLOW_BASE_URL as DEFAULT_BASE_URL } from "@/lib/chatxflow";
 import { getSetting, upsertSetting } from "@/lib/settings";
 import { requireIdentity, mutate } from "@/lib/server/auth";
-import { assertOwner } from "@/lib/server/permissions";
-import { api } from "@/lib/server/http";
+import { assertOwner, HttpError } from "@/lib/server/permissions";
+import { api, body } from "@/lib/server/http";
 export const dynamic = "force-dynamic";
 
 // HQ-global provider settings: only authenticated Owner can read/write.
@@ -33,12 +33,15 @@ interface SettingsBody {
   phoneNumber?: string;
   baseUrl?: string;
 }
+const SETTINGS_FIELDS = ["token", "phoneNumber", "baseUrl"];
 
 async function writeSettings(request: Request) {
-  const body = (await request.json().catch(() => null)) as SettingsBody | null;
-  if (!body) return NextResponse.json({ error: "Invalid input." }, { status: 400 });
+  const raw = await body(request);
+  const unknown = Object.keys(raw).find((k) => !SETTINGS_FIELDS.includes(k));
+  if (unknown) throw new HttpError(400, `Unexpected field: ${unknown}`);
+  const input = raw as SettingsBody;
 
-  const rawBaseUrl = (body.baseUrl ?? DEFAULT_BASE_URL).trim();
+  const rawBaseUrl = (input.baseUrl ?? DEFAULT_BASE_URL).trim();
   const approved = rawBaseUrl ? approvedChatXFlowBaseUrl(rawBaseUrl) : DEFAULT_BASE_URL;
   if (!approved) {
     return NextResponse.json(
@@ -48,13 +51,13 @@ async function writeSettings(request: Request) {
   }
 
   const writes = [
-    upsertSetting("CHATXFLOW_PHONE_NUMBER", (body.phoneNumber ?? "").trim()),
+    upsertSetting("CHATXFLOW_PHONE_NUMBER", (input.phoneNumber ?? "").trim()),
     upsertSetting("CHATXFLOW_BASE_URL", approved),
   ];
   // Only overwrite the token if the admin actually typed a new one — the field
   // is never pre-filled with the real value, so an empty submit means "leave as-is".
-  if (body.token?.trim()) {
-    writes.push(upsertSetting("CHATXFLOW_API_TOKEN", body.token.trim()));
+  if (input.token?.trim()) {
+    writes.push(upsertSetting("CHATXFLOW_API_TOKEN", input.token.trim()));
   }
 
   await Promise.all(writes);
