@@ -1323,7 +1323,29 @@ const COPY: Record<string, readonly [string, string]> = {
   "Cannot remove the last active owner": [
     "Cannot remove the last active owner",
     "Aakhri active Owner ko remove nahi kar sakte"
-  ]
+  ],
+  "Save quality": ["Save quality", "Quality save karo"],
+  "Cancel quality": ["Cancel quality", "Quality cancel karo"],
+  "All received lines": ["All received lines", "Saari received lines"],
+  "Check saved quality": ["Check saved quality", "Saved quality check karo"],
+  "Replay exact request": ["Replay exact request", "Wahi exact request replay karo"],
+  "Photo/reference (not an upload)": ["Photo/reference (not an upload)", "Photo/reference (upload nahi)"],
+  "Quality note (required for FAIL/PARTIAL)": ["Quality note (required for FAIL/PARTIAL)", "Quality note (FAIL/PARTIAL ke liye zaruri)"],
+  "Quality note": ["Quality note", "Quality note"],
+  "Failed quantity": ["Failed quantity", "Failed quantity"],
+  "Not posted": ["Not posted", "Post nahi hua"],
+  "Reference": ["Reference", "Reference"],
+  "Accepted": ["Accepted", "Accepted"],
+  "Failed": ["Failed", "Failed"],
+  "Received": ["Received", "Received"],
+  "Reconciliation required — prior inventory posting cannot be verified. Do not repost.": ["Reconciliation required — prior inventory posting cannot be verified. Do not repost.", "Reconciliation required — purani inventory posting verify nahi ho rahi. Dobara post mat karo."],
+  "Store quality requires PURCHASE_ORDER and INVENTORY access. Ask an administrator; no grants are changed here.": ["Store quality requires PURCHASE_ORDER and INVENTORY access. Ask an administrator; no grants are changed here.", "Store quality ke liye PURCHASE_ORDER aur INVENTORY access chahiye. Administrator se poochho; yahan grants nahi badalte."],
+  "General purchase: quality is saved, but no inventory is posted.": ["General purchase: quality is saved, but no inventory is posted.", "General purchase: quality save hoti hai, inventory post nahi hoti."],
+  "Accepted material quantities post atomically with the saved quality decision. Store quality checks require PURCHASE_ORDER and INVENTORY access.": ["Accepted material quantities post atomically with the saved quality decision. Store quality checks require PURCHASE_ORDER and INVENTORY access.", "Accepted material qty aur saved quality decision ek atomic transaction mein post hote hain. Store quality check ko PURCHASE_ORDER aur INVENTORY access chahiye."],
+  "Vendor returns and refund/credit receivables are not created yet (GRN-2). No money receipt or journal is posted.": ["Vendor returns and refund/credit receivables are not created yet (GRN-2). No money receipt or journal is posted.", "Vendor return aur refund/credit receivables abhi nahi bante (GRN-2). Koi money receipt ya journal post nahi hota."],
+  "Enter valid line quantities and a failure note (3–1000 characters) for FAIL/PARTIAL.": ["Enter valid line quantities and a failure note (3–1000 characters) for FAIL/PARTIAL.", "Sahi line quantities aur FAIL/PARTIAL ke liye 3–1000 character ka failure note bharo."],
+  "Original decision is still unconfirmed or needs reconciliation. Editing remains locked; check again or replay the exact request.": ["Original decision is still unconfirmed or needs reconciliation. Editing remains locked; check again or replay the exact request.", "Original decision abhi unconfirmed hai ya reconciliation chahiye. Editing locked rahegi; dobara check ya wahi exact request replay karo."],
+  "Could not load GRNs.": ["Could not load GRNs.", "GRNs load nahi hue."]
 };
 export function useUiCopy() {
   const { t } = useTranslation();

@@ -154,24 +154,26 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   "cat": "backend",
   "status": "mixed",
   "title": "Purchase & GRN",
-  "short": "Real indent, PO and GRN creation; quality persistence is incomplete.",
-  "what": "Indent submit/approve/reject, PO, bill-step metadata and GRN creation persist in PostgreSQL. No rolling-average/spike computation or file-upload pipeline exists; Upload Bill only marks the step. PASS/PARTIAL with linked raw material posts passed quantity to real Inventory. Quality decision and posted marker stay page-local: reload shows PENDING again and repeating can double-post stock. Vendor returns/refunds and Accounts refund entries are not real.",
+  "short": "Persisted all-line GRN quality and once-only inventory; refunds pending.",
+  "what": "Indent approvals, PO, bill-step metadata, GRN and every PASS/FAIL/PARTIAL decision persist in PostgreSQL. Accepted material stock, failed quantities and audit receipt commit atomically once. Store quality requires PURCHASE_ORDER plus INVENTORY; general purchases save quality without stock. Failure notes are required for FAIL/PARTIAL; photo/reference is text, not an upload. Ambiguous legacy GRNs require reconciliation, never speculative reposting. Vendor return/refund receivables (GRN-2), cash receipts and journals are not created. No rolling-average/spike computation or actual bill upload exists.",
   "how": [
     "Use only a QA branch: raise/submit an indent, then approve/reject with the relevant permission.",
     "New Purchase selects an existing vendor and an Approved indent for the same branch. All approved materials/quantities are locked; enter each line rate. General purchase uses description/amount without an indent. Upload Bill (optional) only marks the step; Mark Material Received creates a real GRN.",
-    "Quality Check PASS/PARTIAL may add real stock; general purchases without a material do not. Never repeat after reload without verifying inventory: the GRN does not retain its quality decision."
+    "Open Quality Check on a ready GRN. Inspect all received lines; choose PASS, FAIL or PARTIAL. For PARTIAL enter each failed quantity in its own unit; add a failure note for FAIL/PARTIAL and Save quality. Reload to inspect persisted failed/accepted quantities and posting state.",
+    "For an unconfirmed outcome use Check saved quality or explicitly Replay exact request; inputs stay locked and no automatic retry occurs. A legacy reconciliation warning must be reviewed by an administrator, not reposted."
   ],
-  "example": "Example: 10 kg received with 2 kg failed in PARTIAL posts 8 kg real stock. Quality status is local; do not repeat after reload. No vendor return/refund is posted.",
+  "example": "Example: 10 kg received with 2 kg failed in PARTIAL saves 2 kg failed and posts exactly 8 kg accepted stock once. Reload retains the decision; exact replay cannot add stock again. No vendor return/refund is posted.",
   "hinglish": {
     "title": "Purchase & GRN",
-    "short": "Real indent, PO aur GRN creation; quality persistence incomplete hai.",
-    "what": "Indent submit/approve/reject, PO, bill-step metadata aur GRN PostgreSQL mein persist hain. Rolling-average/spike calculation aur file-upload pipeline nahi; Upload Bill sirf step mark karta hai. Linked raw material par PASS/PARTIAL passed qty real Inventory mein post karta hai. Quality decision aur posted marker page-local: reload par PENDING aur repeat se stock double-post ho sakta hai. Vendor return/refund aur Accounts refund entry real nahi hain.",
+    "short": "Har GRN line ki saved quality aur ek baar inventory posting; refunds pending.",
+    "what": "Indent approvals, PO, bill-step metadata, GRN aur har PASS/FAIL/PARTIAL decision PostgreSQL mein persist hain. Accepted stock, failed qty aur audit receipt ek atomic transaction mein sirf ek baar save hote hain. Store quality ke liye PURCHASE_ORDER aur INVENTORY dono chahiye; general purchase ki quality save hoti hai, stock nahi. FAIL/PARTIAL par failure note required; photo/reference sirf text hai, upload nahi. Purane ambiguous GRN par reconciliation required hai; andaze se repost nahi. Vendor return/refund receivables (GRN-2), cash receipt aur journal nahi bante. Rolling-average/spike calculation aur actual bill upload bhi pending hain.",
     "how": [
       "Sirf QA branch mein indent raise/submit karo; relevant permission se approve/reject karo.",
       "New Purchase mein existing vendor aur same branch ki Approved indent chuno. Saare approved materials/quantities locked hain; har line ka rate bharo. General purchase description/amount se bina indent banti hai. Upload Bill (optional) sirf step mark hai; Mark Material Received real GRN banata hai.",
-      "Quality Check PASS/PARTIAL real stock badha sakta hai; material ke bina general purchase nahi. Reload ke baad inventory verify kiye bina repeat mat karo: GRN quality decision persist nahi karta."
+      "Ready GRN ka Quality Check kholo aur har received line dekho. PASS, FAIL ya PARTIAL chuno. PARTIAL par har line ki apni unit mein failed qty bharo; FAIL/PARTIAL ka note likhkar Save quality karo. Reload par saved failed/accepted quantities aur posting state verify karo.",
+      "Outcome unconfirmed ho to Check saved quality ya explicitly Replay exact request use karo. Inputs locked rehte hain; automatic retry nahi. Purane GRN ki reconciliation warning ko administrator review kare; repost mat karo."
     ],
-    "example": "Example: 10 kg received aur PARTIAL mein 2 kg failed se 8 kg real stock post. Quality status local hai; reload ke baad repeat mat karo. Vendor return/refund post nahi hota."
+    "example": "Example: 10 kg received aur PARTIAL mein 2 kg failed se failed 2 kg save aur accepted 8 kg stock sirf ek baar post. Reload par decision saved rehta hai; exact replay stock dobara nahi badhata. Vendor return/refund post nahi hota."
   }
 },
   {

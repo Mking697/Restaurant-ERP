@@ -5,6 +5,7 @@ import { inventoryStock } from "@/db/schema/inventory";
 import { mutate } from "@/lib/server/auth";
 import { api, body, json, numeric } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
+import { decimal, MAX_QUANTITY, quantity } from "@/lib/server/production-quantity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,8 +23,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const result = await mutate(request, async (tx, actor) => {
       assertModule(actor, "INVENTORY");
       const input = await body(request);
+      if (Object.keys(input).some(key => key !== "qtyReceived")) throw new HttpError(400, "Unknown receipt field");
+      if (input.qtyReceived === undefined) throw new HttpError(400, "qtyReceived is required");
       const qtyReceived = numeric(input.qtyReceived, "qtyReceived");
-      if (!(Number(qtyReceived) >= 0)) throw new HttpError(400, "qtyReceived must be zero or positive");
+      const received = quantity(qtyReceived, true);
 
       const [transfer] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, id)).limit(1);
       if (!transfer) throw new HttpError(404, "Stock transfer not found");
@@ -33,14 +36,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (!to || !to.branchId) throw new HttpError(400, "Destination warehouse invalid");
       branchScope(actor, to.branchId);
 
-      const [existingStock] = await tx
+      const stockRows = await tx
         .select()
         .from(inventoryStock)
         .where(and(eq(inventoryStock.branchId, to.branchId), eq(inventoryStock.rawMaterialId, transfer.rawMaterialId)))
-        .limit(1);
+        .limit(2).for("update");
+      if (stockRows.length > 1) throw new HttpError(409, "Duplicate raw stock rows; reconcile inventory first");
+      const [existingStock] = stockRows;
       if (existingStock) {
-        const newQty = (Number(existingStock.qtyOnHand) + Number(qtyReceived)).toFixed(3);
-        await tx.update(inventoryStock).set({ qtyOnHand: newQty, updatedAt: new Date() }).where(eq(inventoryStock.id, existingStock.id));
+        const newQty = quantity(existingStock.qtyOnHand, true) + received;
+        if (newQty > MAX_QUANTITY) throw new HttpError(409, "Inventory stock capacity exceeded");
+        await tx.update(inventoryStock).set({ qtyOnHand: decimal(newQty), updatedAt: new Date() }).where(eq(inventoryStock.id, existingStock.id));
       } else {
         await tx.insert(inventoryStock).values({ id: randomUUID(), branchId: to.branchId, rawMaterialId: transfer.rawMaterialId, qtyOnHand: qtyReceived });
       }
@@ -50,7 +56,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         .set({ status: "RECEIVED", qtyReceived, receivedById: actor.id, receivedAt: new Date() })
         .where(eq(stockTransfers.id, id));
       const [updated] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, id));
-      const variance = (Number(transfer.qtyDispatched) - Number(qtyReceived)).toFixed(3);
+      const difference = quantity(transfer.qtyDispatched) - received;
+      const variance = difference < 0n ? `-${decimal(-difference)}` : decimal(difference);
       return { stockTransfer: updated, variance };
     });
     return json(result, 200);

@@ -2,7 +2,7 @@
 
 ## Scope and preserved baseline
 
-Resumed `main` at `2a7cfc5` in `G:\restaurant erp`. Preserved the staged Phase 2/3 snapshot and interrupted unstaged purchase helpers/tests. No reset, clean, dependency upgrade, application-schema change, production write, commit, push or deployment was performed in this verification pass.
+Resumed `main` at `2a7cfc5` in `G:\restaurant erp`. Preserved the staged Phase 2/3 snapshot and interrupted unstaged purchase helpers/tests. The local repair phase performed no reset, clean, dependency upgrade, application-schema change or production business write. The subsequent authorized release is recorded below.
 
 This is a bounded PO approval-binding repair, not acceptance of the entire ERP roadmap. The older Phase 3 evidence remains in `docs/phase3-verification.md`; its historical checks were not all rerun here.
 
@@ -35,7 +35,7 @@ An older empty QA database `restaurant_erp_purchase_qa_20261028` had schema obje
 
 After execution, suite fixtures, browser fixtures/session scratch JSON and temporary failure function/trigger were removed. Independent readback on the new QA DB returned users=0, branches=0, orders=0, grns=0 and QA failure functions=0. The migrated empty QA database is retained for reuse. Both own dev/production-mode QA servers were stopped; port 4319 verified free. Own `.next-purchase-resumeqa` and `.next-purchase-resumebuild` outputs removed. `tsconfig.json` and `next-env.d.ts` restored to default and `git diff --exit-code` confirmed them clean.
 
-## Remaining gates
+## Independent review and authorized production release
 
 Independent scoped review **passed** with no blocking security or logic findings. The reviewer independently ran **14/14** focused DB-free purchase tests and read the integration additions; the reviewer did not rerun the real HTTP/Postgres suite. Nonblocking suggestion: paginate/fetch approved choices per branch beyond the current 200-row cap.
 
@@ -43,6 +43,12 @@ Fresh production preflight at **2026-10-29T06:40:38Z** used the existing authent
 
 Vercel `env run` could not provide a usable production Neon target (sensitive variables are hidden; running from the repo also loads local `.env`). Its fail-closed host assertion stopped before any DB access. Used Neon CLI instead; no credential export file, provider setting edit or application dotenv rewrite.
 
-RELEASE-1 still requires the authorized commit/push/exact-SHA Vercel READY/public-smoke gates; independent review alone is not deployment.
+RELEASE-1 **COMPLETE**: committed and pushed `5686996af6cf58b6d8d9ef9f23caea65663b30c6` (69 scoped files; no schema/dependency changes). Vercel production deployment `dpl_EoA3JV6ZkwLkMQBrx1UWV7JhCNYK`, URL `restaurant-cttwtxr09-manojs-projects-30be2a32.vercel.app`, returned READY with that exact Git SHA. Independently reading the public alias `restaurant-erp-tau.vercel.app` resolved to the same deployment. GitHub Vercel commit status returned success.
+
+Vercel build logs confirm `npm run db:migrate && npm run build`, migrator success, successful compilation and build completion. Postflight at **2026-10-29T06:45:45Z** again matched the same 11 migration timestamps/hashes/security columns and unchanged business row counts. The migration runner was a no-op for pending DDL: no new migration existed.
+
+**16/16 public anonymous smoke checks passed**: `/login` and `/api/setup` 200 with `setupRequired:false`; `/`, Dashboard, Reports, Performance, Tasks, Purchase and Accounts redirect to `/login`; purchase orders/approved choices, recurring tasks, balance sheet, dashboard KPIs, MIS scores and sales-trend APIs return 401. Login retains DENY/nosniff security headers. No production Owner login, authenticated workflow acceptance, financial/stock fixtures, customer message or provider-setting change was performed.
+
+The post-release tracker/evidence updates are local documentation edits after the deployed snapshot; no follow-up application feature is silently included in this release.
 
 GRN-1/2 are still open: quality decisions and stock-posting markers are page-local, repeat checks can duplicate stock, the current GRN presentation flattens lines, and vendor return/refund receivables are not implemented. These are not silently closed by this PO repair. Tasks assignee lookup, finance posting/actual COGS, automation, evidence storage, three-way match, dependency upgrades and remaining UI acceptance retain the tracker boundaries.

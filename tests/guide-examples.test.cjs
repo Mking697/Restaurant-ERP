@@ -150,3 +150,27 @@ test('offline status removes cash from demos and retains English default with Hi
   assert.match(html, /let language="en"/);
   assert.match(html, /value="hinglish"/);
 });
+
+test('GRN quality controls have source-owned Hinglish copy', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../src/lib/ui-copy.ts'), 'utf8');
+  const module = { exports: {} };
+  require('node:vm').runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
+    module, exports: module.exports, require: name => { assert.equal(name, '@/lib/i18n'); return { useTranslation: () => ({ t: (en, hi) => hi ?? en }) }; }
+  });
+  const copy = module.exports.useUiCopy();
+  for (const label of ['Save quality', 'Cancel quality', 'All received lines', 'Check saved quality', 'Replay exact request', 'Photo/reference (not an upload)', 'Quality note (required for FAIL/PARTIAL)']) assert.notEqual(copy(label), label, label);
+});
+
+test('GRN guidance describes durable all-line quality and once-only stock without claiming refunds', () => {
+  const module = GUIDE_MODULES.find(entry => entry.route === '/purchase');
+  for (const language of ['en', 'hinglish']) {
+    const chapter = language === 'en' ? module : module.hinglish;
+    const practice = GUIDE_EXAMPLES['/purchase'][language];
+    const text = [chapter.short, chapter.what, ...chapter.how, chapter.example, practice.scenario, ...practice.steps, practice.result].join(' ');
+    for (const token of ['PURCHASE_ORDER', 'INVENTORY', 'PASS', 'PARTIAL', 'FAIL', 'reconciliation', 'Check saved quality', 'Replay exact request']) assert.ok(text.includes(token), language + ': ' + token);
+    assert.match(text, /persist|save/i);
+    assert.match(text, /refund/);
+    assert.match(text, /upload/i);
+    assert.doesNotMatch(text, /quality persistence is incomplete|quality decision.*page-local|reload shows PENDING|repeat.*double-post|quality.*incomplete|quality.*persist nahi/i);
+  }
+});

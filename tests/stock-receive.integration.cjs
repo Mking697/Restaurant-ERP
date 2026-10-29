@@ -1,0 +1,41 @@
+require('dotenv').config({quiet:true});
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),{Pool}=require('pg');
+assert.equal(process.env.PGHOST,'127.0.0.1');assert.equal(process.env.PGPORT,'5436');
+assert.match(process.env.PGDATABASE||'',/^restaurant_erp_purchase_qa_\d{8}$/);assert.equal(process.env.GRN_QA_DATABASE,process.env.PGDATABASE);
+const base=new URL(process.env.BASE_URL||'');assert.ok(['localhost','127.0.0.1'].includes(base.hostname)&&base.protocol==='http:');
+const p=new Pool({host:process.env.PGHOST,port:5436,user:process.env.PGUSER,password:process.env.PGPASSWORD,database:process.env.PGDATABASE,ssl:false});
+const prefix='qa-transfer-'+crypto.randomBytes(5).toString('hex'),branch=prefix+'-a',other=prefix+'-b',user=prefix+'-user',mat=prefix+'-material',central=prefix+'-central',dest=prefix+'-dest',foreign=prefix+'-foreign',stock=prefix+'-stock';
+const token=crypto.randomBytes(32).toString('hex'),ids=[];let count=0;
+async function req(path,body,options={}){const r=await fetch(base.origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',signal:AbortSignal.timeout(30000),headers:{origin:options.origin||base.origin,'content-type':'application/json',...(options.anonymous?{}:{cookie:'restaurant_session='+token})},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
+const check=(name,fn)=>{fn();count++;console.log('PASS '+name);};
+async function transfer(to=dest){const r=await req('/api/stock-transfers',{fromWarehouseId:central,toWarehouseId:to,rawMaterialId:mat,qtyDispatched:'10'});assert.equal(r.status,201);ids.push(r.data.stockTransfer.id);return r.data.stockTransfer.id;}
+async function snapshot(id){return {transfer:(await p.query('select status,qty_received,received_by_id,received_at from stock_transfers where id=$1',[id])).rows,stock:(await p.query('select id,qty_on_hand,min_stock_level,max_stock_level from inventory_stock where branch_id=$1 order by id',[branch])).rows};}
+async function main(){
+ await p.query("insert into branches(id,code,name,lat,lng) values($1,$1,'Transfer QA A','0','0'),($2,$2,'Transfer QA B','0','0')",[branch,other]);
+ await p.query("insert into users(id,name,phone_e164,role,branch_id,status,module_access) values($1,'Transfer QA User',$1,'BRANCH_MANAGER',$2,'Active','{INVENTORY}')",[user,branch]);
+ await p.query("insert into sessions(token_hash,user_id,token_version,expires_at) values($1,$2,'0',now()+interval '1 hour')",[crypto.createHash('sha256').update(token).digest('hex'),user]);
+ const me=await req('/api/auth/me');assert.equal(me.status,200);assert.equal(me.data.user.id,user,'QA app database binding');
+ await p.query("insert into raw_materials(id,name,unit) values($1,'Transfer QA Rice','kg')",[mat]);
+ await p.query("insert into warehouses(id,type,branch_id,name) values($1,'CENTRAL',null,'QA Central'),($2,'BRANCH',$3,'QA Destination'),($4,'BRANCH',$5,'QA Foreign')",[central,dest,branch,foreign,other]);
+ await p.query("insert into inventory_stock(id,branch_id,raw_material_id,qty_on_hand,min_stock_level,max_stock_level) values($1,$2,$3,'1.000','2.000','100.000')",[stock,branch,mat]);
+ const missing=await transfer();const before=await snapshot(missing);const omitted=await req(`/api/stock-transfers/${missing}/receive`,{});
+ check('omitted receipt quantity is rejected rather than finalizing a total shortage',()=>assert.equal(omitted.status,400));assert.deepEqual(await snapshot(missing),before);
+ const explicit=await req(`/api/stock-transfers/${missing}/receive`,{qtyReceived:'0'});check('explicit zero remains a deliberate valid total-shortage receipt',()=>{assert.equal(explicit.status,200);assert.equal(explicit.data.stockTransfer.qtyReceived,'0.000');assert.equal(explicit.data.variance,'10.000');});
+ const duplicate=await transfer();await p.query("insert into inventory_stock(id,branch_id,raw_material_id,qty_on_hand) values($1,$2,$3,'2')",[prefix+'-dup',branch,mat]);const duplicateBefore=await snapshot(duplicate);const dup=await req(`/api/stock-transfers/${duplicate}/receive`,{qtyReceived:'3'});
+ check('duplicate stock rows reject receipt with 409 and preserve DISPATCHED state',()=>assert.equal(dup.status,409));assert.deepEqual(await snapshot(duplicate),duplicateBefore);await p.query('delete from inventory_stock where id=$1',[prefix+'-dup']);
+ const capacity=await transfer();await p.query("update inventory_stock set qty_on_hand='999999999.999' where id=$1",[stock]);const capBefore=await snapshot(capacity);const cap=await req(`/api/stock-transfers/${capacity}/receive`,{qtyReceived:'0.001'});
+ check('stock overflow returns actionable 409 without finalizing receipt',()=>assert.equal(cap.status,409));assert.deepEqual(await snapshot(capacity),capBefore);await p.query("update inventory_stock set qty_on_hand='1.000' where id=$1",[stock]);
+ const fractional=await transfer();const fraction=await req(`/api/stock-transfers/${fractional}/receive`,{qtyReceived:'0.001'});
+ check('fractional receive uses exact thousandths and preserves par levels',()=>{assert.equal(fraction.status,200);assert.equal(fraction.data.variance,'9.999');});const fractionalStock=(await snapshot(fractional)).stock[0];assert.deepEqual([fractionalStock.qty_on_hand,fractionalStock.min_stock_level,fractionalStock.max_stock_level],['1.001','2.000','100.000']);
+ for(const [name,body,options,status]of [['unknown field',{qtyReceived:'1',branchId:other},{},400],['null quantity',{qtyReceived:null},{},400],['negative quantity',{qtyReceived:'-1'},{},400],['too many decimals',{qtyReceived:'0.0001'},{},400],['anonymous',{qtyReceived:'1'},{anonymous:true},401],['CSRF',{qtyReceived:'1'},{origin:'https://evil.test'},403]]){const id=await transfer(),snap=await snapshot(id),r=await req(`/api/stock-transfers/${id}/receive`,body,options);check(name+' rejected without receipt/stock effects',()=>assert.equal(r.status,status));assert.deepEqual(await snapshot(id),snap);}
+ const raced=await transfer();const race=await Promise.all([req(`/api/stock-transfers/${raced}/receive`,{qtyReceived:'0.100'}),req(`/api/stock-transfers/${raced}/receive`,{qtyReceived:'0.100'})]);
+ check('concurrent receipts credit exactly once and reject already-finalized transfer',()=>assert.deepEqual(race.map(r=>r.status).sort(),[200,409]));assert.equal((await snapshot(raced)).stock[0].qty_on_hand,'1.101');
+ const overdelivery=await transfer();const excess=await req(`/api/stock-transfers/${overdelivery}/receive`,{qtyReceived:'10.001'});
+ check('overdelivery preserves exact stock and negative variance',()=>{assert.equal(excess.status,200);assert.equal(excess.data.variance,'-0.001');assert.equal(excess.data.stockTransfer.qtyReceived,'10.001');});assert.equal((await snapshot(overdelivery)).stock[0].qty_on_hand,'11.102');
+ await p.query('delete from inventory_stock where id=$1',[stock]);const first=await transfer();const firstReceipt=await req(`/api/stock-transfers/${first}/receive`,{qtyReceived:'1.250'});
+ check('first receipt creates exactly one stock row with unconfigured par levels',()=>{assert.equal(firstReceipt.status,200);assert.equal(firstReceipt.data.variance,'8.750');});const firstStock=(await snapshot(first)).stock;assert.equal(firstStock.length,1);assert.deepEqual([firstStock[0].qty_on_hand,firstStock[0].min_stock_level,firstStock[0].max_stock_level],['1.250','0.000','0.000']);
+ const foreignAttempt=await req('/api/stock-transfers',{fromWarehouseId:central,toWarehouseId:foreign,rawMaterialId:mat,qtyDispatched:'1'});check('branch membership still gates dispatch',()=>assert.equal(foreignAttempt.status,403));
+ console.log(JSON.stringify({total:count,passed:count,failed:0}));
+}
+async function cleanup(){await p.query('delete from stock_transfers where id=any($1)',[ids]);await p.query('delete from inventory_stock where branch_id=$1',[branch]);await p.query('delete from warehouses where id=any($1)',[[central,dest,foreign]]);await p.query('delete from sessions where user_id=$1',[user]);await p.query('delete from users where id=$1',[user]);await p.query('delete from raw_materials where id=$1',[mat]);await p.query('delete from branches where id=any($1)',[[branch,other]]);}
+main().then(async()=>{await cleanup();await p.end();}).catch(async e=>{console.error(e.stack);try{await cleanup();}catch(err){console.error('Cleanup:',err.message);}await p.end();process.exitCode=1;});

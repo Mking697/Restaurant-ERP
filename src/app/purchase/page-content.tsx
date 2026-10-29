@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/toast";
 import { formatInr } from "@/lib/utils";
-import { Plus, Check, X, Upload, PackageCheck, FlaskConical, Trash2 } from "lucide-react";
-import { requestJson, RequestJsonError } from "@/lib/current-user";
+import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
+import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
@@ -60,22 +60,15 @@ interface PurchaseOrderRow {
   lines: PurchaseOrderLineApi[];
 }
 
+interface GrnLine {
+  id: string; rawMaterialId: string | null; name: string; itemDescription: string; unit: string;
+  qtyOrdered: string; qtyReceived: string; qtyFailed: string; qtyAccepted: string; rateOrdered: string;
+}
 interface GrnRow {
-  id: string;
-  poId: string;
-  poNumber: string;
-  branchId: string;
-  branch: string;
-  status: "PENDING" | "RECEIVED" | "QUALITY_HOLD" | "APPROVED";
-  qualityResult: "PENDING" | "PASS" | "FAIL" | "PARTIAL";
-  receivedById: string;
-  receivedBy: string;
-  createdAt: string;
-  rawMaterialId: string | null;
-  uom: string;
-  qtyReceived: number;
-  qtyFailed: number;
-  inventoryPosted?: boolean;
+  id: string; poNumber: string; branchId: string; branch: string; receivedBy: string;
+  status: string; qualityResult: "PENDING" | "PASS" | "FAIL" | "PARTIAL";
+  isGeneralPurchase: boolean; lines: GrnLine[]; qualityNote: string | null; qualityPhotoUrl: string | null;
+  qualityRecorded: boolean; qualityReady: boolean; reconciliationRequired: boolean; inventoryPosted: boolean; qualityRecordedAt: string | null;
 }
 
 const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "destructive" | "outline"> = {
@@ -98,7 +91,7 @@ export default function PurchasePage() {
   const [approvedIndents, setApprovedIndents] = React.useState<ApprovedIndentOption[]>([]);
   const [indents, setIndents] = React.useState<IndentRow[]>([]);
   const [pos, setPos] = React.useState<PurchaseOrderRow[]>([]);
-  const [grns, setGrns] = React.useState<GrnRow[]>([]);
+  const [grnRefresh, setGrnRefresh] = React.useState(0);
   const [loadError, setLoadError] = React.useState("");
   const { notify, ToastHost } = useToast();
 
@@ -112,7 +105,7 @@ export default function PurchasePage() {
     requestJson<{ purchaseOrders: PurchaseOrderRow[] }>("/api/purchase/orders").then((data) => setPos(data.purchaseOrders)).catch((err) => setLoadError(errMsg(err, "Could not load purchase orders")));
   }, []);
   const loadGrns = React.useCallback(() => {
-    requestJson<{ grns: GrnRow[] }>("/api/purchase/grns").then((data) => setGrns(data.grns)).catch((err) => setLoadError(errMsg(err, "Could not load GRNs")));
+    setGrnRefresh((value) => value + 1);
   }, []);
 
   React.useEffect(() => {
@@ -126,11 +119,6 @@ export default function PurchasePage() {
 
   const [raiseOpen, setRaiseOpen] = React.useState(false);
   const [poOpen, setPoOpen] = React.useState(false);
-  const [qualityGrn, setQualityGrn] = React.useState<GrnRow | null>(null);
-  const [qualityResult, setQualityResult] = React.useState<"PASS" | "FAIL" | "PARTIAL">("PASS");
-  const [failQty, setFailQty] = React.useState("");
-  const [qualityBusy, setQualityBusy] = React.useState(false);
-  const [qualityError, setQualityError] = React.useState("");
   const [indentBusy, setIndentBusy] = React.useState(false);
   const [poBusy, setPoBusy] = React.useState(false);
   const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
@@ -276,58 +264,6 @@ export default function PurchasePage() {
     }
   }
 
-  function openQualityCheck(grn: GrnRow) {
-    setQualityGrn(grn);
-    setQualityResult("PASS");
-    setFailQty("");
-    setQualityError("");
-  }
-
-  async function submitQualityCheck() {
-    if (!qualityGrn) return;
-    const failedQty = qualityResult === "PASS" ? 0 : Number(failQty) || 0;
-    if (qualityResult !== "PASS" && failedQty <= 0) return;
-    const totalQty = qualityGrn.qtyReceived ?? 0;
-    const passQty = qualityResult === "PASS" ? totalQty : qualityResult === "PARTIAL" ? Math.max(0, totalQty - failedQty) : 0;
-    const canPostToInventory = passQty > 0 && !!qualityGrn.branchId && !!qualityGrn.rawMaterialId;
-
-    setQualityError("");
-    setQualityBusy(true);
-    try {
-      let posted = false;
-      let newQtyOnHand: string | undefined;
-      if (canPostToInventory) {
-        const result = await requestJson<{ item: { qtyOnHand: string; unit: string } }>("/api/inventory/receive", {
-          method: "POST",
-          body: JSON.stringify({ branchId: qualityGrn.branchId, rawMaterialId: qualityGrn.rawMaterialId, qty: passQty }),
-        });
-        posted = true;
-        newQtyOnHand = result.item.qtyOnHand;
-      }
-      setGrns((prev) =>
-        prev.map((g) =>
-          g.id === qualityGrn.id
-            ? { ...g, qualityResult, qtyFailed: failedQty, inventoryPosted: posted, status: qualityResult === "FAIL" ? "QUALITY_HOLD" : "APPROVED" }
-            : g
-        )
-      );
-      if (posted) {
-        notify(uiText(
-          `${qualityGrn.id}: Quality ${qualityResult}. ${passQty} ${qualityGrn.uom} posted to real Inventory — new on-hand ${newQtyOnHand} ${qualityGrn.uom}.`,
-          `${qualityGrn.id}: Quality ${qualityResult}. ${passQty} ${qualityGrn.uom} real Inventory mein post hua — naya on-hand ${newQtyOnHand} ${qualityGrn.uom}.`
-        ));
-      } else if (qualityResult === "PASS") {
-        notify(uiText(`${qualityGrn.id}: Quality PASS, but this GRN has no linked raw material (general purchase), so nothing was posted to Inventory.`, `${qualityGrn.id}: Quality PASS, lekin is GRN ka koi linked raw material nahi hai (general purchase), isliye Inventory mein kuchh post nahi hua.`));
-      } else {
-        notify(uiText(`${qualityGrn.id}: ${qualityResult}, failed ${failedQty} ${qualityGrn.uom}. No vendor return or Accounts refund entry was posted (demo only).`, `${qualityGrn.id}: ${qualityResult}, failed ${failedQty} ${qualityGrn.uom}. Vendor return ya Accounts refund entry post nahi hua (demo hi hai).`));
-      }
-      setQualityGrn(null);
-    } catch (err) {
-      setQualityError(errMsg(err, "Could not post to Inventory. Quality result was not saved."));
-    } finally {
-      setQualityBusy(false);
-    }
-  }
 
   return (
     <AppShell activeHref="/purchase">
@@ -629,117 +565,9 @@ export default function PurchasePage() {
         </TabsContent>
 
         <TabsContent value="grns">
-          <Card>
-            <CardContent className="pt-5">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{uiText("GRN")}</TableHead>
-                    <TableHead>{uiText("PO Number")}</TableHead>
-                    <TableHead>{uiText("Branch")}</TableHead>
-                    <TableHead>{uiText("Received By")}</TableHead>
-                    <TableHead>{uiText("Quality Result")}</TableHead>
-                    <TableHead>{uiText("Fail Qty")}</TableHead>
-                    <TableHead>{uiText("Inventory")}</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grns.map((g) => (
-                    <TableRow key={g.id}>
-                      <TableCell className="font-medium">{g.id.slice(0, 8)}</TableCell>
-                      <TableCell>{g.poNumber}</TableCell>
-                      <TableCell>{g.branch}</TableCell>
-                      <TableCell>{g.receivedBy}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            g.qualityResult === "PASS"
-                              ? "success"
-                              : g.qualityResult === "FAIL"
-                                ? "destructive"
-                                : g.qualityResult === "PARTIAL"
-                                  ? "warning"
-                                  : "secondary"
-                          }
-                        >
-                          {g.qualityResult}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{g.qtyFailed > 0 ? `${g.qtyFailed} ${g.uom}` : "—"}</TableCell>
-                      <TableCell>
-                        {g.inventoryPosted ? (
-                          <Badge variant="success">{uiText("Posted ✓")}</Badge>
-                        ) : g.qualityResult === "PENDING" ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : (
-                          <Badge variant="outline">{uiText("Not posted")}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {g.qualityResult === "PENDING" && (
-                          <Button size="sm" variant="outline" onClick={() => openQualityCheck(g)}>
-                            <FlaskConical className="size-3.5" /> {uiText(" Quality Check ")}</Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <GrnQualitySection refreshToken={grnRefresh} />
         </TabsContent>
       </Tabs>
-
-      {/* Quality check dialog — PASS/PARTIAL post the passed qty to real Inventory; FAIL/PARTIAL fail-qty is demo-only return+refund */}
-      <Dialog open={!!qualityGrn} onOpenChange={(open) => !open && !qualityBusy && setQualityGrn(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{uiText("Quality Check — ")}{qualityGrn?.id.slice(0, 8)}</DialogTitle>
-            <DialogDescription>
-              {qualityGrn?.rawMaterialId
-                ? uiText(" Pass/Partial → passed quantity posts to the real Inventory table right now. Fail/Partial fail-qty return + Accounts refund entry is still demo-only. ", " Pass/Partial → passed quantity turant real Inventory table mein post hoti hai. Fail/Partial ki fail-qty return + Accounts refund entry abhi bhi demo hi hai. ")
-                : uiText(" This GRN is a general purchase with no linked raw material — nothing will post to Inventory. ", " Ye GRN ek general purchase hai, koi linked raw material nahi — Inventory mein kuchh post nahi hoga. ")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {qualityError && <p role="alert" className="text-sm text-destructive">{uiText(qualityError)}</p>}
-            <fieldset disabled={qualityBusy} className="space-y-3">
-              <div className="flex gap-2">
-                {(["PASS", "PARTIAL", "FAIL"] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setQualityResult(opt)}
-                    className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
-                      qualityResult === opt ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-              {qualityResult !== "PASS" && (
-                <Field label={uiText(`Fail quantity (${qualityGrn?.uom ?? "UOM"})`, `Fail quantity (${qualityGrn?.uom ?? "UOM"})`)}>
-                  <input
-                    type="number"
-                    className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                    value={failQty}
-                    onChange={(e) => setFailQty(e.target.value)}
-                    placeholder={uiText("2.5")}
-                  />
-                </Field>
-              )}
-            </fieldset>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQualityGrn(null)} disabled={qualityBusy}>
-              {uiText(" Cancel ")}</Button>
-            <Button onClick={submitQualityCheck} disabled={qualityBusy || (qualityResult !== "PASS" && !failQty.trim())}>
-              {qualityBusy ? uiText(" Submitting… ") : uiText(" Submit ")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <ToastHost />
     </AppShell>
@@ -753,4 +581,156 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+// Keep this independently keyed to live identity/grants; an old dialog cannot
+// publish a completion into a newly authorized scope.
+function GrnQualitySection({ refreshToken }: { refreshToken: number }) {
+  const user = useCurrentUser();
+  const scope = JSON.stringify([user.id, user.authenticated, user.ready, user.role, user.branchId, [...user.moduleAccess].sort()]);
+  return <GrnQualityWorkspace key={scope} user={user} refreshToken={refreshToken} />;
+}
+
+function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refreshToken: number }) {
+  const uiText = useUiCopy();
+  const [grns, setGrns] = React.useState<GrnRow[]>([]);
+  const [selected, setSelected] = React.useState<GrnRow | null>(null);
+  const [result, setResult] = React.useState<"PASS" | "PARTIAL" | "FAIL">("PASS");
+  const [failures, setFailures] = React.useState<Record<string, string>>({});
+  const [note, setNote] = React.useState("");
+  const [photoUrl, setPhotoUrl] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [loadError, setLoadError] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [uncertain, setUncertain] = React.useState(false);
+  const alive = React.useRef(true);
+  const busyRef = React.useRef(false);
+  const generation = React.useRef(0);
+  const readVersion = React.useRef(0);
+  type Decision = { result: "PASS" | "PARTIAL" | "FAIL"; lines: { id: string; qtyFailed: string }[]; note: string; photoUrl: string };
+  const intent = React.useRef<{ grn: GrnRow; body: Decision; serialized: string } | null>(null);
+  const allowed = user.ready && user.authenticated && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("PURCHASE_ORDER"));
+  const inventoryAllowed = allowed && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("INVENTORY"));
+  const canCheck = (grn: GrnRow) => allowed && (grn.isGeneralPurchase || inventoryAllowed) && grn.qualityReady && !grn.reconciliationRequired && !grn.qualityRecorded && grn.qualityResult === "PENDING";
+  const quantity = (value: string) => /^\d{1,12}(?:\.\d{1,3})?$/.test(value) ? BigInt(value.split(".")[0]) * BigInt(1000) + BigInt((value.split(".")[1] ?? "").padEnd(3, "0")) : null;
+  const decisionLines = selected?.lines.map(line => ({ id: line.id, qtyFailed: result === "PASS" ? "0" : result === "FAIL" ? line.qtyReceived : failures[line.id] ?? "0" })) ?? [];
+  const quantitiesValid = !!selected && selected.lines.length > 0 && selected.lines.length <= 50 && new Set(selected.lines.map(line => line.id)).size === selected.lines.length && decisionLines.every((line, i) => {
+    const failed = quantity(line.qtyFailed), received = quantity(selected.lines[i].qtyReceived);
+    return failed !== null && received !== null && received > BigInt(0) && failed <= received;
+  });
+  const partialValid = result !== "PARTIAL" || (decisionLines.some(line => (quantity(line.qtyFailed) ?? BigInt(0)) > BigInt(0)) && decisionLines.some((line, i) => quantity(line.qtyFailed) !== quantity(selected!.lines[i].qtyReceived)));
+  const formValid = quantitiesValid && partialValid && note.trim().length <= 1000 && (result === "PASS" || note.trim().length >= 3) && photoUrl.trim().length <= 2000;
+  const editable = () => !busyRef.current && !intent.current;
+  React.useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; generation.current++; readVersion.current++; };
+  }, []);
+  React.useEffect(() => {
+    let active = true;
+    const version = ++readVersion.current;
+    if (allowed) void requestJson<{ grns: GrnRow[] }>("/api/purchase/grns").then(data => {
+      if (active && alive.current && version === readVersion.current && !intent.current) { setGrns(data.grns); setLoadError(""); }
+    }).catch(err => { if (active && alive.current && version === readVersion.current) setLoadError(errMsg(err, "Could not load GRNs.")); });
+    return () => { active = false; };
+  }, [allowed, refreshToken]);
+
+  function openQuality(grn: GrnRow) {
+    if (!editable() || !canCheck(grn)) return;
+    generation.current++;
+    setSelected(grn); setResult("PASS"); setFailures({}); setNote(""); setPhotoUrl(""); setError("");
+  }
+  function closeQuality() {
+    if (!editable()) return;
+    generation.current++; setSelected(null); setError("");
+  }
+  // A response is evidence only when it identifies this exact durable decision,
+  // including every original line. Never infer posting from a non-PENDING status.
+  function matchesSaved(row: GrnRow, attempt: NonNullable<typeof intent.current>) {
+    const original = attempt.grn, body = attempt.body;
+    if (!row || row.id !== original.id || row.branchId !== original.branchId || row.isGeneralPurchase !== original.isGeneralPurchase || row.qualityRecorded !== true || row.reconciliationRequired || !row.qualityRecordedAt || row.qualityResult !== body.result || row.status !== (body.result === "FAIL" ? "QUALITY_HOLD" : "APPROVED") || (row.qualityNote ?? "").trim() !== body.note || (row.qualityPhotoUrl ?? "").trim() !== body.photoUrl || !Array.isArray(row.lines) || row.lines.length !== original.lines.length || new Set(row.lines.map(line => line.id)).size !== original.lines.length) return false;
+    return row.inventoryPosted === (!original.isGeneralPurchase && body.result !== "FAIL") && row.lines.every(line => {
+      const source = original.lines.find(value => value.id === line.id), decision = body.lines.find(value => value.id === line.id);
+      if (!source || !decision || line.rawMaterialId !== source.rawMaterialId || line.unit !== source.unit) return false;
+      const received = quantity(line.qtyReceived), failed = quantity(line.qtyFailed), accepted = quantity(line.qtyAccepted);
+      return received !== null && received === quantity(source.qtyReceived) && failed !== null && failed === quantity(decision.qtyFailed) && accepted !== null && accepted === received - failed;
+    });
+  }
+  function acceptSaved(row: GrnRow) {
+    readVersion.current++;
+    setGrns(prev => prev.map(value => value.id === row.id ? row : value));
+    intent.current = null; setUncertain(false); setSelected(null); setError("");
+  }
+  async function saveQuality(replay = false) {
+    if (busyRef.current || !selected || !canCheck(selected)) return;
+    if (replay ? !intent.current : !!intent.current) return;
+    if (!replay && !formValid) { setError("Enter valid line quantities and a failure note (3–1000 characters) for FAIL/PARTIAL."); return; }
+    const body: Decision = { result, lines: decisionLines, note: note.trim(), photoUrl: photoUrl.trim() };
+    const attempt = replay ? intent.current! : { grn: selected, body, serialized: JSON.stringify(body) };
+    const token = generation.current;
+    intent.current = attempt; busyRef.current = true; setBusy(true); setError(""); readVersion.current++;
+    try {
+      const data = await requestJson<{ grn: GrnRow; replayed: boolean }>(`/api/purchase/grns/${attempt.grn.id}/quality`, { method: "POST", body: attempt.serialized });
+      if (!alive.current || token !== generation.current) return;
+      if (!matchesSaved(data.grn, attempt)) throw new Error("The response did not confirm the original quality decision.");
+      acceptSaved(data.grn);
+    } catch (err) {
+      if (!alive.current || token !== generation.current) return;
+      if (!replay && err instanceof RequestJsonError && err.outcome === "rejected") { intent.current = null; setUncertain(false); setError(err.message); }
+      else { setUncertain(true); setError("Outcome unconfirmed. Keep the original decision: check saved quality or explicitly replay the exact request. " + errMsg(err, "Unknown response.")); }
+    } finally {
+      if (alive.current && token === generation.current) { busyRef.current = false; setBusy(false); }
+    }
+  }
+  async function checkSaved() {
+    const attempt = intent.current;
+    if (!attempt || busyRef.current || !canCheck(attempt.grn)) return;
+    const token = generation.current;
+    busyRef.current = true; setBusy(true); readVersion.current++;
+    try {
+      const data = await requestJson<{ grns: GrnRow[] }>("/api/purchase/grns");
+      if (!alive.current || token !== generation.current) return;
+      const row = data.grns.find(value => value.id === attempt.grn.id);
+      if (row && matchesSaved(row, attempt)) acceptSaved(row);
+      else setError("Original decision is still unconfirmed or needs reconciliation. Editing remains locked; check again or replay the exact request.");
+    } catch (err) { if (alive.current && token === generation.current) setError(errMsg(err, "Could not check saved quality. Original decision remains locked.")); }
+    finally { if (alive.current && token === generation.current) { busyRef.current = false; setBusy(false); } }
+  }
+  return <>
+    {loadError && <p role="alert" className="text-sm text-destructive">{uiText(loadError)}</p>}
+    <Card><CardContent className="pt-5"><Table><TableHeader><TableRow>
+      <TableHead>{uiText("GRN")}</TableHead><TableHead>{uiText("PO Number")}</TableHead><TableHead>{uiText("Branch")}</TableHead>
+      <TableHead>{uiText("Received By")}</TableHead><TableHead>{uiText("Quality Result")}</TableHead><TableHead>{uiText("All received lines")}</TableHead><TableHead>{uiText("Inventory")}</TableHead><TableHead />
+    </TableRow></TableHeader><TableBody>{grns.map(g => <TableRow key={g.id}>
+      <TableCell>{g.id.slice(0, 8)}</TableCell><TableCell>{g.poNumber}</TableCell><TableCell>{g.branch}</TableCell><TableCell>{g.receivedBy}</TableCell>
+      <TableCell><Badge variant={g.qualityResult === "PASS" ? "success" : g.qualityResult === "FAIL" ? "destructive" : g.qualityResult === "PARTIAL" ? "warning" : "secondary"}>{g.qualityResult}</Badge>
+        <p className="text-xs">{g.status}</p>{g.qualityNote && <p className="max-w-64 break-words text-xs">{g.qualityNote}</p>}{g.qualityPhotoUrl && <p className="max-w-64 break-words text-xs">{uiText("Reference")}: {g.qualityPhotoUrl}</p>}
+        {g.qualityRecorded && <p className="text-xs">{g.qualityRecordedAt}</p>}
+      </TableCell><TableCell>{g.lines.map(line => <div key={line.id} className="min-w-0 break-words text-sm">
+        {line.name || line.itemDescription} — {uiText("Received")}: {line.qtyReceived} {line.unit}; {uiText("Failed")}: {line.qtyFailed} {line.unit}; {uiText("Accepted")}: {line.qtyAccepted} {line.unit}
+      </div>)}</TableCell><TableCell>{g.qualityRecorded && g.inventoryPosted ? <Badge variant="success">{uiText("Posted ✓")}</Badge> : uiText("Not posted")}</TableCell>
+      <TableCell>{g.reconciliationRequired ? <p className="text-xs text-destructive">{uiText("Reconciliation required — prior inventory posting cannot be verified. Do not repost.")}</p> : g.qualityReady && !g.qualityRecorded && g.qualityResult === "PENDING" && <>
+        <Button disabled={busy || uncertain || !canCheck(g)} onClick={() => openQuality(g)}>{uiText("Quality Check")}</Button>
+        {!g.isGeneralPurchase && !inventoryAllowed && <p className="text-xs text-muted-foreground">{uiText("Store quality requires PURCHASE_ORDER and INVENTORY access. Ask an administrator; no grants are changed here.")}</p>}
+      </>}</TableCell>
+    </TableRow>)}</TableBody></Table></CardContent></Card>
+    <Dialog open={!!selected} onOpenChange={open => { if (!open) closeQuality(); }}><DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogHeader><DialogTitle>{uiText("Quality Check")} — {selected?.id.slice(0, 8)}</DialogTitle><DialogDescription>{selected?.isGeneralPurchase ? uiText("General purchase: quality is saved, but no inventory is posted.") : uiText("Accepted material quantities post atomically with the saved quality decision. Store quality checks require PURCHASE_ORDER and INVENTORY access.")}</DialogDescription></DialogHeader>
+      {error && <p role="alert" className="text-sm text-destructive">{uiText(error)}</p>}
+      <p className="text-xs text-muted-foreground">{uiText("Vendor returns and refund/credit receivables are not created yet (GRN-2). No money receipt or journal is posted.")}</p>
+      <fieldset disabled={busy || uncertain} className="min-w-0 space-y-3">
+        <div className="flex gap-2">{(["PASS", "PARTIAL", "FAIL"] as const).map(value => <button key={value} type="button" aria-pressed={result === value} className={`flex-1 rounded border p-2 text-sm ${result === value ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => { if (editable()) setResult(value); }}>{value}</button>)}</div>
+        {selected?.lines.map(line => <div key={line.id} className="min-w-0 space-y-2 rounded border p-3">
+          <p className="break-words">{line.name || line.itemDescription} — {line.qtyReceived} {line.unit}</p>
+          {result === "PARTIAL" ? <label className="block text-xs">{uiText("Failed quantity")} ({line.unit})<input type="number" min="0" max={line.qtyReceived} step="0.001" aria-label={`Failed quantity for ${line.id}`} value={failures[line.id] ?? "0"} onChange={e => { if (editable()) setFailures(prev => ({ ...prev, [line.id]: e.target.value })); }} className="w-full min-w-0 rounded border p-2" /></label> : <p className="text-xs">{uiText("Failed quantity")}: {result === "PASS" ? "0" : line.qtyReceived} {line.unit}</p>}
+        </div>)}
+        <Field label={uiText("Quality note (required for FAIL/PARTIAL)")}><textarea aria-label="Quality note" maxLength={1000} value={note} onChange={e => { if (editable()) setNote(e.target.value); }} className="w-full min-w-0 rounded border p-2" /></Field>
+        <Field label={uiText("Photo/reference (not an upload)")}><input aria-label="Photo/reference (not an upload)" maxLength={2000} value={photoUrl} onChange={e => { if (editable()) setPhotoUrl(e.target.value); }} className="w-full min-w-0 rounded border p-2" /></Field>
+      </fieldset>
+      <DialogFooter>
+        <Button variant="outline" onClick={closeQuality} disabled={busy || uncertain}>{uiText("Cancel quality")}</Button>
+        {uncertain && <><Button variant="outline" onClick={checkSaved} disabled={busy}>{uiText("Check saved quality")}</Button><Button variant="outline" onClick={() => saveQuality(true)} disabled={busy}>{uiText("Replay exact request")}</Button></>}
+        <Button onClick={() => saveQuality()} disabled={busy || uncertain || !formValid || !selected || !canCheck(selected)}>{uiText("Save quality")}</Button>
+      </DialogFooter>
+    </DialogContent></Dialog>
+  </>;
 }

@@ -107,24 +107,24 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
   },
   "/purchase": {
   "en": {
-    "scenario": "Create a real general-purchase PO and GRN only in QA. Quality decisions are incomplete; do not practice stock posting on a business branch.",
+    "scenario": "Create a real general-purchase PO and saved GRN quality decision only in QA; do not practice on a business branch.",
     "steps": [
       "Click New Purchase and select General purchase in a QA branch.",
       "Select an existing vendor; enter Office chair repair and Amount ₹500, then Create (Step 1: Buy). A vendor must already exist; this form does not create one.",
       "In Purchase Orders, Upload Bill (optional) only marks the step, not an upload. Click Mark Material Received once and inspect the saved GRN.",
-      "For this general GRN without raw material, Quality Check PASS posts no inventory. For linked material, PASS/PARTIAL posts real passed stock: never repeat after reload without verifying inventory."
+      "On this general GRN, open Quality Check, choose PASS and Save quality. Reload: PASS and all accepted/failed quantities remain saved, with no inventory posting. A store GRN needs PURCHASE_ORDER plus INVENTORY; PARTIAL takes a failed quantity per line and a failure note."
     ],
-    "result": "PO and GRN persist in the database; quality result/posted marker are page-local and reload shows PENDING again. Repeating a linked-material quality check can double-post real inventory. No vendor return, refund or Accounts refund is posted; no bill file is uploaded."
+    "result": "PO, GRN, all-line quality decision and audit receipt persist after reload. Accepted store material stock posts atomically once; an exact replay cannot add it again. For an unknown outcome use Check saved quality or explicitly Replay exact request without changing the frozen inputs. Legacy GRNs without trusted origin/receipt require reconciliation. No vendor return/refund receivable, money receipt or journal is posted; bill/reference text is not a file upload."
   },
   "hinglish": {
-    "scenario": "Sirf QA mein real general-purchase PO aur GRN banao. Quality incomplete hai; business branch par stock posting practice mat karo.",
+    "scenario": "Sirf QA mein real general-purchase PO aur saved GRN quality decision banao; business branch par practice mat karo.",
     "steps": [
       "New Purchase dabao aur QA branch mein General purchase chuno.",
       "Existing vendor chuno; Office chair repair aur Amount ₹500 daal kar Create (Step 1: Buy) karo. Vendor pehle se hona chahiye; form vendor nahi banata.",
       "Purchase Orders mein Upload Bill (optional) sirf step mark hai, upload nahi. Mark Material Received ek baar dabao aur saved GRN dekho.",
-      "Raw material ke bina is general GRN ka Quality Check PASS stock nahi post karta. Linked material par PASS/PARTIAL real passed stock post karta hai: reload ke baad inventory verify kiye bina repeat mat karo."
+      "Is general GRN ka Quality Check kholo, PASS chuno aur Save quality karo. Reload par PASS aur har line ki accepted/failed qty saved hai; inventory posting nahi. Store GRN ke liye PURCHASE_ORDER aur INVENTORY chahiye; PARTIAL mein har line ka failed qty aur failure note bharo."
     ],
-    "result": "PO aur GRN DB mein persist; quality result/posted marker page-local aur reload par PENDING hai. Linked-material quality repeat se real stock double-post ho sakta hai. Vendor return, refund, Accounts refund aur bill file upload nahi hote."
+    "result": "PO, GRN, har line ki quality aur audit receipt reload ke baad persist hain. Accepted store stock atomic tareeke se sirf ek baar post; exact replay stock dobara nahi badhata. Unknown outcome par frozen inputs badle bina Check saved quality ya explicitly Replay exact request karo. Trusted origin/receipt ke bina legacy GRN par reconciliation required hai. Vendor return/refund receivable, money receipt aur journal nahi bante; bill/reference text file upload nahi hai."
   }
 },
   "/pos": {

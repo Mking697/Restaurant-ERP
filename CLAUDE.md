@@ -11,7 +11,7 @@ first every time work resumes on this project.
 
 ---
 
-## ACTIVE RELEASE + REMAINING-WORK TRACKER (October 28, 2026)
+## ACTIVE RELEASE + REMAINING-WORK TRACKER (October 29, 2026)
 
 User authorized committing/pushing/deploying the completed Phase 2/3 snapshot,
 then starting the remaining work and marking each item COMPLETE only after
@@ -20,8 +20,8 @@ dependency upgrades, paid providers and production business writes still need
 separate approval. Pending follow-up changes are not automatically part of the
 current authorized release snapshot.
 
-- [FIX REVIEWED — RELEASE PREFLIGHT] RELEASE-1: Store-PO approval bypass
-  repaired in the real POST and UI; parent ran 213/213 unit tests, clean
+- [COMPLETE] RELEASE-1: Phase 2/3 deployed as `5686996` after the store-PO approval fix
+  in the real POST and UI; parent ran 213/213 unit tests, clean
   typecheck/build and 50/50 HTTP/PG checks on dev AND compiled app, including
   no-write rejections, decimal concurrency and forced rollback. Browser
   create/reload and exact two-line PG readback passed; pixel-level review is
@@ -29,15 +29,31 @@ current authorized release snapshot.
   Independent scoped review passed with no blocking security/logic findings;
   reviewer reran 14/14 focused DB-free purchase tests. Nonblocking suggestion:
   paginate approved-indent choices beyond the current 200-row list cap.
-  Commit/push verified Phase 2/3 only after fresh production preflight;
-  confirm Vercel READY for the exact SHA, public smoke and release evidence.
-  Prior production preflight (recheck
-  before deployment): all 11 existing migrations already applied (0000–0010),
+  Committed/pushed `5686996af6cf58b6d8d9ef9f23caea65663b30c6`; Vercel
+  `dpl_EoA3JV6ZkwLkMQBrx1UWV7JhCNYK` READY for that exact SHA, public alias
+  read back to that deployment and GitHub Vercel status success. Public smoke
+  16/16 passed; no authenticated production workflow/Owner login or fixtures.
+  Fresh Neon read-only preflight AND postflight: all 11 migrations (0000–0010),
   correct timestamps and LF-normalized SHA-256 hashes; local 0002 checkout has
-  CRLF only. owner_only and login_attempts already exist. No pending migration.
-- [PENDING — NEXT] GRN-1: Persist PASS/FAIL/PARTIAL plus per-line failed qty,
-  atomically post accepted inventory once, reject conflicting replay, support
-  all GRN lines, real reload readback and rollback/concurrency/auth tests.
+  CRLF only. owner_only and login_attempts verified. No pending migration.
+  Production counts unchanged: 6 branches, 1 user, 12 inventory rows, 0 POS
+  orders/POs/GRNs. All remaining items below stay open, not part of this release.
+- [COMPLETE — LOCAL FUNCTIONAL ACCEPTANCE] GRN-1: All-line quality/failures,
+  atomic once-only accepted stock, durable audit/origin evidence, safe exact
+  replay and legacy reconciliation are implemented. Parent: 247/247 unit,
+  clean typecheck/build; dev AND compiled HTTP/PG: GRN 34/34, purchase 50/50,
+  transfer receipt 15/15. Browser PASS/FAIL/PARTIAL/general save+reload,
+  note validation, buyer permission prerequisite, legacy block and exact PG
+  stock/line/receipt readback passed; phone width 390 without page overflow.
+  English/Hinglish guides synced. Independent application review passed;
+  reviewer ran 32/32 focused tests. Related transfer omission, duplicate-row,
+  capacity and exact-quantity/field-validation gaps fixed with regressions.
+  Evidence: `docs/grn-quality-verification.md`; contract:
+  `docs/grn-quality-contract.md`. Own QA fixtures/processes/output cleaned;
+  default generated-type config diff-clean. Pixel review unavailable (image
+  provider 404); exhaustive visual/device QA remains UX-1, not claimed here.
+  Local uncommitted/undeployed changes only; no application schema/migration,
+  dependency or production change. GRN-2 and all items below remain open.
 - [PENDING] GRN-2: Persist failed-material vendor-return/refund receivable
   records and expose them to Accounts. Distinguish an owed refund/credit from
   actual receipt of money; no invented cash payment or automatic journals.

@@ -44,6 +44,7 @@ async function req(method, path, bodyObj, cookie, originOverride) {
 }
 
 async function cleanup() {
+  await pool.query(`delete from audit_log where entity_type='GRN' and entity_id in (select id from grns where branch_id=any($1))`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from grn_lines where grn_id in (select id from grns where branch_id = any($1))`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from grns where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from purchase_order_lines where po_id in (select id from purchase_orders where branch_id = any($1))`, [[ids.branchA, ids.branchB]]);
@@ -246,19 +247,16 @@ async function main() {
   // --- GRN listing shows real rows shaped for the existing quality-check -> inventory flow ---
   const grnList = await req('GET', '/api/purchase/grns?branchId=' + ids.branchA, undefined, managerCookie);
   const grnRow = grnList.json?.grns?.find((g) => g.id === grnId);
-  check('GRN list includes created GRN with branchId/rawMaterialId/qtyReceived/uom shaped for /api/inventory/receive', grnList.status === 200 && grnRow && grnRow.branchId === ids.branchA && grnRow.rawMaterialId === ids.chicken && Number(grnRow.qtyReceived) === 10 && grnRow.uom === 'kg', grnRow);
+  check('GRN list includes every created material line and durable posting readiness', grnList.status === 200 && grnRow?.branchId === ids.branchA && grnRow.lines?.length === 2 && grnRow.lines.some(l => l.rawMaterialId === ids.chicken && l.qtyReceived === '10.000' && l.unit === 'kg') && grnRow.qualityReady === true, grnRow);
 
   const generalGrnRow = grnList.json?.grns?.find((g) => g.poId === generalPoId);
-  check('general-purchase GRN has no rawMaterialId (nothing to post to Inventory)', generalGrnRow && generalGrnRow.rawMaterialId === null, generalGrnRow);
+  check('general-purchase GRN has only descriptive lines (nothing to post to Inventory)', generalGrnRow?.isGeneralPurchase === true && generalGrnRow.lines.every(l => l.rawMaterialId === null), generalGrnRow);
 
-  // --- Hand-off into the ALREADY-REAL GRN quality -> Inventory posting route ---
-  // This re-uses (does not duplicate) /api/inventory/receive — confirms the GRN
-  // this pass creates is correctly shaped to feed that existing, unmodified route.
-  const beforeStock = (await pool.query('select qty_on_hand from inventory_stock where branch_id=$1 and raw_material_id=$2', [ids.branchA, ids.chicken])).rows[0]?.qty_on_hand ?? '0';
-  const postToInventory = await req('POST', '/api/inventory/receive', { branchId: grnRow.branchId, rawMaterialId: grnRow.rawMaterialId, qty: grnRow.qtyReceived }, managerCookie);
-  check('existing /api/inventory/receive accepts the real GRN shape and posts stock', postToInventory.status === 200, postToInventory.json);
-  const afterStock = Number(postToInventory.json?.item?.qtyOnHand ?? 0);
-  check('inventory stock increased by the GRN qtyReceived (10kg)', Math.abs(afterStock - (Number(beforeStock) + 10)) < 1e-9, { beforeStock, afterStock });
+  // Real durable quality decision posts ALL accepted lines once.
+  const postToInventory = await req('POST', `/api/purchase/grns/${grnId}/quality`, { result: 'PASS', lines: grnRow.lines.map(l => ({ id: l.id, qtyFailed: '0' })) }, managerCookie);
+  check('GRN quality records a durable decision and inventory receipt', postToInventory.status === 200 && postToInventory.json.grn.inventoryPosted === true, postToInventory.json);
+  const stock = await pool.query('select raw_material_id,qty_on_hand from inventory_stock where branch_id=$1', [ids.branchA]);
+  check('all GRN accepted quantities posted: chicken 10kg and rice 5kg', stock.rows.some(r => r.raw_material_id === ids.chicken && r.qty_on_hand === '10.000') && stock.rows.some(r => r.raw_material_id === ids.rice && r.qty_on_hand === '5.000'), stock.rows);
 
   // --- Branch isolation on GRN/PO/Vendor reads ---
   const grnForeign = await req('GET', '/api/purchase/grns?branchId=' + ids.branchB, undefined, managerCookie);

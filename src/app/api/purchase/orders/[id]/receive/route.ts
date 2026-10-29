@@ -6,15 +6,16 @@ import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope } from "@/lib/server/permissions";
 import { allowedFields, assertPoNotReceived } from "@/lib/server/purchase";
 import { loadPo } from "../../../_shared";
+import { auditLog } from "@/db/schema/whatsapp";
+import { qualityOriginId } from "@/lib/server/grn-quality-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/purchase/orders/[id]/receive — Step 3 (Material Receive).
-// Creates the GRN row (PENDING quality) shaped exactly for the ALREADY-REAL
-// quality-check -> /api/inventory/receive flow (src/app/api/inventory/receive
-// + the GRN dialog in purchase/page-content.tsx) — this route does NOT
-// duplicate that posting logic, it only produces the GRN+lines it reads.
+// Creates the PENDING GRN, all lines and trusted origin for the GRN-bound
+// POST /api/purchase/grns/[id]/quality flow. That endpoint owns atomic,
+// once-only quality and accepted-stock posting; this route never posts stock.
 // No per-line received-quantity override exists in the current UI (it never
 // collected one even on mock data), so qtyReceived defaults to qtyOrdered;
 // a real "receive less than ordered" flow is a later increment, not faked here.
@@ -48,6 +49,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
       const [grn] = await tx.select().from(grns).where(eq(grns.id, grnId));
       const lines = await tx.select().from(grnLines).where(eq(grnLines.grnId, grnId));
+      await tx.insert(auditLog).values({ id: qualityOriginId(grnId), userId: actor.id, action: "GRN_CREATED", entityType: "GRN", entityId: grnId, metadataJson: { version: 1, branchId: po.branchId, poId: po.id } });
       return { grn, lines };
     });
     return json(result, 201);
