@@ -14,6 +14,7 @@ import { Download } from "lucide-react";
 import { ActionState, DataTable, Field, inputClass, LoadState, money, monthEnd, monthNow, Panel, post, query, today, useAction, useResource } from "../workforce/live-ui";
 import LegacyAccountsDemo from "./legacy-demos";
 import { createExpenseAttempt } from "@/lib/expense-attempt";
+import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
 
 type Category = "RENT" | "UTILITIES" | "MARKETING" | "OTHER";
 const categories: Category[] = ["RENT", "UTILITIES", "MARKETING", "OTHER"];
@@ -34,13 +35,15 @@ function AccountsScope({ selected }: { selected: string }) {
   const petty = hasCurrentModule(actor, "PETTY_CASH"); const recon = hasCurrentModule(actor, "AGGREGATOR_RECON");
   const pnl = hasCurrentModule(actor, "ACCOUNTS_EXPENSES", "PAYROLL");
   const gstr = hasCurrentModule(actor, "OFFICIAL_SALES_REPORTS");
-  const any = pnl || petty || recon || gstr;
-  return <><PageHeader title={t("Accounts", "Accounts")} description={t("Saved expenses and finalized payroll costs. Other tabs are explicitly labelled demonstrations, not live accounts.", "Saved expenses aur final payroll costs. Baaki tabs saaf taur par demos hain, live accounts nahi.")} />
+  const refunds = hasCurrentModule(actor, "VENDOR_REFUNDS");
+  const any = pnl || petty || recon || gstr || refunds;
+  return <><PageHeader title={t("Accounts", "Accounts")} description={t("Saved expenses, finalized payroll costs and expected refund/credit claims (not money received). Demonstration tabs remain labelled separately.", "Saved expenses, final payroll costs aur expected refund/credit claims (paisa receive nahi hua). Demo tabs alag label kiye gaye hain.")} />
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!any ? <p role="alert">{t("Accounts permission is required.", "Accounts permission chahiye.")}</p> : <>
       {pnl && <div className="mb-4 grid max-w-xl gap-3 sm:grid-cols-2"><Field label={t("Branch", "Branch")}><select className={inputClass} value={validBranch ? branchId : ""} disabled={actor.role !== "SUPER_ADMIN" || selected !== "all"} onChange={e => setChoice(e.target.value)}><option value="">{t("Select one branch", "Ek branch chuno")}</option>{branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field><Field label={t("Month", "Mahina")}><input className={inputClass} type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>}
-      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : gstr ? "gstr" : "demos"}><TabsList>{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{gstr && <TabsTrigger value="gstr">{t("GSTR Export", "GSTR Export")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts · Demo", "Baaki accounts · Demo")}</TabsTrigger>}</TabsList>
+      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : gstr ? "gstr" : refunds ? "vendor-refunds" : "demos"}><TabsList className="h-auto flex-wrap justify-start">{refunds && <TabsTrigger value="vendor-refunds">{t("Vendor refunds", "Vendor refunds")}</TabsTrigger>}{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{gstr && <TabsTrigger value="gstr">{t("GSTR Export", "GSTR Export")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts · Demo", "Baaki accounts · Demo")}</TabsTrigger>}</TabsList>
         {allowed && <TabsContent value="expenses">{validBranch && month ? <ExpensePanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month to view or post real expenses.", "Real expenses dekhne ya save karne ke liye branch aur mahina chuno.")}</Panel>}</TabsContent>}{pnl && <TabsContent value="pnl">{validBranch && month ? <ProfitLossPanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month.", "Branch aur mahina chuno.")}</Panel>}</TabsContent>}
+        {refunds && <TabsContent value="vendor-refunds"><VendorReturnsPanel mode="accounts" /></TabsContent>}
         {gstr && <TabsContent value="gstr"><GstrExportPanel selectedBranchId={selected} /></TabsContent>}
         {(petty || recon) && <TabsContent value="demos"><LegacyAccountsDemo petty={petty} recon={recon} balance={petty || recon} /></TabsContent>}
       </Tabs>

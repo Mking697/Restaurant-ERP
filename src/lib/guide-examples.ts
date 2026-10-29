@@ -107,24 +107,24 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
   },
   "/purchase": {
   "en": {
-    "scenario": "Create a real general-purchase PO and saved GRN quality decision only in QA; do not practice on a business branch.",
+    "scenario": "In QA only, create a general-purchase PO, fail its GRN and inspect the real expected vendor claim; no money is received.",
     "steps": [
       "Click New Purchase and select General purchase in a QA branch.",
-      "Select an existing vendor; enter Office chair repair and Amount ₹500, then Create (Step 1: Buy). A vendor must already exist; this form does not create one.",
+      "Select an existing vendor; enter Practice replacement part and Amount INR 500, then Create (Step 1: Buy). The vendor must already exist.",
       "In Purchase Orders, Upload Bill (optional) only marks the step, not an upload. Click Mark Material Received once and inspect the saved GRN.",
-      "On this general GRN, open Quality Check, choose PASS and Save quality. Reload: PASS and all accepted/failed quantities remain saved, with no inventory posting. A store GRN needs PURCHASE_ORDER plus INVENTORY; PARTIAL takes a failed quantity per line and a failure note."
+      "Open Quality Check, choose FAIL, add a failure note and Save quality. Open Vendor returns and reload: the failed quantity 1.000 and expected claim INR 500.00 persist. An Accounts user with VENDOR_REFUNDS can read the same Vendor refunds record."
     ],
-    "result": "PO, GRN, all-line quality decision and audit receipt persist after reload. Accepted store material stock posts atomically once; an exact replay cannot add it again. For an unknown outcome use Check saved quality or explicitly Replay exact request without changing the frozen inputs. Legacy GRNs without trusted origin/receipt require reconciliation. No vendor return/refund receivable, money receipt or journal is posted; bill/reference text is not a file upload."
+    "result": "PO, failed GRN and vendor claim persist. New FAIL/PARTIAL auto-creates claims; trusted older failed GRNs can be registered explicitly once from Vendor returns without another stock deduction. Unknown registration outcome permits only saved-record checking or exact replay. Legacy/unverifiable records require reconciliation. The expected refund/credit is not physical return proof, vendor acceptance or money received; no cash or journal is posted. File references remain text, not uploads."
   },
   "hinglish": {
-    "scenario": "Sirf QA mein real general-purchase PO aur saved GRN quality decision banao; business branch par practice mat karo.",
+    "scenario": "Sirf QA mein general-purchase PO aur failed GRN banao aur real expected vendor claim dekho; paisa receive nahi hota.",
     "steps": [
       "New Purchase dabao aur QA branch mein General purchase chuno.",
-      "Existing vendor chuno; Office chair repair aur Amount ₹500 daal kar Create (Step 1: Buy) karo. Vendor pehle se hona chahiye; form vendor nahi banata.",
+      "Existing vendor chuno; Practice replacement part aur Amount INR 500 bharo, phir Create (Step 1: Buy). Vendor pehle se hona chahiye.",
       "Purchase Orders mein Upload Bill (optional) sirf step mark hai, upload nahi. Mark Material Received ek baar dabao aur saved GRN dekho.",
-      "Is general GRN ka Quality Check kholo, PASS chuno aur Save quality karo. Reload par PASS aur har line ki accepted/failed qty saved hai; inventory posting nahi. Store GRN ke liye PURCHASE_ORDER aur INVENTORY chahiye; PARTIAL mein har line ka failed qty aur failure note bharo."
+      "Quality Check mein FAIL chuno, failure note likho aur Save quality karo. Vendor returns kholo aur reload: failed qty 1.000 aur expected claim INR 500.00 save hain. VENDOR_REFUNDS wala Accounts user wahi Vendor refunds record dekh sakta hai."
     ],
-    "result": "PO, GRN, har line ki quality aur audit receipt reload ke baad persist hain. Accepted store stock atomic tareeke se sirf ek baar post; exact replay stock dobara nahi badhata. Unknown outcome par frozen inputs badle bina Check saved quality ya explicitly Replay exact request karo. Trusted origin/receipt ke bina legacy GRN par reconciliation required hai. Vendor return/refund receivable, money receipt aur journal nahi bante; bill/reference text file upload nahi hai."
+    "result": "PO, failed GRN aur vendor claim persist hain. Naye FAIL/PARTIAL par auto claims bante hain; trusted purane failed GRN ko Vendor returns se explicitly ek baar register kar sakte ho, stock dobara deduct nahi. Unknown registration outcome par saved-record check ya exact replay hi karo. Legacy/unverifiable record par reconciliation required. Expected refund/credit physical return proof, vendor acceptance ya paisa received nahi; cash/journal post nahi hota. File reference text hai, upload nahi."
   }
 },
   "/pos": {
@@ -160,7 +160,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
       "Save, reload and find the posted record. Open P&L for the same branch/month and check Rent.",
       "If this was a practice mistake, Void the expense with a reason; retain its history rather than entering an offsetting duplicate."
     ],
-    "result": "A real database expense increases Rent by ₹5,000 and a void excludes it from totals. Finalized payroll contributes Labor Cost separately. P&L Revenue/COGS and gross/net profit remain disconnected despite Reports current-recipe/rate cost estimates; no sample profit is mixed in. Petty Cash and manual Aggregator settlements now persist with server-computed balances/payouts; they do not auto-post journals. Balance Sheet reads shared HQ accounts plus branch journals; chart seeding is Owner-only, not automatic on read."
+    "result": "A real database expense increases Rent by ₹5,000 and a void excludes it from totals. Finalized payroll contributes Labor Cost separately. P&L Revenue/COGS and gross/net profit remain disconnected despite Reports current-recipe/rate cost estimates; no sample profit is mixed in. Petty Cash and manual Aggregator settlements now persist with server-computed balances/payouts; they do not auto-post journals. Balance Sheet reads shared HQ accounts plus branch journals; chart seeding is Owner-only, not automatic on read. Separately, VENDOR_REFUNDS opens read-only Vendor refunds with expected claims, not received money or settlement. It does not grant expenses, purchase or journal writes."
   },
   "hinglish": {
     "scenario": "Real ₹5,000 branch rent daalo aur month total dekho. Practice sirf test branch mein karo.",
@@ -170,7 +170,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
       "Save, reload aur posted record dekho. Same branch/month ka P&L kholkar Rent check karo.",
       "Practice mein galti hui ho to reason dekar Void karo; duplicate offset entry mat daalo, history rakho."
     ],
-    "result": "Real DB expense se Rent ₹5,000 badhta hai; Void par total se exclude hota hai. Finalized payroll ki Labor Cost alag aati hai. Reports ke current recipe/rate estimates ke bawajood P&L Revenue/COGS aur gross/net profit disconnected hain; sample profit mix nahi hota. Petty Cash aur manual Aggregator settlements ab server-computed balance/payout ke saath persist hain, auto-journal nahi. Balance Sheet shared HQ accounts aur branch journals padhta hai; chart seeding Owner-only hai, read par auto nahi."
+    "result": "Real DB expense se Rent ₹5,000 badhta hai; Void par total se exclude hota hai. Finalized payroll ki Labor Cost alag aati hai. Reports ke current recipe/rate estimates ke bawajood P&L Revenue/COGS aur gross/net profit disconnected hain; sample profit mix nahi hota. Petty Cash aur manual Aggregator settlements ab server-computed balance/payout ke saath persist hain, auto-journal nahi. Balance Sheet shared HQ accounts aur branch journals padhta hai; chart seeding Owner-only hai, read par auto nahi. Alag VENDOR_REFUNDS se read-only Vendor refunds mein expected claims dikhte hain, received paisa ya settlement nahi. Expense, purchase ya journal writes ki grant nahi milti."
   }
 },
   "/workforce": {

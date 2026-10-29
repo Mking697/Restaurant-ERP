@@ -10,6 +10,7 @@ import type { Executor } from "./auth";
 import { assertModule, branchScope, HttpError, type Identity } from "./permissions";
 import { decimal, MAX_QUANTITY } from "./production-quantity";
 import { lockRecipeStock } from "./production";
+import { assertVendorReturnsRecorded, recordVendorReturns } from "./vendor-returns";
 import { parseQualityInput, persistedQuantity, qualityDecision, qualityReceiptId, qualityReceiptState, QUALITY_ACTION, sameQualityRequest, qualityOriginId, validQualityOrigin } from "./grn-quality-policy";
 
 export async function readGrns(tx: Executor, actor: Identity, query: { branchId?: string | null; status?: typeof grns.$inferSelect.status; id?: string } = {}) {
@@ -67,6 +68,11 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
     if (!state.qualityRecorded) throw new HttpError(409, "Quality receipt inconsistent; reconciliation required");
     const previous = parseQualityInput((receipt.metadataJson as { request: Record<string, unknown> }).request);
     if (!sameQualityRequest(request, previous)) throw new HttpError(409, "Quality already finalized with a different decision");
+    const returnsVersion = (receipt.metadataJson as { vendorReturnsVersion?: unknown }).vendorReturnsVersion;
+    if (returnsVersion !== undefined) {
+      if (returnsVersion !== 1 || request.result === "PASS") throw new HttpError(409, "Vendor claim version inconsistent; reconciliation required");
+      await assertVendorReturnsRecorded(tx, actor, id);
+    }
     const [saved] = await readGrns(tx, actor, { id });
     if (!saved?.qualityRecorded) throw new HttpError(409, "Quality readback inconsistent; reconciliation required");
     return { grn: saved, replayed: true };
@@ -94,7 +100,8 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
   }
   for (const line of decision.failedLines) await tx.update(grnLines).set({ qtyFailed: line.qtyFailed }).where(and(eq(grnLines.id, line.id), eq(grnLines.grnId, id)));
   await tx.update(grns).set({ qualityResult: request.result, status: request.result === "FAIL" ? "QUALITY_HOLD" : "APPROVED", qualityNote: request.note, qualityPhotoUrl: request.photoUrl }).where(eq(grns.id, id));
-  await tx.insert(auditLog).values({ id: qualityReceiptId(id), userId: actor.id, action: QUALITY_ACTION, entityType: "GRN", entityId: id, metadataJson: { version: 1, branchId: grn.branchId, request, credits: decision.credits } });
+  await tx.insert(auditLog).values({ id: qualityReceiptId(id), userId: actor.id, action: QUALITY_ACTION, entityType: "GRN", entityId: id, metadataJson: { version: 1, branchId: grn.branchId, request, credits: decision.credits, ...(request.result !== "PASS" ? { vendorReturnsVersion: 1 } : {}) } });
+  if (request.result !== "PASS") await recordVendorReturns(tx, actor, id, {});
   const [saved] = await readGrns(tx, actor, { id });
   if (!saved?.qualityRecorded) throw new HttpError(409, "Quality readback inconsistent; transaction rolled back");
   return { grn: saved, replayed: false };

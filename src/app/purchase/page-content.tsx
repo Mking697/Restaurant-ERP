@@ -23,6 +23,7 @@ import { formatInr } from "@/lib/utils";
 import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
 import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
+import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -454,6 +455,7 @@ export default function PurchasePage() {
           <TabsTrigger value="indents">{uiText("Indents")}</TabsTrigger>
           <TabsTrigger value="pos">{uiText("Purchase Orders")}</TabsTrigger>
           <TabsTrigger value="grns">{uiText("GRN / Quality")}</TabsTrigger>
+          <TabsTrigger value="vendor-returns">{uiText("Vendor returns", "Vendor returns")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="indents">
@@ -567,6 +569,7 @@ export default function PurchasePage() {
         <TabsContent value="grns">
           <GrnQualitySection refreshToken={grnRefresh} />
         </TabsContent>
+        <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /></TabsContent>
       </Tabs>
 
       <ToastHost />
@@ -716,7 +719,7 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
     <Dialog open={!!selected} onOpenChange={open => { if (!open) closeQuality(); }}><DialogContent className="max-h-[85vh] overflow-y-auto">
       <DialogHeader><DialogTitle>{uiText("Quality Check")} — {selected?.id.slice(0, 8)}</DialogTitle><DialogDescription>{selected?.isGeneralPurchase ? uiText("General purchase: quality is saved, but no inventory is posted.") : uiText("Accepted material quantities post atomically with the saved quality decision. Store quality checks require PURCHASE_ORDER and INVENTORY access.")}</DialogDescription></DialogHeader>
       {error && <p role="alert" className="text-sm text-destructive">{uiText(error)}</p>}
-      <p className="text-xs text-muted-foreground">{uiText("Vendor returns and refund/credit receivables are not created yet (GRN-2). No money receipt or journal is posted.")}</p>
+      <p className="text-xs text-muted-foreground">{uiText("Failed quantities queue expected refund/credit claims for Accounts. This is not money received, physical dispatch or vendor acceptance. No cash or journal is posted.", "Failed quantities ke expected refund/credit claims Accounts ke liye queue hote hain. Yeh paisa receive hone, physical dispatch ya vendor acceptance ka proof nahi. Cash ya journal post nahi hota.")}</p>
       <fieldset disabled={busy || uncertain} className="min-w-0 space-y-3">
         <div className="flex gap-2">{(["PASS", "PARTIAL", "FAIL"] as const).map(value => <button key={value} type="button" aria-pressed={result === value} className={`flex-1 rounded border p-2 text-sm ${result === value ? "bg-primary text-primary-foreground" : "bg-card"}`} onClick={() => { if (editable()) setResult(value); }}>{value}</button>)}</div>
         {selected?.lines.map(line => <div key={line.id} className="min-w-0 space-y-2 rounded border p-3">

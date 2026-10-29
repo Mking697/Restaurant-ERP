@@ -11,7 +11,7 @@ const RULES: Array<[string, ModuleKey[]]> = [
  ["/purchase", ["PURCHASE_INDENT", "PURCHASE_ORDER"]],
  ["/inventory", ["INVENTORY"]], ["/pos", ["POS_CASHIER"]],
  ["/warehouse", ["INVENTORY"]],
- ["/cash-drop", ["CASH_DROP"]], ["/accounts", ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS"]],
+ ["/cash-drop", ["CASH_DROP"]], ["/accounts", ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"]],
  ["/admin/settings/shifts", ["SHIFT_MANAGEMENT"]],
  ["/workforce", ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"]],
 ];

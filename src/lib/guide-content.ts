@@ -154,26 +154,26 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   "cat": "backend",
   "status": "mixed",
   "title": "Purchase & GRN",
-  "short": "Persisted all-line GRN quality and once-only inventory; refunds pending.",
-  "what": "Indent approvals, PO, bill-step metadata, GRN and every PASS/FAIL/PARTIAL decision persist in PostgreSQL. Accepted material stock, failed quantities and audit receipt commit atomically once. Store quality requires PURCHASE_ORDER plus INVENTORY; general purchases save quality without stock. Failure notes are required for FAIL/PARTIAL; photo/reference is text, not an upload. Ambiguous legacy GRNs require reconciliation, never speculative reposting. Vendor return/refund receivables (GRN-2), cash receipts and journals are not created. No rolling-average/spike computation or actual bill upload exists.",
+  "short": "Saved GRN quality, once-only stock and expected vendor refund/credit claims.",
+  "what": "Indent approvals, PO, bill-step metadata and every GRN line persist. Quality and accepted stock commit atomically once. New FAIL/PARTIAL decisions also create failed-quantity vendor return/refund claims at saved PO rates, rounded per line. These are expected refund/credit claims, NOT proof of physical return, vendor acceptance or money received; no cash, journal or second stock deduction is created. Store quality needs PURCHASE_ORDER and INVENTORY; descriptive general claims do not post stock. Vendor returns lists saved claims; trusted earlier failures can be registered explicitly once. Ambiguous legacy quality/claims require reconciliation. Invoice tax adjustments, settlement, real uploads and spike automation are separate work.",
   "how": [
     "Use only a QA branch: raise/submit an indent, then approve/reject with the relevant permission.",
     "New Purchase selects an existing vendor and an Approved indent for the same branch. All approved materials/quantities are locked; enter each line rate. General purchase uses description/amount without an indent. Upload Bill (optional) only marks the step; Mark Material Received creates a real GRN.",
-    "Open Quality Check on a ready GRN. Inspect all received lines; choose PASS, FAIL or PARTIAL. For PARTIAL enter each failed quantity in its own unit; add a failure note for FAIL/PARTIAL and Save quality. Reload to inspect persisted failed/accepted quantities and posting state.",
-    "For an unconfirmed outcome use Check saved quality or explicitly Replay exact request; inputs stay locked and no automatic retry occurs. A legacy reconciliation warning must be reviewed by an administrator, not reposted."
+    "Open Quality Check on a ready GRN. Inspect all received lines; choose PASS, FAIL or PARTIAL. For PARTIAL enter each failed quantity in its own unit; add a failure note for FAIL/PARTIAL and Save quality. Reload to inspect persisted failed/accepted quantities and posting state. New FAIL/PARTIAL also queues expected refund/credit claims; inspect Vendor returns.",
+    "For an unconfirmed outcome use Check saved quality or explicitly Replay exact request; inputs stay locked and no automatic retry occurs. A legacy reconciliation warning must be reviewed by an administrator, not reposted. Vendor returns can register trusted historical failures with the same no-edit request; it cannot record money received."
   ],
-  "example": "Example: 10 kg received with 2 kg failed in PARTIAL saves 2 kg failed and posts exactly 8 kg accepted stock once. Reload retains the decision; exact replay cannot add stock again. No vendor return/refund is posted.",
+  "example": "Example: rice failed 2.125 kg at saved rate INR 10.25/kg creates a saved INR 21.78 expected claim. Accounts VENDOR_REFUNDS can read it; neither a cash receipt nor a second stock deduction is posted.",
   "hinglish": {
     "title": "Purchase & GRN",
-    "short": "Har GRN line ki saved quality aur ek baar inventory posting; refunds pending.",
-    "what": "Indent approvals, PO, bill-step metadata, GRN aur har PASS/FAIL/PARTIAL decision PostgreSQL mein persist hain. Accepted stock, failed qty aur audit receipt ek atomic transaction mein sirf ek baar save hote hain. Store quality ke liye PURCHASE_ORDER aur INVENTORY dono chahiye; general purchase ki quality save hoti hai, stock nahi. FAIL/PARTIAL par failure note required; photo/reference sirf text hai, upload nahi. Purane ambiguous GRN par reconciliation required hai; andaze se repost nahi. Vendor return/refund receivables (GRN-2), cash receipt aur journal nahi bante. Rolling-average/spike calculation aur actual bill upload bhi pending hain.",
+    "short": "Saved GRN quality, ek baar stock aur expected vendor refund/credit claims.",
+    "what": "Indent approvals, PO, bill-step metadata aur har GRN line persist hain. Quality aur accepted stock ek atomic transaction mein sirf ek baar post hote hain. Naye FAIL/PARTIAL par failed qty ke saved PO rate se rounded expected vendor return/refund claims bhi bante hain. Yeh expected refund/credit claim hai, physical return, vendor acceptance ya paisa received ka proof NAHI; cash, journal aur dobara stock deduction nahi hota. Store quality ko PURCHASE_ORDER aur INVENTORY chahiye; general descriptive claims stock nahi badhate. Vendor returns mein saved claims aur trusted purane failed GRN ka explicit once-only registration hai. Ambiguous legacy records par reconciliation required. Invoice tax adjustment, settlement, real upload aur spike automation alag kaam hai.",
     "how": [
       "Sirf QA branch mein indent raise/submit karo; relevant permission se approve/reject karo.",
       "New Purchase mein existing vendor aur same branch ki Approved indent chuno. Saare approved materials/quantities locked hain; har line ka rate bharo. General purchase description/amount se bina indent banti hai. Upload Bill (optional) sirf step mark hai; Mark Material Received real GRN banata hai.",
-      "Ready GRN ka Quality Check kholo aur har received line dekho. PASS, FAIL ya PARTIAL chuno. PARTIAL par har line ki apni unit mein failed qty bharo; FAIL/PARTIAL ka note likhkar Save quality karo. Reload par saved failed/accepted quantities aur posting state verify karo.",
-      "Outcome unconfirmed ho to Check saved quality ya explicitly Replay exact request use karo. Inputs locked rehte hain; automatic retry nahi. Purane GRN ki reconciliation warning ko administrator review kare; repost mat karo."
+      "Ready GRN ka Quality Check kholo aur har received line dekho. PASS, FAIL ya PARTIAL chuno. PARTIAL par har line ki apni unit mein failed qty bharo; FAIL/PARTIAL ka note likhkar Save quality karo. Reload par saved failed/accepted quantities aur posting state verify karo. Naye FAIL/PARTIAL ka expected refund/credit claim Vendor returns mein dekho.",
+      "Outcome unconfirmed ho to Check saved quality ya explicitly Replay exact request use karo. Inputs locked rehte hain; automatic retry nahi. Purane GRN ki reconciliation warning ko administrator review kare; repost mat karo. Vendor returns se trusted historical failure ka same no-edit request register kar sakte ho; paisa received record nahi hota."
     ],
-    "example": "Example: 10 kg received aur PARTIAL mein 2 kg failed se failed 2 kg save aur accepted 8 kg stock sirf ek baar post. Reload par decision saved rehta hai; exact replay stock dobara nahi badhata. Vendor return/refund post nahi hota."
+    "example": "Example: rice 2.125 kg failed, saved rate INR 10.25/kg par INR 21.78 ka expected claim save hota hai. VENDOR_REFUNDS wale Accounts ko dikhega; cash receipt ya dobara stock deduction nahi."
   }
 },
   {
@@ -242,21 +242,23 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   "status": "mixed",
   "title": "Accounts",
   "short": "Real expenses, payroll costs, petty cash, settlements and journal-based balances.",
-  "what": "Expenses persist with void history; P&L reads posted expenses and finalized payroll. P&L revenue/COGS and gross/net profit remain disconnected despite Reports recipe-cost estimates. Petty Cash stores IN/OUT and rejects negative balance; Aggregator Recon stores manual settlements with server-computed net payout. Balance Sheet aggregates shared HQ accounts plus branch journals, showing real zeros/unseeded state until Owner explicitly seeds the chart. Petty cash/settlements do not auto-post journals or transfer money.",
+  "what": "Expenses persist with void history; P&L reads posted expenses and finalized payroll. P&L revenue/COGS and gross/net profit remain disconnected despite Reports recipe-cost estimates. Petty Cash stores IN/OUT and rejects negative balance; Aggregator Recon stores manual settlements with server-computed net payout. Balance Sheet aggregates shared HQ accounts plus branch journals, showing real zeros/unseeded state until Owner explicitly seeds the chart. Petty cash/settlements do not auto-post journals or transfer money. VENDOR_REFUNDS grants read-only Vendor refunds access to branch-scoped expected vendor return/refund claims. This is an amount claimed at saved PO rates, not money received, a settled credit, physical-dispatch proof or an automatic journal. No other Accounts or Purchase grant is automatically assigned.",
   "how": [
     "Choose a QA branch/month and add an expense with category, date, amount, description and reference; save and reload.",
     "Void mistakes with a reason; never duplicate finalized payroll as operating expense. P&L revenue/COGS remain unavailable.",
-    "With the relevant grants, log Petty Cash IN/OUT or Aggregator settlement values and inspect Balance Sheet; chart seeding creates accounts, not transactions or balances."
+    "With the relevant grants, log Petty Cash IN/OUT or Aggregator settlement values and inspect Balance Sheet; chart seeding creates accounts, not transactions or balances.",
+    "With VENDOR_REFUNDS, open Vendor refunds and compare PO/vendor/failed quantity/expected claim amount; reconciliation-required rows are not confirmed claims. Money receipt and credit settlement remain separate."
   ],
   "example": "Example: ₹5,000 Rent raises real expense cost. Petty-cash top-up is not revenue and does not automatically enter the journal-based Balance Sheet.",
   "hinglish": {
     "title": "Accounts",
     "short": "Real expenses, payroll costs, petty cash, settlements aur journal-based balances.",
-    "what": "Expenses void history ke saath persist; P&L posted expenses aur finalized payroll padhta hai. Reports recipe-cost estimate ke bawajood P&L revenue/COGS aur gross/net profit disconnected hain. Petty Cash real IN/OUT aur negative balance rejection deta hai; Aggregator manual settlement ka net payout server nikalta hai. Balance Sheet shared HQ accounts aur branch journals padhta hai; Owner explicitly chart seed kare tab tak real zeros/unseeded state. Petty cash/settlements auto-journal ya money transfer nahi karte.",
+    "what": "Expenses void history ke saath persist; P&L posted expenses aur finalized payroll padhta hai. Reports recipe-cost estimate ke bawajood P&L revenue/COGS aur gross/net profit disconnected hain. Petty Cash real IN/OUT aur negative balance rejection deta hai; Aggregator manual settlement ka net payout server nikalta hai. Balance Sheet shared HQ accounts aur branch journals padhta hai; Owner explicitly chart seed kare tab tak real zeros/unseeded state. Petty cash/settlements auto-journal ya money transfer nahi karte. VENDOR_REFUNDS se branch-scoped expected vendor return/refund claims ka read-only Vendor refunds view milta hai. Saved PO rate ka claim paisa received, settled credit, physical dispatch proof ya automatic journal nahi. Doosre Accounts/Purchase grants auto assign nahi hote.",
     "how": [
       "QA branch/month mein category, date, amount, description aur reference se expense save karke reload karo.",
       "Galti reason se Void karo; finalized payroll ko operating expense dobara mat daalo. P&L revenue/COGS unavailable hain.",
-      "Relevant grants se Petty Cash IN/OUT ya Aggregator settlement daalo aur Balance Sheet dekho; chart seeding accounts banati hai, transactions/balances nahi."
+      "Relevant grants se Petty Cash IN/OUT ya Aggregator settlement daalo aur Balance Sheet dekho; chart seeding accounts banati hai, transactions/balances nahi.",
+      "VENDOR_REFUNDS ke saath Vendor refunds kholo; PO/vendor/failed qty/expected claim dekho. Reconciliation-required row confirmed claim nahi. Money receipt aur credit settlement alag pending hain."
     ],
     "example": "Example: ₹5,000 Rent se real expense badhta hai. Petty-cash top-up revenue nahi aur journal-based Balance Sheet mein auto-entry nahi karta."
   }

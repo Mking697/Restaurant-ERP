@@ -20,6 +20,7 @@ async function pageHarness() {
     { rawMaterialId: 'oil', qty: '5.000', name: 'Oil', unit: 'l' },
   ] };
   const dependencies = {
+    '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
     react: fakeReact,
     'react/jsx-runtime': require('react/jsx-runtime'),
     '@/lib/ui-copy': { useUiCopy: () => en => en },

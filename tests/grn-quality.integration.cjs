@@ -40,8 +40,8 @@ async function state(id){
 }
 async function stock(material=mat){return (await pool.query('select qty_on_hand from inventory_stock where branch_id=$1 and raw_material_id=$2',[a,material])).rows;}
 async function cleanup(){
- for(const table of ['audit_log','grn_lines','grns','purchase_order_lines','purchase_orders']){
-  const column={audit_log:'entity_id',grn_lines:'grn_id',grns:'id',purchase_order_lines:'po_id',purchase_orders:'id'}[table];
+ for(const table of ['material_returns','audit_log','grn_lines','grns','purchase_order_lines','purchase_orders']){
+  const column={material_returns:'grn_id',audit_log:'entity_id',grn_lines:'grn_id',grns:'id',purchase_order_lines:'po_id',purchase_orders:'id'}[table];
   await pool.query(`delete from ${table} where ${column}=any($1)`,[table.startsWith('purchase_')?poIds:grnIds]);
  }
  await pool.query('delete from inventory_stock where branch_id=any($1)',[[a,b]]);

@@ -20,6 +20,13 @@ dependency upgrades, paid providers and production business writes still need
 separate approval. Pending follow-up changes are not automatically part of the
 current authorized release snapshot.
 
+Latest user instruction (October 29, 2026): commit, push and deploy ALL completed,
+accepted work including GRN-2, and retain the eight pending items below in this
+tracker. This release authorization does NOT authorize implementing those pending
+items, new schema changes, breaking dependency upgrades, paid providers, customer
+messages or production business-data writes. GRN-2 release verification is in
+progress; do not infer deployment from local acceptance or a successful push.
+
 - [COMPLETE] RELEASE-1: Phase 2/3 deployed as `5686996` after the store-PO approval fix
   in the real POST and UI; parent ran 213/213 unit tests, clean
   typecheck/build and 50/50 HTTP/PG checks on dev AND compiled app, including
@@ -60,10 +67,25 @@ current authorized release snapshot.
   matched; no pending migration or dependency change. Production counts
   unchanged: 6 branches, 1 user, 12 inventory rows, 0 orders/POs/GRNs.
   No authenticated production workflow, fixtures or messages. A docs-only
-  follow-up carries this release checkpoint. GRN-2 and all items below stay open.
-- [PENDING] GRN-2: Persist failed-material vendor-return/refund receivable
-  records and expose them to Accounts. Distinguish an owed refund/credit from
-  actual receipt of money; no invented cash payment or automatic journals.
+  follow-up carries that release checkpoint. Later local acceptance is recorded below.
+- [COMPLETE — LOCAL FUNCTIONAL ACCEPTANCE] GRN-2: Immutable failed-line
+  vendor return/refund claims implemented with existing tables; expected
+  PO-rate claims are NOT physical return proof, money received or journals.
+  New quality creates claims atomically; trusted historical failures register
+  once. Accounts has least-privilege VENDOR_REFUNDS read-only access. Parent
+  passed 283/283 unit, clean typecheck/build; dev AND compiled HTTP/PG:
+  returns 31/31, GRN-1 34/34, purchase 50/50. Compiled browser quality ->
+  claims -> Accounts reload and exact PG/no-money readback passed, including
+  390px geometry and grant-only Accounts session. Guides synced; own QA
+  resources cleaned. Independent review `deleg_b25c8f66` passed with no
+  blockers; reviewer ran 64/64 plus 8/8 focused tests and parent final
+  combined rerun passed 72/72. Evidence:
+  `docs/grn-vendor-returns-verification.md`; contract:
+  `docs/grn-vendor-returns-contract.md`. Nonblocking follow-up: historical
+  selector inherits latest-200 GRN discovery limit; pagination/authorized
+  lookup remains a UX improvement. No schema/dependency/production change;
+  local uncommitted/undeployed only. Actual money receipt, vendor acceptance,
+  physical-return evidence and settlement remain separate work.
 - [PENDING] TASKS-1: Add minimal branch-scoped assignee lookup/dropdown without
   granting user administration or exposing salary/phone/credential fields.
 - [PENDING] FINANCE-1: Real, idempotent journal posting for agreed source events;
@@ -78,13 +100,16 @@ current authorized release snapshot.
 - [PENDING — INFRA/APPROVAL] EVIDENCE-1: Real attachment storage, signed access,
   camera/GPS capture and geofence checks. Current text/URL references are not
   uploaded evidence; provider/retention/consent decisions precede deployment.
-- [PENDING] PURCHASE-3: Vendor invoices/three-way match/refund reconciliation
-  end-to-end acceptance; do not infer a complete money workflow from GRN stock.
+- [PENDING] PURCHASE-3: Vendor invoices, three-way matching, physical-return/
+  vendor-acceptance evidence and actual refund/credit settlement/reconciliation
+  end-to-end acceptance. GRN-2 expected claims are not a completed money workflow.
 - [PENDING — APPROVAL] SECURITY-1: Separate tested breaking Drizzle/Next upgrade
   passes for the recorded dependency advisories, then fresh dependency audit.
-- [PENDING] UX-1: Linked-data precheck for branch deletion; real Clone Branch
-  Wizard remains deferred. Complete hardened multi-device/pixel-level UI QA;
-  current DOM/geometry evidence is not a claim of exhaustive visual acceptance.
+- [PENDING] UX-1: Linked-data precheck/warning for branch deletion; real Clone
+  Branch Wizard remains deferred. Complete hardened desktop, laptop, tablet and
+  mobile functional/pixel-level UI QA; current DOM/geometry evidence is not a
+  claim of exhaustive visual acceptance. Purchase/GRN historical selectors also
+  need pagination/authorized lookup beyond the existing latest-200 discovery cap.
 
 ## GPT TAKEOVER — PHASE 3 LOCAL INTEGRATION (October 28, 2026)
 

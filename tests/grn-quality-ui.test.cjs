@@ -20,6 +20,7 @@ async function harness(options = {}) {
     useEffect(fn, deps) { const i = cursor++, store = active; if (!store[i] || deps?.some((v, n) => v !== store[i].deps[n])) { const previous = store[i]; store[i] = { deps }; effects.push(() => { previous?.cleanup?.(); store[i].cleanup = fn(); }); } },
   };
   const deps = {
+    '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
     react: hooks, 'react/jsx-runtime': require('react/jsx-runtime'), '@/lib/ui-copy': { useUiCopy: () => en => en },
     '@/lib/current-branch': { useBranches: () => ({ branches: [] }) },
     '@/lib/current-user': { RequestJsonError, useCurrentUser: () => user, requestJson: async (url, init) => {

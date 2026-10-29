@@ -20,7 +20,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
-    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS"],
+    "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"],
     "/workforce": ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"],
   };
   return hasCurrentModule(user, ...(groups[href] ?? [module]));

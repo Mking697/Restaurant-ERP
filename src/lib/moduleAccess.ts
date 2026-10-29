@@ -24,6 +24,7 @@ export const MODULE_KEYS = [
   "MIS_PERFORMANCE", // MIS score leaderboard
   "REPORTS", // reports module
   "WHATSAPP_LOGS", // WhatsApp message log / audit viewer
+  "VENDOR_REFUNDS", // read-only vendor return/refund claims; never money receipt or settlement
   "ACCOUNTS_EXPENSES", // branch categorized operating expenses and P&L
   "PAYROLL", // employee compensation and finalized monthly payroll
   "ATTENDANCE", // branch daily attendance marking
