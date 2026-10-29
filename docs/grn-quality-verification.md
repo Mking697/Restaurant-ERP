@@ -1,8 +1,17 @@
 # GRN-1 local acceptance — October 29, 2026
 
-Status: COMPLETE within the local functional scope of `docs/grn-quality-contract.md`. Changes remain uncommitted and undeployed on top of `5686996`. This is not whole-ERP acceptance or a production release.
+Status: COMPLETE within the functional scope of `docs/grn-quality-contract.md`. Subsequently committed, pushed and deployed as application source `9df29c646c99d102ec19f9e7d95582615716cc9b` after explicit user authorization. This is not whole-ERP acceptance.
 
-Tracker update: after the initial protected-file approval timeout, the user explicitly requested another approval attempt. The approved write succeeded; `CLAUDE.md` now marks GRN-1 COMPLETE — LOCAL FUNCTIONAL ACCEPTANCE. Production deployment and the separate remaining roadmap items are still pending.
+Tracker update: after the initial protected-file approval timeout, the user requested another approval attempt and the approved write succeeded. `CLAUDE.md` records the completed acceptance and subsequent production release. Separate roadmap items remain pending.
+
+## Production release verification
+
+- Application commit: `9df29c646c99d102ec19f9e7d95582615716cc9b`; GitHub main readback matched after push.
+- Exact-SHA Vercel production deployment `dpl_8pXgwBNZS5yvyAKmERxMXef9LQBh` reached READY. At application-release verification time, public alias `restaurant-erp-tau.vercel.app` read back to this deployment and GitHub Vercel status was success.
+- Anonymous public smoke: 18/18 passed. Login/security headers, existing-owner setup state, protected-page redirects and API denials passed. GET on the new POST-only quality route returned 405, confirming method admission without a production write.
+- Read-only Neon preflight `2026-10-29T10:41:31.990Z` and postflight `2026-10-29T10:45:01.203Z`: all 11 migration timestamps/LF-normalized SHA-256 hashes matched. Existing security columns verified; no pending migration. Vercel still uses `npm run db:migrate && npm run build`, but this release adds no migration.
+- Production business counts unchanged: 6 branches, 1 user, 12 inventory rows, 0 POS orders, 0 POs and 0 GRNs. No production login, business fixtures, stock writes or external messages were used for acceptance.
+- This release checkpoint is a docs-only follow-up to the deployed application snapshot; the same GitHub/Vercel pipeline also builds that documentation commit. Authenticated GRN behavior is supported by the isolated local compiled-app tests below, not a claim of authenticated production workflow testing.
 
 ## Implemented and verified
 
@@ -51,7 +60,7 @@ Reviewer batch `deleg_c2f51ad2` passed the bounded application diff, including u
 
 Both nonblocking suggestions were applied: corrected the stale PO-receive comment and added overdelivery/first-stock regressions. Subsequent changes were comments, documentation and test isolation/coverage, not additional application behavior.
 
-## Cleanup and release boundaries
+## Cleanup and boundaries at local acceptance (before the authorized release above)
 
 - Exact browser fixtures removed and reread absent; all 15 inspected business/auth/fixture tables in the disposable database were empty. Eleven existing migrations remain; temporary QA triggers count zero.
 - QA cookie/scratch session removed. Own ports 4321/4322 verified free; own dev/compiled output directories removed. Default `tsconfig.json` and `next-env.d.ts` references restored and diff-clean.

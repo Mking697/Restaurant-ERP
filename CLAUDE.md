@@ -52,8 +52,15 @@ current authorized release snapshot.
   `docs/grn-quality-contract.md`. Own QA fixtures/processes/output cleaned;
   default generated-type config diff-clean. Pixel review unavailable (image
   provider 404); exhaustive visual/device QA remains UX-1, not claimed here.
-  Local uncommitted/undeployed changes only; no application schema/migration,
-  dependency or production change. GRN-2 and all items below remain open.
+  Application release `9df29c646c99d102ec19f9e7d95582615716cc9b` committed,
+  pushed and deployed after explicit user approval. Vercel deployment
+  `dpl_8pXgwBNZS5yvyAKmERxMXef9LQBh` READY for that exact SHA; public alias
+  readback matched and GitHub Vercel status succeeded. Public smoke 18/18.
+  Fresh Neon read-only pre/postflight: all 11 migration hashes/timestamps
+  matched; no pending migration or dependency change. Production counts
+  unchanged: 6 branches, 1 user, 12 inventory rows, 0 orders/POs/GRNs.
+  No authenticated production workflow, fixtures or messages. A docs-only
+  follow-up carries this release checkpoint. GRN-2 and all items below stay open.
 - [PENDING] GRN-2: Persist failed-material vendor-return/refund receivable
   records and expose them to Accounts. Distinguish an owed refund/credit from
   actual receipt of money; no invented cash payment or automatic journals.
