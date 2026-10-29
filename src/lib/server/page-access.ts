@@ -26,5 +26,9 @@ export function canOpenPath(user: Identity, path: string) {
 // No mock business records are exposed as if persisted and branch-isolated.
 // Enable each remaining route only after its DB-backed acceptance is complete.
 export function isPersistedPath(path: string) {
- return ["/", "/guide", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/cash-drop"].includes(path);
+ const persisted = ["/", "/guide", "/dashboard", "/reports", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/cash-drop"];
+ // Report details share the real-data implementation; do not classify other
+ // arbitrary nested routes as persisted. Purchase labels its remaining
+ // quality-result/return/refund limitations beside those specific actions.
+ return persisted.includes(path) || path.startsWith("/reports/");
 }

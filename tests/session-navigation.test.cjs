@@ -170,13 +170,13 @@ test("page navigation without rerendering root updates demo notice, permissions 
   const content = () => { rendered++; return React.createElement("p", null, "MODULE_SECRET"); };
   // These are independent page/RSC renders while the root stays mounted.
   let html = renderToString(await guard.protectedPage("/dashboard", content));
-  assert.match(html, /Demo data/); assert.match(html, /MODULE_SECRET/);
+  assert.doesNotMatch(html, /Demo data/); assert.match(html, /MODULE_SECRET/);
   for (const route of ["/guide", "/inventory", "/admin/users", "/admin/branches", "/admin/settings/whatsapp", "/admin/settings/restaurant"]) {
     html = renderToString(await guard.protectedPage(route, content));
     assert.doesNotMatch(html, /Demo data/); assert.match(html, /MODULE_SECRET/);
   }
   html = renderToString(await guard.protectedPage("/reports/sales", content));
-  assert.match(html, /Demo data/);
+  assert.doesNotMatch(html, /Demo data/);
   state.user = { ...identity, role: "CASHIER", branchId: "own-branch", moduleAccess: ["INVENTORY"], passwordHash: "MUST_NOT_SERIALIZE" };
   const before = rendered;
   for (const route of ["/dashboard", "/reports/sales", "/admin/users", "/admin/settings/whatsapp", "/admin/settings/restaurant"]) {

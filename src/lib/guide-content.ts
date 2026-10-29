@@ -11,113 +11,113 @@ interface BilingualGuideModule extends GuideModule { hinglish: Pick<GuideModule,
 // Seventeen bilingual chapters. "live" means database-backed functionality, not a production-deployment claim. Keep standalone guide in sync.
 export const GUIDE_MODULES: BilingualGuideModule[] = [
   {
-    "module": "DASHBOARD_OWNER",
-    "route": "/dashboard",
-    "icon": "📊",
-    "cat": "frontend",
-    "status": "pending",
+  "module": "DASHBOARD_OWNER",
+  "route": "/dashboard",
+  "icon": "📊",
+  "cat": "frontend",
+  "status": "live",
+  "title": "Owner Dashboard",
+  "short": "Real branch KPIs, charts and saved MIS snapshots.",
+  "what": "Reads completed POS sales, branch inventory, overdue tasks, saved MIS and actual closing variances. Inventory valuation excludes missing vendor rates. Food cost uses current recipes/rates: an estimate, not historical posted COGS. Prime cost remains null (N/A); unavailable MIS/cash metrics show —. Compiled food cost is an arithmetic mean of measured branch estimates, not a weighted chain ratio.",
+  "how": [
+    "Select a permitted branch or the Owner compiled view.",
+    "Review Sales — Today, Inventory Value, Avg. Food Cost %, Overdue Tasks and branch detail.",
+    "Inspect missing-rate notes, saved MIS coverage, 14-day revenue trend and month-to-date channel mix; viewing writes nothing."
+  ],
+  "example": "Example: a material without a vendor rate is excluded from value with a missing-rate warning. No saved MIS snapshot means —, not an invented score.",
+  "hinglish": {
     "title": "Owner Dashboard",
-    "short": "Sample branch KPIs and charts; not live business totals.",
-    "what": "Compare illustrative sales, inventory value, prime cost, overdue tasks and MIS scores. Branch filtering is a demo presentation filter, not evidence of database isolation.",
+    "short": "Real branch KPIs, charts aur saved MIS snapshots.",
+    "what": "Completed POS sales, branch inventory, overdue tasks, saved MIS aur actual closing variance padhta hai. Missing vendor rate wale material value se exclude hain. Food cost current recipes/rates ka estimate hai, historical posted COGS nahi. Prime cost null (N/A); unavailable MIS/cash par — hai. Compiled food cost measured branch estimates ka arithmetic mean hai, weighted chain ratio nahi.",
     "how": [
-      "Select a branch or the compiled view in the branch selector.",
-      "Review KPI cards, revenue charts, channel mix and the branch table.",
-      "Use Guide Book for workflow details. Dashboard metrics remain sample data, even when Inventory has real stock."
+      "Permitted branch ya Owner compiled view chuno.",
+      "Sales — Today, Inventory Value, Avg. Food Cost %, Overdue Tasks aur branch detail dekho.",
+      "Missing-rate notes, saved MIS coverage, 14-day revenue trend aur month-to-date channel mix dekho; viewing se write nahi hota."
     ],
-    "example": "Illustration: a sample branch shows ₹1,42,500 revenue and four overdue tasks. Do not use these values for business decisions.",
-    "hinglish": {
-      "title": "Owner Dashboard",
-      "short": "Sample branch KPIs aur charts; live business totals nahi.",
-      "what": "Sample sales, inventory value, prime cost, overdue tasks aur MIS compare karo. Branch filter sirf demo presentation hai, database isolation ka proof nahi.",
-      "how": [
-        "Branch selector se branch ya compiled view chuno.",
-        "KPI cards, revenue charts, channel mix aur branch table dekho.",
-        "Workflow details ke liye Guide Book kholo. Inventory real hone par bhi dashboard sample data hi hai."
-      ],
-      "example": "Example: sample branch mein ₹1,42,500 revenue aur chaar overdue tasks hain. In numbers se business decisions mat lo."
-    }
-  },
+    "example": "Example: vendor rate na ho to material value se exclude aur warning aati hai. Saved MIS snapshot na ho to — dikhega, invented score nahi."
+  }
+},
   {
-    "module": "REPORTS",
-    "route": "/reports",
-    "icon": "📑",
-    "cat": "frontend",
-    "status": "pending",
+  "module": "REPORTS",
+  "route": "/reports",
+  "icon": "📑",
+  "cat": "frontend",
+  "status": "live",
+  "title": "Reports",
+  "short": "Six database-backed reports with scoped rows and CSV exports.",
+  "what": "Sales Trend reads POS sales; MIS reads saved branch snapshots; Food Cost estimates sold-item recipe cost at current vendor rates, not historical posted COGS. Inventory Variance reads recorded counts, Cash Reconciliation actual shift closings, and Aggregator Reconciliation saved settlements. Missing recipes/rates are disclosed; incomplete cost totals stay unavailable. Reports estimates do not connect Accounts P&L revenue/COGS; prime cost is unavailable.",
+  "how": [
+    "Open a report card and select a permitted branch.",
+    "Set Days, Month (IST), or From/To as offered; review rows, coverage and exclusion reasons.",
+    "Export CSV downloads displayed real rows; Food Cost also offers branch-summary export."
+  ],
+  "example": "Example: Food Cost shows sold quantities and current BOM cost where available; missing recipe/rate reasons prevent silently understated branch cost.",
+  "hinglish": {
     "title": "Reports",
-    "short": "Six sample reports with charts, tables and CSV export.",
-    "what": "Sales Trend, MIS Scorecard, Food Cost & Menu Margin, Inventory Variance, Cash Reconciliation and Aggregator Reconciliation use mock datasets. They are not connected to live transactions.",
+    "short": "Chhe DB-backed reports, scoped rows aur CSV exports.",
+    "what": "Sales Trend real POS sales, MIS saved branch snapshots aur Food Cost sold items ka current recipe/vendor-rate estimate padhta hai, historical posted COGS nahi. Inventory Variance recorded counts, Cash actual shift closings aur Aggregator saved settlements se aate hain. Missing recipe/rate disclose hain; incomplete cost total unavailable hai. Reports estimate se Accounts P&L revenue/COGS connect nahi hote; prime cost unavailable hai.",
     "how": [
-      "Open a report card.",
-      "Review its charts and table.",
-      "Export CSV downloads the same sample dataset for spreadsheet review."
+      "Report card kholo aur permitted branch chuno.",
+      "Diye gaye Days, Month (IST), ya From/To set karo; rows, coverage aur exclusion reason padho.",
+      "Export CSV displayed real rows deta hai; Food Cost ka branch-summary export bhi hai."
     ],
-    "example": "Illustration: a ₹420 dish with a sample ₹138 ingredient cost appears in Food Cost. These are demo values, not a verified recipe cost.",
-    "hinglish": {
-      "title": "Reports",
-      "short": "Charts, tables aur CSV export ke saath chhe sample reports.",
-      "what": "Sales Trend, MIS, Food Cost, Inventory Variance, Cash aur Aggregator reports mock data use karti hain. Live transactions connected nahi hain.",
-      "how": [
-        "Report card kholo.",
-        "Charts aur table dekho.",
-        "Export CSV se wahi sample dataset spreadsheet ke liye download hota hai."
-      ],
-      "example": "Example: ₹420 ki dish aur ₹138 sample ingredient cost Food Cost mein dikhti hai. Yeh demo values hain, verified recipe cost nahi."
-    }
-  },
+    "example": "Example: Food Cost sold qty aur current BOM estimate dikhata hai; missing recipe/rate reason aata hai, cost silently kam nahi hoti."
+  }
+},
   {
-    "module": "MIS_PERFORMANCE",
-    "route": "/performance",
-    "icon": "🏆",
-    "cat": "frontend",
-    "status": "pending",
+  "module": "MIS_PERFORMANCE",
+  "route": "/performance",
+  "icon": "🏆",
+  "cat": "frontend",
+  "status": "live",
+  "title": "MIS Leaderboard",
+  "short": "Saved branch-level MIS rankings and measured-component coverage.",
+  "what": "Manual Compute MIS uses real recurring tasks, one-time delegation, night variance and closed shifts with base weights 40/30/20/10. Missing components are excluded; remaining weights re-normalize to 100%. Components used preserves snapshot coverage. Branches without measurable data are skipped. These persisted branch/period snapshots are not employee scores, payroll results or cron updates.",
+  "how": [
+    "Set Period start and Period end for a window of at most 31 days.",
+    "Owner or CENTRAL_STORE_MGR clicks Compute MIS to save/recompute; other permitted readers view saved scores.",
+    "Compare branch On Time, Delay, Not Done and Components used before ranking; Export CSV exports visible scores."
+  ],
+  "example": "Example: only recurring/delegation data exists: weights become 40/70 and 30/70. Missing variance/cashier is not scored zero.",
+  "hinglish": {
     "title": "MIS Leaderboard",
-    "short": "Illustrative staff rankings, completion counts and weighted scores.",
-    "what": "The displayed task/delegation/variance/cashier weighting is 40/30/20/10. Scores and timestamps are sample data; live score calculation is pending.",
+    "short": "Saved branch-level MIS rank aur measured-component coverage.",
+    "what": "Manual Compute MIS real recurring tasks, one-time delegation, night variance aur closed shifts par 40/30/20/10 base weights lagata hai. Missing components exclude karke baaki weights 100% par re-normalize hote hain. Components used snapshot coverage rakhta hai. Data na ho to branch skip; saved branch/period snapshots employee scores, payroll ya cron updates nahi hain.",
     "how": [
-      "Compare On Time, Delay and Not Done counts.",
-      "Review the score chart and table.",
-      "Export CSV to inspect the illustrative rankings."
+      "Period start aur Period end mein maximum 31-day window chuno.",
+      "Owner ya CENTRAL_STORE_MGR Compute MIS se save/recompute kare; doosre permitted readers saved scores dekhein.",
+      "Rank se pehle branch On Time, Delay, Not Done aur Components used dekho; Export CSV visible scores deta hai."
     ],
-    "example": "Illustration: Rahul’s sample score is 93.1%. It is not an assessment of a real employee.",
-    "hinglish": {
-      "title": "MIS Leaderboard",
-      "short": "Staff ranking, completion counts aur weighted score ka demo.",
-      "what": "Task/delegation/variance/cashier weighting 40/30/20/10 dikhayi gayi hai. Scores aur timestamps sample hain; live calculation pending hai.",
-      "how": [
-        "On Time, Delay aur Not Done counts compare karo.",
-        "Score chart aur table dekho.",
-        "Sample ranking inspect karne ke liye Export CSV use karo."
-      ],
-      "example": "Example: Rahul ka sample score 93.1% hai. Yeh kisi real employee ka assessment nahi."
-    }
-  },
+    "example": "Example: sirf recurring/delegation data ho to weights 40/70 aur 30/70 hain. Missing variance/cashier ko zero nahi milta."
+  }
+},
   {
-    "module": "TASKS_DELEGATION",
-    "route": "/tasks",
-    "icon": "✅",
-    "cat": "frontend",
-    "status": "pending",
+  "module": "TASKS_DELEGATION",
+  "route": "/tasks",
+  "icon": "✅",
+  "cat": "frontend",
+  "status": "live",
+  "title": "Tasks & Checklists",
+  "short": "Persisted recurring definitions, one-time delegation and completion.",
+  "what": "Definitions and delegated completion save to PostgreSQL. Enter an existing same-branch assignee user ID manually; no dropdown. Pause/Resume changes definitions, not generated occurrences. No cron recurrence/escalation, reminders, camera capture, geofence verification or file-upload storage exists. Evidence saves a reference link/filename, not file bytes.",
+  "how": [
+    "Practice only in a QA branch: New Recurring / Checklist saves title, doer user ID, frequency, anchor assign date and shift time.",
+    "Delegate Task saves a one-time task with same-branch user ID, priority and due time.",
+    "Mark Done requires non-empty evidence for ONE_TIME on both client and server. Recurring instance completion permits no attachment, but this UI manages definitions, not generated recurring instances."
+  ],
+  "example": "Example: delegate Clean fridge to an existing QA user ID. Mark Done with a reference: DONE persists after reload; no image is uploaded and no cron job is scheduled.",
+  "hinglish": {
     "title": "Tasks & Checklists",
-    "short": "Try recurring checklists and one-time task delegation.",
-    "what": "This interactive demo keeps tasks in browser page state. Reloading resets changes. Automatic recurrence, reminders, file upload storage and task persistence are not connected.",
+    "short": "Recurring definitions, one-time delegation aur completion persist hote hain.",
+    "what": "Definitions aur delegated completion PostgreSQL mein save hain. Existing same-branch assignee user ID manually daalo; dropdown nahi. Pause/Resume definitions badalta hai, generated occurrences nahi. Cron recurrence/escalation, reminders, camera, geofence verification aur file-upload storage nahi hain. Evidence sirf reference link/filename save karta hai, file bytes nahi.",
     "how": [
-      "Create a recurring checklist with title, branch, doer, frequency and shift time.",
-      "Delegate a one-time task with priority and due time.",
-      "Mark Done: evidence selection is optional for recurring tasks and required for delegation. Only the selected file name is retained, not an uploaded file."
+      "Sirf QA branch mein New Recurring / Checklist se title, doer user ID, frequency, anchor assign date aur shift time save karo.",
+      "Delegate Task mein same-branch user ID, priority aur due time se one-time task save karo.",
+      "Mark Done mein ONE_TIME ko non-empty evidence client aur server dono maangte hain. Recurring instance completion par optional hai, par UI definitions manage karta hai, generated recurring instances nahi."
     ],
-    "example": "Illustration: create a fridge-check task, then mark it Done. Reloading removes your demo changes; no recurring schedule was created.",
-    "hinglish": {
-      "title": "Tasks & Checklists",
-      "short": "Recurring checklist aur one-time delegation try karo.",
-      "what": "Demo tasks browser page state mein rehte hain. Reload par changes reset hote hain. Auto recurrence, reminders, file storage aur task persistence connected nahi hain.",
-      "how": [
-        "Title, branch, doer, frequency aur shift time se recurring checklist banao.",
-        "Priority aur due time se one-time task saunpo.",
-        "Mark Done mein recurring evidence optional aur delegation evidence zaroori hai. Sirf selected file ka naam rehta hai, file upload nahi hoti."
-      ],
-      "example": "Example: fridge-check task banao aur Done karo. Reload par changes hat jaayenge; recurring schedule create nahi hua."
-    }
-  },
+    "example": "Example: existing QA user ID ko Clean fridge do. Reference ke saath Mark Done: DONE reload ke baad rehta hai; image upload aur cron scheduling nahi hoti."
+  }
+},
   {
     "module": "INVENTORY",
     "route": "/inventory",
@@ -148,32 +148,32 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     }
   },
   {
-    "module": "PURCHASE_ORDER",
-    "route": "/purchase",
-    "icon": "🛒",
-    "cat": "backend",
-    "status": "pending",
+  "module": "PURCHASE_ORDER",
+  "route": "/purchase",
+  "icon": "🛒",
+  "cat": "backend",
+  "status": "mixed",
+  "title": "Purchase & GRN",
+  "short": "Real indent, PO and GRN creation; quality persistence is incomplete.",
+  "what": "Indent submit/approve/reject, PO, bill-step metadata and GRN creation persist in PostgreSQL. No rolling-average/spike computation or file-upload pipeline exists; Upload Bill only marks the step. PASS/PARTIAL with linked raw material posts passed quantity to real Inventory. Quality decision and posted marker stay page-local: reload shows PENDING again and repeating can double-post stock. Vendor returns/refunds and Accounts refund entries are not real.",
+  "how": [
+    "Use only a QA branch: raise/submit an indent, then approve/reject with the relevant permission.",
+    "New Purchase selects an existing vendor and an Approved indent for the same branch. All approved materials/quantities are locked; enter each line rate. General purchase uses description/amount without an indent. Upload Bill (optional) only marks the step; Mark Material Received creates a real GRN.",
+    "Quality Check PASS/PARTIAL may add real stock; general purchases without a material do not. Never repeat after reload without verifying inventory: the GRN does not retain its quality decision."
+  ],
+  "example": "Example: 10 kg received with 2 kg failed in PARTIAL posts 8 kg real stock. Quality status is local; do not repeat after reload. No vendor return/refund is posted.",
+  "hinglish": {
     "title": "Purchase & GRN",
-    "short": "Interactive indent, purchase and quality-check demo.",
-    "what": "Try the workflow without posting real purchases. Indents, POs and GRNs are page-local mock records. Quality decisions do not update live Inventory, create vendor returns or post Accounts refunds.",
+    "short": "Real indent, PO aur GRN creation; quality persistence incomplete hai.",
+    "what": "Indent submit/approve/reject, PO, bill-step metadata aur GRN PostgreSQL mein persist hain. Rolling-average/spike calculation aur file-upload pipeline nahi; Upload Bill sirf step mark karta hai. Linked raw material par PASS/PARTIAL passed qty real Inventory mein post karta hai. Quality decision aur posted marker page-local: reload par PENDING aur repeat se stock double-post ho sakta hai. Vendor return/refund aur Accounts refund entry real nahi hain.",
     "how": [
-      "Raise an indent, submit for approval, then approve or reject it.",
-      "Create a store or general purchase. Try Buy, optional Bill Upload and Material Receive.",
-      "Open the GRN quality check and choose Pass, Fail or Partial. The result is a demo only; no stock/refund posting occurs."
+      "Sirf QA branch mein indent raise/submit karo; relevant permission se approve/reject karo.",
+      "New Purchase mein existing vendor aur same branch ki Approved indent chuno. Saare approved materials/quantities locked hain; har line ka rate bharo. General purchase description/amount se bina indent banti hai. Upload Bill (optional) sirf step mark hai; Mark Material Received real GRN banata hai.",
+      "Quality Check PASS/PARTIAL real stock badha sakta hai; material ke bina general purchase nahi. Reload ke baad inventory verify kiye bina repeat mat karo: GRN quality decision persist nahi karta."
     ],
-    "example": "Illustration: mark a demo GRN Partial with 2 kg failed. Its row changes, but live inventory and accounts remain unchanged.",
-    "hinglish": {
-      "title": "Purchase & GRN",
-      "short": "Indent, purchase aur quality-check ka interactive demo.",
-      "what": "Real purchase post kiye bina workflow try karo. Indents, POs aur GRNs page-local mock records hain. Quality decision se live Inventory, vendor return ya Accounts refund nahi banta.",
-      "how": [
-        "Indent banao, approval ke liye bhejo, phir approve/reject karo.",
-        "Store ya general purchase banao. Buy, optional Bill Upload aur Material Receive try karo.",
-        "GRN quality check mein Pass, Fail ya Partial chuno. Sirf demo result hai; stock/refund posting nahi hoti."
-      ],
-      "example": "Example: demo GRN Partial karo aur 2 kg failed bharo. Row badlegi, par live inventory aur accounts nahi badlenge."
-    }
-  },
+    "example": "Example: 10 kg received aur PARTIAL mein 2 kg failed se 8 kg real stock post. Quality status local hai; reload ke baad repeat mat karo. Vendor return/refund post nahi hota."
+  }
+},
   {
     "module": "POS_CASHIER",
     "route": "/pos",
@@ -182,7 +182,7 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "status": "live",
     "title": "POS / Cashier",
     "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm. Operational confidentiality only: only Owner can set or restore Owner-only visibility, with a 3-500 character reason and audit history. All non-Owner operational users, including an accountant with official-report access, see filtered orders and visible totals only. Owner sees actual, visible and private totals for the selected scope. Visibility never cancels a sale, reverses stock or removes official records: authorized OFFICIAL_SALES_REPORTS exports remain actual. Existing printouts/downloads cannot be revoked; other dashboards/reports remain mock demos, not private live records.",
+    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm. Operational confidentiality only: only Owner can set or restore Owner-only visibility, with a 3-500 character reason and audit history. All non-Owner operational users, including an accountant with official-report access, see filtered orders and visible totals only. Owner sees actual, visible and private totals for the selected scope. Visibility never cancels a sale, reverses stock or removes official records: authorized OFFICIAL_SALES_REPORTS exports remain actual. Existing printouts/downloads cannot be revoked; Dashboard/Reports now use database-backed permission-scoped data, not mock demos; official exports remain separate actual-record disclosure.",
     "how": [
       "In a QA test branch/account with POS_CASHIER, first Start Shift if shifts are configured but no run is open. Review and Accept Handover if PENDING: sales are blocked until acceptance. Unconfigured branches retain legacy POS but cannot real-close until shifts are configured. New Order writes real orders and stock; choose channel, counter (1 or 2), items and tender.",
       "Confirm Order checks and deducts direct raw + produced Semi-FG stock, and posts the order — a shortfall, or a dish whose Semi-FG hasn't been produced yet (see Menu & BOM's Production panel), rejects the whole order with a 409.",
@@ -193,7 +193,7 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "hinglish": {
       "title": "POS / Cashier",
       "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai. Yeh sirf operational confidentiality hai: sirf Owner, 3-500 character reason aur audit history ke saath, Owner-only visibility set ya restore kar sakta hai. Har non-Owner, official-report access wala accountant bhi, operational POS mein filtered orders aur visible totals hi dekhega. Owner selected scope ke actual, visible aur private totals dekhta hai. Visibility se sale cancel, stock reverse ya official records remove nahi hote: authorized OFFICIAL_SALES_REPORTS exports actual rehte hain. Existing printouts/downloads revoke nahi hote; doosre dashboards/reports mock demos hain, private live records nahi.",
+      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai. Yeh sirf operational confidentiality hai: sirf Owner, 3-500 character reason aur audit history ke saath, Owner-only visibility set ya restore kar sakta hai. Har non-Owner, official-report access wala accountant bhi, operational POS mein filtered orders aur visible totals hi dekhega. Owner selected scope ke actual, visible aur private totals dekhta hai. Visibility se sale cancel, stock reverse ya official records remove nahi hote: authorized OFFICIAL_SALES_REPORTS exports actual rehte hain. Existing printouts/downloads revoke nahi hote; Dashboard/Reports ab DB-backed permission-scoped data hain, mock demo nahi; official exports alag actual-record disclosure hain.",
       "how": [
         "POS_CASHIER wale QA test branch/account mein configured shifts par run open na ho to Start Shift karo. PENDING handover check karke Accept Handover karo: acceptance tak sale blocked hai. Unconfigured branch ka legacy POS chalta hai par config ke bina real-close nahi. New Order real orders/stock likhta hai; channel, counter (1 ya 2), items aur tender chuno.",
         "Confirm Order direct raw + produced Semi-FG stock check+deduct karta hai aur order post karta hai — kami ho, ya kisi dish ka Semi-FG abhi produce na hua ho (Menu & BOM ke Production panel se produce karo), to 409 ke saath poora order reject.",
@@ -233,32 +233,32 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     }
   },
   {
-    "module": "ACCOUNTS_EXPENSES",
-    "route": "/accounts",
-    "icon": "💰",
-    "cat": "finance",
-    "status": "mixed",
-        "title": "Accounts",
-    "short": "Real branch expenses and payroll costs; other accounting areas remain clearly marked demos.",
-    "what": "Permitted accountants enter Rent, Utilities, Marketing and Other operating expenses with branch, date, amount and reference. Expenses persist and can be voided with a reason. P&L shows actual posted expenses and finalized salary snapshots. Sales and food-cost integration remain pending, so gross/net profit are not invented. Petty cash, aggregator reconciliation and balance-sheet areas remain demo or pending, as labelled.",
+  "module": "ACCOUNTS_EXPENSES",
+  "route": "/accounts",
+  "icon": "💰",
+  "cat": "finance",
+  "status": "mixed",
+  "title": "Accounts",
+  "short": "Real expenses, payroll costs, petty cash, settlements and journal-based balances.",
+  "what": "Expenses persist with void history; P&L reads posted expenses and finalized payroll. P&L revenue/COGS and gross/net profit remain disconnected despite Reports recipe-cost estimates. Petty Cash stores IN/OUT and rejects negative balance; Aggregator Recon stores manual settlements with server-computed net payout. Balance Sheet aggregates shared HQ accounts plus branch journals, showing real zeros/unseeded state until Owner explicitly seeds the chart. Petty cash/settlements do not auto-post journals or transfer money.",
+  "how": [
+    "Choose a QA branch/month and add an expense with category, date, amount, description and reference; save and reload.",
+    "Void mistakes with a reason; never duplicate finalized payroll as operating expense. P&L revenue/COGS remain unavailable.",
+    "With the relevant grants, log Petty Cash IN/OUT or Aggregator settlement values and inspect Balance Sheet; chart seeding creates accounts, not transactions or balances."
+  ],
+  "example": "Example: ₹5,000 Rent raises real expense cost. Petty-cash top-up is not revenue and does not automatically enter the journal-based Balance Sheet.",
+  "hinglish": {
+    "title": "Accounts",
+    "short": "Real expenses, payroll costs, petty cash, settlements aur journal-based balances.",
+    "what": "Expenses void history ke saath persist; P&L posted expenses aur finalized payroll padhta hai. Reports recipe-cost estimate ke bawajood P&L revenue/COGS aur gross/net profit disconnected hain. Petty Cash real IN/OUT aur negative balance rejection deta hai; Aggregator manual settlement ka net payout server nikalta hai. Balance Sheet shared HQ accounts aur branch journals padhta hai; Owner explicitly chart seed kare tab tak real zeros/unseeded state. Petty cash/settlements auto-journal ya money transfer nahi karte.",
     "how": [
-      "Choose branch and month, then open Expenses or P&L.",
-      "Add an expense with category, date, subcategory, amount, description and bill/reference; save and reload to confirm persistence.",
-      "Use Void with a reason to reverse an incorrect expense without deleting its history. Do not enter payroll again as an operating expense: finalized payroll supplies labor cost."
+      "QA branch/month mein category, date, amount, description aur reference se expense save karke reload karo.",
+      "Galti reason se Void karo; finalized payroll ko operating expense dobara mat daalo. P&L revenue/COGS unavailable hain.",
+      "Relevant grants se Petty Cash IN/OUT ya Aggregator settlement daalo aur Balance Sheet dekho; chart seeding accounts banati hai, transactions/balances nahi."
     ],
-    "example": "Example: save ₹5,000 Rent for a test branch in September. Its real September rent total increases by ₹5,000. Net profit remains unavailable until sales and COGS are connected.",
-    "hinglish": {
-      "title": "Accounts",
-      "short": "Real branch expenses aur payroll costs; baaki accounting areas labelled demo hain.",
-      "what": "Permission wala accountant Rent, Utilities, Marketing aur Other expense branch/date/amount/reference ke saath daalta hai. Expenses save hote hain aur reason dekar Void kiye ja sakte hain. P&L mein real expenses aur finalized salary cost aati hai. Sales/food-cost integration pending hai, isliye gross/net profit invent nahi hota. Baaki accounting areas par demo/pending label dekho.",
-      "how": [
-        "Branch aur month chuno, phir Expenses ya P&L kholo.",
-        "Category, date, subcategory, amount, description aur bill/reference se expense add karo; save ke baad reload se persistence check karo.",
-        "Galat expense ko reason dekar Void karo; history delete nahi hoti. Salary dobara expense mein mat daalo: finalized payroll se labor cost aati hai."
-      ],
-      "example": "Example: test branch mein September ka ₹5,000 Rent save karo. Real rent total ₹5,000 badhega. Sales/COGS connect hone tak Net Profit unavailable rahega."
-    }
-  },
+    "example": "Example: ₹5,000 Rent se real expense badhta hai. Petty-cash top-up revenue nahi aur journal-based Balance Sheet mein auto-entry nahi karta."
+  }
+},
 {
   "module": "PAYROLL",
   "route": "/workforce",

@@ -51,11 +51,10 @@ test('workforce guidance preserves leave identity and states practice permission
   assert.deepEqual(modules.find(module => module.route === '/workforce'), workforce);
 });
 
-test('examples distinguish page-local demos from real writes and never supply credentials', () => {
-  for (const route of ['/tasks', '/purchase']) {
-    assert.match(GUIDE_EXAMPLES[route].en.result, /demo|page|local/i, route);
-    assert.match(GUIDE_EXAMPLES[route].en.result, /not|no |reset|reload/i, route);
-  }
+test('examples distinguish persisted writes from deferred quality/upload behavior and never supply credentials', () => {
+  assert.match(GUIDE_EXAMPLES['/tasks'].en.result, /persist|database|Postgres/i);
+  assert.match(GUIDE_EXAMPLES['/purchase'].en.result, /persist|database|Postgres/i);
+  assert.match(GUIDE_EXAMPLES['/purchase'].en.result, /quality|refund|return/i);
   for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce', '/pos', '/cash-drop', '/admin/settings/shifts', '/menu', '/warehouse', '/accounts-gstr']) {
     assert.match(GUIDE_EXAMPLES[route].en.result, /real|persist|database|Postgres/i, route);
   }

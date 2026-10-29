@@ -57,8 +57,8 @@ const COPY: Record<string, readonly [string, string]> = {
     "Sirf selected branch ki demo rows dikh rahi hain. Yeh filter database isolation ka proof nahi hai."
   ],
   "Branch selector (top-left) se kisi ek branch par filter karo — sirf uska data dikhega.": [
-    "Use the branch selector to filter this illustrative table.",
-    "Branch selector se is sample table ko filter karo."
+    "Use the branch selector to filter this database-backed table.",
+    "Branch selector se is real database table ko filter karo."
   ],
   "Aapke role mein abhi koi module access nahi hai. Admin se Users & Access mein apna Module Access set karwao.": [
     "Your role has no module access yet. Ask an administrator to update your grants in Users & Access.",
@@ -97,8 +97,8 @@ const COPY: Record<string, readonly [string, string]> = {
     "Dine-in, takeaway, Swiggy aur Zomato ke demo orders. Page reload par changes reset ho jaate hain."
   ],
   "Store-related material ya general (non-store) item — dono same 3-step flow follow karte hain.": [
-    "Store materials and general purchases use the same three-step demo flow. No purchase is saved to the database.",
-    "Store material aur general purchase ka same three-step demo flow hai. Database mein purchase save nahi hoti."
+    "Purchases are saved to PostgreSQL. Store materials require an approved indent with locked quantities; general purchases do not need an indent.",
+    "Purchase PostgreSQL mein save hoti hai. Store materials ke liye approved indent aur locked quantities zaroori hain; general purchase ko indent nahi chahiye."
   ],
   "General purchase (store/raw-material se related nahi — no Indent needed)": [
     "General purchase (not a store/raw-material item; no indent needed)",
@@ -113,8 +113,8 @@ const COPY: Record<string, readonly [string, string]> = {
     "Sirf demo quality decision hai. Pass se live inventory update nahi hoti; fail se vendor return ya Accounts refund nahi banta."
   ],
   "Har report ke apne charts hain — click karke kholo. Excel export button Phase 3 mein wire hoga.": [
-    "Open a report to view sample charts and tables. Export CSV downloads illustrative data, not live database records.",
-    "Report kholkar sample charts aur tables dekho. Export CSV se demo data download hota hai, live database records nahi."
+    "Open a report to view real database charts and tables. Export CSV downloads the displayed rows.",
+    "Report kholkar real database charts aur tables dekho. Export CSV se displayed rows download hoti hain."
   ],
   "Checklist hi recurring task hai — ek baar assign karo, frequency ke hisaab se auto-assign hota rahega. Delegation one-time, priority-based hai. Doer apne dashboard se Done karega.": [
     "Try recurring checklists and one-time delegation in this demo. Tasks are page-local; automatic scheduling, reminders and database saving are not connected.",

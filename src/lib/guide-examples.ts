@@ -6,53 +6,93 @@ export interface GuideExample {
 // Practice instructions, never business records or automatically submitted forms.
 export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideExample }> = {
   "/dashboard": {
-    en: {
-      scenario: "You own six branches and want to compare today's sample performance.",
-      steps: ["Open Owner Dashboard and select All branches (compiled).", "Read Total Sales and Total Inventory Value, then scroll to the branch comparison table.", "Select Connaught Place in the branch selector and compare its displayed KPIs with the compiled view.", "Return to All branches. No sales or inventory records are changed by viewing these charts."],
-      result: "The displayed sample KPIs change with the branch selection. They do not become live accounting figures: this dashboard is a demo, even though Inventory uses the database."
-    },
-    hinglish: {
-      scenario: "Aapki chhe branches hain aur aaj ki sample performance compare karni hai.",
-      steps: ["Owner Dashboard kholo aur All branches (compiled) chuno.", "Total Sales aur Total Inventory Value dekho, phir neeche branch comparison table padho.", "Branch selector mein Connaught Place chuno aur uske KPIs ko compiled view se compare karo.", "Wapas All branches chuno. Charts dekhne se sales ya inventory records nahi badalte."],
-      result: "Branch selection ke saath sample KPIs badlenge. Yeh live accounting numbers nahi hain: Inventory DB-backed hone par bhi dashboard abhi demo hai."
-    }
+  "en": {
+    "scenario": "Compare real database sales and stock KPIs for permitted branches without changing records.",
+    "steps": [
+      "Open Owner Dashboard and select All branches (compiled) as Owner.",
+      "Read Sales — Today, Inventory Value and overdue tasks; inspect missing vendor-rate notes.",
+      "Choose an existing branch and compare its real detail, latest saved MIS and 14-day revenue trend.",
+      "Review food-cost availability: current recipe/rate estimates only, with Prime Cost N/A. Return to the compiled view."
+    ],
+    "result": "Database-backed KPIs follow the selected scope. Missing rates are excluded; missing MIS/cash shows —. Avg. Food Cost is a mean of measured branch estimates, not historical COGS or Accounts P&L profit."
   },
+  "hinglish": {
+    "scenario": "Permitted branches ke real DB sales aur stock KPIs compare karo, records badle bina.",
+    "steps": [
+      "Owner se Owner Dashboard kholo aur All branches (compiled) chuno.",
+      "Sales — Today, Inventory Value aur overdue tasks dekho; missing vendor-rate notes padho.",
+      "Existing branch chuno aur real detail, latest saved MIS aur 14-day revenue trend compare karo.",
+      "Food-cost availability dekho: sirf current recipe/rate estimate, Prime Cost N/A. Compiled view par laut aao."
+    ],
+    "result": "DB-backed KPIs selected scope ke hain. Missing rates exclude aur missing MIS/cash — hai. Avg. Food Cost measured branch estimates ka mean hai, historical COGS ya Accounts P&L profit nahi."
+  }
+},
   "/reports": {
-    en: {
-      scenario: "You want to review sample dish costs and share the report in a spreadsheet.",
-      steps: ["Open Reports, then the Food Cost & Menu Margin report card.", "Pick a sample dish row and compare its selling price with ingredient cost and margin.", "Click Export CSV and open the downloaded file in Excel or another spreadsheet app.", "Compare the exported rows with the report table. Do not use this sample report to change actual menu prices."],
-      result: "A CSV containing the report's sample rows is downloaded. Exporting does not create or change a real purchase, recipe or financial record."
-    },
-    hinglish: {
-      scenario: "Sample dish cost dekhni hai aur report spreadsheet mein share karni hai.",
-      steps: ["Reports kholo, phir Food Cost & Menu Margin card kholo.", "Kisi sample dish ka selling price, ingredient cost aur margin compare karo.", "Export CSV dabao aur downloaded file Excel ya kisi spreadsheet app mein kholo.", "Exported rows ko report table se milao. Sample report se asli menu prices mat badlo."],
-      result: "Report ki sample rows wali CSV download hogi. Export se real purchase, recipe ya financial record create/change nahi hota."
-    }
+  "en": {
+    "scenario": "Inspect real sold-item food-cost estimates and export rows without assuming historical cost accuracy.",
+    "steps": [
+      "Open Reports, then Food Cost & Menu Margin; select a permitted branch.",
+      "Choose Month (IST) containing actual sales and inspect sold qty, revenue and BOM cost per unit.",
+      "Read missing recipe/rate and excluded-order reasons; incomplete totals must remain unavailable rather than zero.",
+      "Export CSV and branch-summary CSV; compare them with the displayed rows."
+    ],
+    "result": "CSV exports database-backed report rows. Cost uses current recipes/vendor rates, not historical posted COGS; Reports does not connect Accounts P&L revenue/COGS. Empty periods show no invented rows."
   },
+  "hinglish": {
+    "scenario": "Real sold-item food-cost estimate dekho aur export karo; historical accuracy assume mat karo.",
+    "steps": [
+      "Reports ka Food Cost & Menu Margin kholo aur permitted branch chuno.",
+      "Actual sales wala Month (IST) chuno; sold qty, revenue aur BOM cost per unit dekho.",
+      "Missing recipe/rate aur excluded-order reasons padho; incomplete totals unavailable hain, zero nahi.",
+      "Export CSV aur branch-summary CSV download karke displayed rows se milao."
+    ],
+    "result": "CSV real DB report rows deta hai. Cost current recipes/vendor rates ka hai, historical posted COGS nahi; Reports se Accounts P&L revenue/COGS connect nahi hote. Empty period mein invented rows nahi aate."
+  }
+},
   "/performance": {
-    en: {
-      scenario: "You want to understand why one sample employee ranks above another.",
-      steps: ["Open MIS Leaderboard and find Rahul Sharma's sample row.", "Read On Time, Delay and Not Done counts together, not just the rank.", "Compare his score with another employee and the chart. The shown task/delegation/variance/cashier weights are 40/30/20/10.", "Use Export CSV to review the sample ranking outside the app."],
-      result: "You can explain the displayed ranking and counts. These are illustrative scores, not a live performance assessment or an automatically calculated payroll result."
-    },
-    hinglish: {
-      scenario: "Samajhna hai ki ek sample employee ki ranking doosre se upar kyun hai.",
-      steps: ["MIS Leaderboard kholo aur Rahul Sharma ki sample row dekho.", "Sirf rank nahi, On Time, Delay aur Not Done counts saath mein padho.", "Doosre employee aur chart se score compare karo. Task/delegation/variance/cashier weights 40/30/20/10 dikhaye gaye hain.", "App ke bahar ranking dekhne ke liye Export CSV use karo."],
-      result: "Displayed ranking aur counts samajh aayenge. Yeh sample scores hain, live employee assessment ya automatic payroll result nahi."
-    }
+  "en": {
+    "scenario": "Compute a branch-level MIS snapshot only in QA; Compute MIS is a real database write, not an employee payroll action.",
+    "steps": [
+      "Open MIS Leaderboard for a QA branch with real task/variance/closed-shift data.",
+      "Set Period start and Period end with end after start and a window no longer than 31 days.",
+      "As Owner or CENTRAL_STORE_MGR, click Compute MIS; otherwise ask an authorized operator and view the saved snapshot.",
+      "Compare On Time, Delay, Not Done and Components used, then Export CSV. Repeat computation updates the same branch/period snapshot."
+    ],
+    "result": "Saved branch scores persist after reload. Base weights 40/30/20/10 are re-normalized over measured components; missing data is not zero and empty branches are skipped. These are branch snapshots, not individual employee scores or cron-updated payroll."
   },
+  "hinglish": {
+    "scenario": "Sirf QA mein branch-level MIS snapshot compute karo; Compute MIS real DB write hai, employee payroll action nahi.",
+    "steps": [
+      "Real task/variance/closed-shift data wali QA branch ka MIS Leaderboard kholo.",
+      "Period start/end set karo: end start ke baad aur window maximum 31 days ho.",
+      "Owner ya CENTRAL_STORE_MGR se Compute MIS dabao; warna authorized operator se compute karwa kar saved snapshot dekho.",
+      "On Time, Delay, Not Done aur Components used compare karke Export CSV lo. Repeat compute same branch/period snapshot update karta hai."
+    ],
+    "result": "Saved branch scores reload ke baad rehte hain. Base weights 40/30/20/10 measured components par re-normalize; missing data zero nahi, empty branch skip hai. Yeh branch snapshots hain, employee scores ya cron-updated payroll nahi."
+  }
+},
   "/tasks": {
-    en: {
-      scenario: "Assign a one-time fridge-cleaning task and demonstrate the evidence requirement.",
-      steps: ["Click Delegate Task. Title: Clean fridge; Branch: Connaught Place; Assign to: Rahul Sharma.", "Choose HIGH priority and a future due date/time, then create the task.", "Find the new row and click Mark Done. Without selecting an attachment, submission stays blocked.", "Select a non-sensitive sample image and click Mark Done. For a recurring/checklist task, evidence selection is optional instead."],
-      result: "The demo row changes to Done. Only the selected file name is kept in page state; no file is uploaded, no reminder is scheduled, and reloading resets the demo changes."
-    },
-    hinglish: {
-      scenario: "Fridge saaf karne ka one-time task do aur evidence rule samjho.",
-      steps: ["Delegate Task dabao. Title: Clean fridge; Branch: Connaught Place; Assign to: Rahul Sharma.", "HIGH priority aur future due date/time chuno, phir task banao.", "Nayi row ka Mark Done dabao. Attachment select kiye bina submit blocked rahega.", "Koi non-sensitive sample image select karo aur Mark Done dabao. Recurring/checklist task mein evidence optional hai."],
-      result: "Demo row Done ho jaayegi. Sirf file ka naam page state mein rehta hai; file upload, reminder schedule ya DB save nahi hota. Reload par demo changes reset hote hain."
-    }
+  "en": {
+    "scenario": "Delegate Clean fridge in a QA branch only: creation and completion write real database records.",
+    "steps": [
+      "With TASKS_DELEGATION, click Delegate Task; enter Clean fridge and select the QA branch if offered.",
+      "Ask an authorized administrator for an existing same-branch user ID; type it in Assign to — user ID, choose HIGH and a future due time, then Create.",
+      "Find the task and open Mark Done; submission is blocked without a non-empty Evidence attachment reference.",
+      "Enter a non-sensitive evidence reference such as fridge-check.jpg and Mark Done; reload to verify saved DONE. This is text, not an uploaded file."
+    ],
+    "result": "Real task completion persists after page reload, not a page-local demo. No file bytes are uploaded and no reminders/cron run. Recurring definitions can be saved/paused, but do not automatically generate occurrences; recurring instance evidence is optional."
   },
+  "hinglish": {
+    "scenario": "Clean fridge sirf QA branch mein delegate karo: create aur completion real DB writes hain.",
+    "steps": [
+      "TASKS_DELEGATION se Delegate Task dabao; Clean fridge aur offered ho to QA branch chuno.",
+      "Authorized admin se existing same-branch user ID lo; Assign to — user ID mein manually daalo, HIGH aur future due time chuno, phir Create.",
+      "Task ka Mark Done kholo; non-empty Evidence attachment reference ke bina submission blocked hai.",
+      "fridge-check.jpg jaisa non-sensitive reference daal kar Mark Done karo; reload par saved DONE dekho. Yeh text hai, uploaded file nahi."
+    ],
+    "result": "Real completion page reload ke baad persist hai, page-local demo nahi. File bytes upload aur reminders/cron nahi. Recurring definition save/pause hoti hai par automatic occurrences nahi bante; recurring instance evidence optional hai."
+  }
+},
   "/inventory": {
     en: {
       scenario: "Add a new practice ingredient with low opening stock in a permitted branch.",
@@ -66,27 +106,37 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
     }
   },
   "/purchase": {
-    en: {
-      scenario: "Try buying a general item without a store indent, then inspect the quality-check flow.",
-      steps: ["Click New Purchase and select General purchase.", "Branch: Connaught Place; Vendor: Practice Repairs; Item description: Office chair repair; Amount: ₹500. Click Create (Step 1: Buy).", "In Purchase Orders, try the optional bill step and then Mark Material Received. Inspect the resulting demo GRN.", "Open a pending GRN's Quality Check. Try Pass, or Partial/Fail with a failure quantity in the displayed unit."],
-      result: "The local PO/GRN progress and quality result change. No live inventory, vendor return, refund or Accounts entry is posted. Reloading restores the sample data."
-    },
-    hinglish: {
-      scenario: "Store indent ke bina general item purchase try karo, phir quality check dekho.",
-      steps: ["New Purchase dabao aur General purchase chuno.", "Branch: Connaught Place; Vendor: Practice Repairs; Item description: Office chair repair; Amount: ₹500. Create (Step 1: Buy) dabao.", "Purchase Orders mein optional bill step aur phir Mark Material Received try karo. Bani hui demo GRN dekho.", "Pending GRN ka Quality Check kholo. Pass try karo, ya displayed unit mein fail quantity bharke Partial/Fail chuno."],
-      result: "Local PO/GRN progress aur quality result badlega. Live stock, vendor return, refund ya Accounts posting nahi hogi. Reload par sample data wapas aayega."
-    }
+  "en": {
+    "scenario": "Create a real general-purchase PO and GRN only in QA. Quality decisions are incomplete; do not practice stock posting on a business branch.",
+    "steps": [
+      "Click New Purchase and select General purchase in a QA branch.",
+      "Select an existing vendor; enter Office chair repair and Amount ₹500, then Create (Step 1: Buy). A vendor must already exist; this form does not create one.",
+      "In Purchase Orders, Upload Bill (optional) only marks the step, not an upload. Click Mark Material Received once and inspect the saved GRN.",
+      "For this general GRN without raw material, Quality Check PASS posts no inventory. For linked material, PASS/PARTIAL posts real passed stock: never repeat after reload without verifying inventory."
+    ],
+    "result": "PO and GRN persist in the database; quality result/posted marker are page-local and reload shows PENDING again. Repeating a linked-material quality check can double-post real inventory. No vendor return, refund or Accounts refund is posted; no bill file is uploaded."
   },
+  "hinglish": {
+    "scenario": "Sirf QA mein real general-purchase PO aur GRN banao. Quality incomplete hai; business branch par stock posting practice mat karo.",
+    "steps": [
+      "New Purchase dabao aur QA branch mein General purchase chuno.",
+      "Existing vendor chuno; Office chair repair aur Amount ₹500 daal kar Create (Step 1: Buy) karo. Vendor pehle se hona chahiye; form vendor nahi banata.",
+      "Purchase Orders mein Upload Bill (optional) sirf step mark hai, upload nahi. Mark Material Received ek baar dabao aur saved GRN dekho.",
+      "Raw material ke bina is general GRN ka Quality Check PASS stock nahi post karta. Linked material par PASS/PARTIAL real passed stock post karta hai: reload ke baad inventory verify kiye bina repeat mat karo."
+    ],
+    "result": "PO aur GRN DB mein persist; quality result/posted marker page-local aur reload par PENDING hai. Linked-material quality repeat se real stock double-post ho sakta hai. Vendor return, refund, Accounts refund aur bill file upload nahi hote."
+  }
+},
   "/pos": {
     en: {
       scenario: "Use a QA test branch/account with POS_CASHIER to place a real UPI order after checking shift acceptance. This writes real orders and deducts stock; do not practice on a business branch.",
       steps: ["Open POS in the QA test branch. If shifts are configured and none is open, click Start Shift; if Accept Shift Handover appears, inspect amounts and Accept Handover. PENDING acceptance blocks sale.", "Click New Order: DINE_IN, Counter 1, Qty 2 of a sellable BOM-configured dish, Tender UPI. Leave customer WhatsApp blank to avoid a practice message.", "Confirm Order. A direct raw or produced Semi-FG shortage rejects the whole order with 409; stock the direct raw materials and produce required Semi-FG before trying again.", "Reload POS and inspect the order/receipt; verify direct raw and produced Semi-FG stock decreased by recipe quantity × 2, without deducting embedded raw again. In a separate Owner session, set this order to Owner-only with a 3-500 character reason and inspect audit history. Reload a staff session (including an accountant with official-report access): filtered orders and visible totals exclude it. Owner sees actual, visible and private totals. Restore visibility as Owner with a reason and verify staff can see it again."],
-      result: "A real database order, KOT and receipt persist after reload. For a configured branch it belongs to the open accepted run and UPI is this run's receipt, not a payment transfer. Unconfigured branches retain legacy POS, but cannot real-close until shifts are configured. Owner-only is operational privacy, not sale deletion: stock, cash reconciliation and actual official records remain unchanged. Authorized OFFICIAL_SALES_REPORTS exports include it. Existing printouts/downloads cannot be revoked; other dashboards/reports are mock demos, not private live records."
+      result: "A real database order, KOT and receipt persist after reload. For a configured branch it belongs to the open accepted run and UPI is this run's receipt, not a payment transfer. Unconfigured branches retain legacy POS, but cannot real-close until shifts are configured. Owner-only is operational privacy, not sale deletion: stock, cash reconciliation and actual official records remain unchanged. Authorized OFFICIAL_SALES_REPORTS exports include it. Existing printouts/downloads cannot be revoked; Dashboard/Reports now use database-backed permission-scoped data, not mock demos; official exports remain separate actual-record disclosure."
     },
     hinglish: {
       scenario: "POS_CASHIER wale QA test branch/account mein shift acceptance check karke real UPI order lagao. Real orders save aur stock deduct hota hai; business branch par practice mat karo.",
       steps: ["QA test branch ka POS kholo. Shifts configured hon aur run open na ho to Start Shift karo; Accept Shift Handover dikhe to amounts check karke Accept Handover karo. PENDING acceptance par sale blocked hai.", "New Order: DINE_IN, Counter 1, BOM-configured sellable dish ki Qty 2, Tender UPI chuno. Practice message se bachne ke liye customer WhatsApp blank rakho.", "Confirm Order karo. Direct raw ya produced Semi-FG kam ho to poora order 409 se reject; direct raw stock bharo aur required Semi-FG pehle produce karo.", "POS reload karke order/receipt aur stock verify karo: direct raw aur produced Semi-FG recipe qty × 2 kam, embedded raw dobara deduct nahi. Alag Owner session se order Owner-only karo, 3-500 character reason do aur audit history dekho. Staff session (official-report access wala accountant bhi) reload kare: filtered orders aur visible totals se order exclude ho. Owner actual, visible aur private totals dekhega. Owner reason dekar visibility restore kare aur staff mein dobara order verify karo."],
-      result: "Real database order, KOT aur receipt reload ke baad rehte hain. Configured branch mein order open accepted run ka hai aur UPI sirf is run ki receipt hai, payment transfer nahi. Unconfigured branch ka legacy POS chalta hai, par config ke bina real-close nahi. Owner-only operational privacy hai, sale delete nahi: stock, cash reconciliation aur actual official records nahi badalte. Authorized OFFICIAL_SALES_REPORTS export mein order rehta hai. Existing printouts/downloads revoke nahi hote; doosre dashboards/reports mock demos hain, private live records nahi."
+      result: "Real database order, KOT aur receipt reload ke baad rehte hain. Configured branch mein order open accepted run ka hai aur UPI sirf is run ki receipt hai, payment transfer nahi. Unconfigured branch ka legacy POS chalta hai, par config ke bina real-close nahi. Owner-only operational privacy hai, sale delete nahi: stock, cash reconciliation aur actual official records nahi badalte. Authorized OFFICIAL_SALES_REPORTS export mein order rehta hai. Existing printouts/downloads revoke nahi hote; Dashboard/Reports ab DB-backed permission-scoped data hain, mock demo nahi; official exports alag actual-record disclosure hain."
     }
   },
   "/cash-drop": {
@@ -110,7 +160,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
       "Save, reload and find the posted record. Open P&L for the same branch/month and check Rent.",
       "If this was a practice mistake, Void the expense with a reason; retain its history rather than entering an offsetting duplicate."
     ],
-    "result": "A real database expense increases Rent by ₹5,000 and a void excludes it from totals. Finalized payroll contributes Labor Cost separately. Revenue/COGS and gross/net profit remain unavailable until sales/stock posting are connected; no sample profit is mixed in."
+    "result": "A real database expense increases Rent by ₹5,000 and a void excludes it from totals. Finalized payroll contributes Labor Cost separately. P&L Revenue/COGS and gross/net profit remain disconnected despite Reports current-recipe/rate cost estimates; no sample profit is mixed in. Petty Cash and manual Aggregator settlements now persist with server-computed balances/payouts; they do not auto-post journals. Balance Sheet reads shared HQ accounts plus branch journals; chart seeding is Owner-only, not automatic on read."
   },
   "hinglish": {
     "scenario": "Real ₹5,000 branch rent daalo aur month total dekho. Practice sirf test branch mein karo.",
@@ -120,7 +170,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
       "Save, reload aur posted record dekho. Same branch/month ka P&L kholkar Rent check karo.",
       "Practice mein galti hui ho to reason dekar Void karo; duplicate offset entry mat daalo, history rakho."
     ],
-    "result": "Real DB expense se Rent ₹5,000 badhta hai; Void par total se exclude hota hai. Finalized payroll ki Labor Cost alag aati hai. Sales/stock posting connect hone tak Revenue/COGS aur gross/net profit unavailable hain; sample profit mix nahi hota."
+    "result": "Real DB expense se Rent ₹5,000 badhta hai; Void par total se exclude hota hai. Finalized payroll ki Labor Cost alag aati hai. Reports ke current recipe/rate estimates ke bawajood P&L Revenue/COGS aur gross/net profit disconnected hain; sample profit mix nahi hota. Petty Cash aur manual Aggregator settlements ab server-computed balance/payout ke saath persist hain, auto-journal nahi. Balance Sheet shared HQ accounts aur branch journals padhta hai; chart seeding Owner-only hai, read par auto nahi."
   }
 },
   "/workforce": {
@@ -221,12 +271,12 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
     en: {
       scenario: "In an isolated QA test branch, compare actual GSTR-1 HSN records with filtered staff POS totals. Use Owner or an explicit OFFICIAL_SALES_REPORTS grant; POS_CASHIER alone is insufficient and existing users receive no automatic grant.",
       steps: ["With POS_CASHIER, place 1-2 real POS orders only in the QA branch with branch/company GST state codes configured. As Owner, mark one Owner-only with a reason; the sale and its official record still exist.", "As Owner or with explicit OFFICIAL_SALES_REPORTS, open Accounts and GSTR Export, set From/To to the QA order date and select that branch. A POS_CASHIER-only session must not receive official-report access.", "Click Generate and review actual HSN-wise rate, qty, taxable value, CGST/SGST/IGST and total, including the Owner-only order. Do not substitute filtered staff POS totals.", "Click Export CSV and open the downloaded file; confirm its numbers match the on-screen table."],
-      result: "The real CSV matches actual completed orders in the selected date/branch scope, including Owner-only orders, not filtered staff totals or mock numbers. Missing GST configuration is counted as excluded, not presented as compliant. Visibility does not remove official records or revoke existing printouts/downloads; other dashboards/reports remain mock demos, not private live records."
+      result: "The real CSV matches actual completed orders in the selected date/branch scope, including Owner-only orders, not filtered staff totals or mock numbers. Missing GST configuration is counted as excluded, not presented as compliant. Visibility does not remove official records or revoke existing printouts/downloads; Dashboard/Reports now use database-backed permission-scoped data, not mock demos; official exports remain separate actual-record disclosure."
     },
     hinglish: {
       scenario: "Isolated QA test branch mein actual GSTR-1 HSN records aur filtered staff POS totals compare karo. Owner ya explicit OFFICIAL_SALES_REPORTS grant chahiye; sirf POS_CASHIER kaafi nahi aur existing users ko auto-grant nahi milta.",
       steps: ["POS_CASHIER se sirf QA branch mein branch/company GST state codes set karke 1-2 real POS orders lagao. Owner se ek order reason dekar Owner-only karo; sale aur official record rehte hain.", "Owner ya explicit OFFICIAL_SALES_REPORTS se Accounts ka GSTR Export kholo, From/To QA order ki date aur wahi branch chuno. Sirf POS_CASHIER wale session ko official-report access nahi milna chahiye.", "Generate dabao aur actual HSN-wise rate, qty, taxable value, CGST/SGST/IGST aur total dekho, Owner-only order samet. Filtered staff POS totals ko official figures mat maano.", "Export CSV dabao aur downloaded file kholo; confirm numbers on-screen table se milte hain."],
-      result: "Real CSV selected date/branch ke actual completed orders se banta hai, Owner-only orders samet; filtered staff totals ya mock numbers se nahi. Missing GST configuration wale orders excluded count mein hain, compliant nahi. Visibility se official records remove ya existing printouts/downloads revoke nahi hote; doosre dashboards/reports mock demos hain, private live records nahi."
+      result: "Real CSV selected date/branch ke actual completed orders se banta hai, Owner-only orders samet; filtered staff totals ya mock numbers se nahi. Missing GST configuration wale orders excluded count mein hain, compliant nahi. Visibility se official records remove ya existing printouts/downloads revoke nahi hote; Dashboard/Reports ab DB-backed permission-scoped data hain, mock demo nahi; official exports alag actual-record disclosure hain."
     }
   }
 };

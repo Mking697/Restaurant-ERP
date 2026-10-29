@@ -33,6 +33,18 @@ test('stale branch reads and reloads cannot replace the newest resource',async()
   const first=resource.reload();const second=resource.reload();requests[3].resolve({branch:'B newest'});await second;requests[2].resolve({branch:'B stale'});await first;
   resource=h.render(()=>h.hooks.useResource(url));assert.equal(resource.data.branch,'B newest');h.unmount();
 });
+test('old compute completion cannot reload an obsolete period or strand the new period loading',async()=>{
+  const requests=[];const h=harness(url=>{const d=deferred();requests.push({url,...d});return d.promise;});
+  const old=h.render(()=>h.hooks.useResource('/period-a'));
+  h.render(()=>h.hooks.useResource('/period-b'));
+  const staleReload=old.reload();
+  assert.equal(requests.length,2,'obsolete reload must not start another period-A request');
+  await staleReload;
+  requests[1].resolve({period:'B'});await tick();
+  const current=h.render(()=>h.hooks.useResource('/period-b'));
+  assert.equal(current.loading,false);assert.equal(current.data.period,'B');
+  requests[0].resolve({period:'A'});await tick();h.unmount();
+});
 test('a failed finalization never emits success; synchronous double clicks submit once',async()=>{
   const h=harness(()=>Promise.resolve({}));let action=h.render(()=>h.hooks.useAction());const gate=deferred();let writes=0;
   const first=action.run(async()=>{writes++;await gate.promise;},'FINAL saved');

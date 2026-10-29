@@ -65,11 +65,11 @@ test('grant-specific workforce tabs and Owner bypass do not depend on job title'
   assert.match(denied,/Workforce permission is required/);
   assert.doesNotMatch(denied,/role="tab"/);
 });
-test('petty cash-only access retains explicitly labelled local demo without live expense controls', () => {
+test('petty cash-only access renders the real DB-backed petty cash tab, no aggregator/expense controls', () => {
   const html = render('src/app/accounts/page-content.tsx',['PETTY_CASH']);
-  assert.match(html,/Interactive demo only/);
-  assert.match(html,/Petty Cash Entry/);
-  assert.doesNotMatch(html,/Save expense|Aggregator Recon|Profit &amp; Loss/);
+  assert.match(html,/Real accounts data, saved to Postgres/);
+  assert.match(html,/Log petty cash entry/);
+  assert.doesNotMatch(html,/Save expense|>Aggregator Recon<|Profit &amp; Loss/);
 });
 test('employee forms use stable payroll enum values in both languages', () => {
   for (const language of ['en','hinglish']) {

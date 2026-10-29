@@ -19,20 +19,64 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/toast";
-import {
-  getIndents,
-  getPurchaseOrders,
-  getGrns,
-  type IndentRow,
-  type PurchaseOrderRow,
-  type GrnRow,
-} from "@/lib/mock-data";
 import { formatInr } from "@/lib/utils";
-import { Plus, Check, X, Upload, PackageCheck, FlaskConical } from "lucide-react";
-import { requestJson } from "@/lib/current-user";
+import { Plus, Check, X, Upload, PackageCheck, FlaskConical, Trash2 } from "lucide-react";
+import { requestJson, RequestJsonError } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
+interface VendorOption { id: string; name: string; }
+interface IndentLineInput { rawMaterialId: string; qty: string; }
+interface ApprovedIndentOption { id: string; branchId: string; lines: { rawMaterialId: string; qty: string; name: string; unit: string }[]; }
+
+interface IndentRow {
+  id: string;
+  branchId: string;
+  branch: string;
+  raisedById: string;
+  raisedBy: string;
+  status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "PO_RAISED";
+  spikePercent: string | null;
+  lineCount: number;
+  createdAt: string;
+}
+
+interface PurchaseOrderLineApi { rawMaterialId: string | null; itemDescription: string; qty: string; rate: string; }
+interface PurchaseOrderRow {
+  id: string;
+  poNumber: string;
+  branchId: string;
+  branch: string;
+  vendorId: string;
+  vendor: string;
+  indentId: string | null;
+  isGeneralPurchase: boolean;
+  status: "CREATED" | "SENT" | "DISPATCHED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CLOSED";
+  boughtAt: string | null;
+  pdfUrl: string;
+  billUploadedAt: string | null;
+  materialReceivedAt: string | null;
+  createdAt: string;
+  lines: PurchaseOrderLineApi[];
+}
+
+interface GrnRow {
+  id: string;
+  poId: string;
+  poNumber: string;
+  branchId: string;
+  branch: string;
+  status: "PENDING" | "RECEIVED" | "QUALITY_HOLD" | "APPROVED";
+  qualityResult: "PENDING" | "PASS" | "FAIL" | "PARTIAL";
+  receivedById: string;
+  receivedBy: string;
+  createdAt: string;
+  rawMaterialId: string | null;
+  uom: string;
+  qtyReceived: number;
+  qtyFailed: number;
+  inventoryPosted?: boolean;
+}
 
 const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "destructive" | "outline"> = {
   DRAFT: "secondary",
@@ -42,18 +86,44 @@ const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "dest
   PO_RAISED: "outline",
 };
 
+function errMsg(err: unknown, fallback: string) {
+  return err instanceof RequestJsonError ? err.message : err instanceof Error ? err.message : fallback;
+}
+
 export default function PurchasePage() {
   const uiText = useUiCopy();
   const { branches } = useBranches();
   const [materials, setMaterials] = React.useState<RawMaterialOption[]>([]);
-  React.useEffect(() => {
-    requestJson<{ rawMaterials: RawMaterialOption[] }>("/api/raw-materials")
-      .then((data) => setMaterials(data.rawMaterials))
-      .catch(() => setMaterials([]));
+  const [vendors, setVendors] = React.useState<VendorOption[]>([]);
+  const [approvedIndents, setApprovedIndents] = React.useState<ApprovedIndentOption[]>([]);
+  const [indents, setIndents] = React.useState<IndentRow[]>([]);
+  const [pos, setPos] = React.useState<PurchaseOrderRow[]>([]);
+  const [grns, setGrns] = React.useState<GrnRow[]>([]);
+  const [loadError, setLoadError] = React.useState("");
+  const { notify, ToastHost } = useToast();
+
+  const loadIndents = React.useCallback(() => {
+    requestJson<{ indents: IndentRow[] }>("/api/purchase/indents").then((data) => setIndents(data.indents)).catch((err) => setLoadError(errMsg(err, "Could not load indents")));
   }, []);
-  const [indents, setIndents] = React.useState<IndentRow[]>(getIndents());
-  const [pos, setPos] = React.useState<PurchaseOrderRow[]>(getPurchaseOrders());
-  const [grns, setGrns] = React.useState<GrnRow[]>(getGrns());
+  const loadApprovedIndents = React.useCallback(() => {
+    requestJson<{ indents: ApprovedIndentOption[] }>("/api/purchase/orders/approved-indents").then((data) => setApprovedIndents(data.indents)).catch((err) => { setApprovedIndents([]); setLoadError(errMsg(err, "Could not load approved indents")); });
+  }, []);
+  const loadOrders = React.useCallback(() => {
+    requestJson<{ purchaseOrders: PurchaseOrderRow[] }>("/api/purchase/orders").then((data) => setPos(data.purchaseOrders)).catch((err) => setLoadError(errMsg(err, "Could not load purchase orders")));
+  }, []);
+  const loadGrns = React.useCallback(() => {
+    requestJson<{ grns: GrnRow[] }>("/api/purchase/grns").then((data) => setGrns(data.grns)).catch((err) => setLoadError(errMsg(err, "Could not load GRNs")));
+  }, []);
+
+  React.useEffect(() => {
+    requestJson<{ rawMaterials: RawMaterialOption[] }>("/api/raw-materials").then((data) => setMaterials(data.rawMaterials)).catch(() => setMaterials([]));
+    requestJson<{ vendors: VendorOption[] }>("/api/purchase/vendors").then((data) => setVendors(data.vendors)).catch(() => setVendors([]));
+    loadIndents();
+    loadApprovedIndents();
+    loadOrders();
+    loadGrns();
+  }, [loadIndents, loadApprovedIndents, loadOrders, loadGrns]);
+
   const [raiseOpen, setRaiseOpen] = React.useState(false);
   const [poOpen, setPoOpen] = React.useState(false);
   const [qualityGrn, setQualityGrn] = React.useState<GrnRow | null>(null);
@@ -61,108 +131,149 @@ export default function PurchasePage() {
   const [failQty, setFailQty] = React.useState("");
   const [qualityBusy, setQualityBusy] = React.useState(false);
   const [qualityError, setQualityError] = React.useState("");
-  const { notify, ToastHost } = useToast();
+  const [indentBusy, setIndentBusy] = React.useState(false);
+  const [poBusy, setPoBusy] = React.useState(false);
+  const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
 
-  const [indentForm, setIndentForm] = React.useState({ branch: "", raisedBy: "", lineCount: "1" });
+  const [indentForm, setIndentForm] = React.useState<{ branchId: string; lines: IndentLineInput[] }>({
+    branchId: "",
+    lines: [{ rawMaterialId: "", qty: "" }],
+  });
   const [poForm, setPoForm] = React.useState({
     isGeneral: false,
     branchId: "",
-    vendor: "",
-    itemOrMaterial: "",
-    rawMaterialId: "",
-    qty: "",
-    amountInr: "",
+    vendorId: "",
+    itemDescription: "",
+    indentId: "",
+    rates: {} as Record<number, string>,
+    rate: "",
   });
 
-  function raiseIndent() {
-    if (!indentForm.branch.trim() || !indentForm.raisedBy.trim()) return;
-    const id = `IND-${1043 + indents.length}`;
-    setIndents((prev) => [
-      {
-        id,
-        branch: indentForm.branch.trim(),
-        raisedBy: indentForm.raisedBy.trim(),
-        status: "DRAFT",
-        spikePercent: null,
-        lineCount: Number(indentForm.lineCount) || 1,
-        createdAt: "Just now",
-      },
-      ...prev,
-    ]);
-    notify(uiText(`Demo indent ${id} raised for ${indentForm.branch}. Submit for approval next. Not saved.`, `${indentForm.branch} ke liye demo indent ${id} bani. Ab approval ke liye bhejo. Save nahi hui.`));
-    setIndentForm({ branch: "", raisedBy: "", lineCount: "1" });
-    setRaiseOpen(false);
+  function addIndentLine() {
+    setIndentForm((prev) => ({ ...prev, lines: [...prev.lines, { rawMaterialId: "", qty: "" }] }));
+  }
+  function removeIndentLine(index: number) {
+    setIndentForm((prev) => ({ ...prev, lines: prev.lines.filter((_, i) => i !== index) }));
+  }
+  function updateIndentLine(index: number, field: keyof IndentLineInput, value: string) {
+    setIndentForm((prev) => ({ ...prev, lines: prev.lines.map((l, i) => (i === index ? { ...l, [field]: value } : l)) }));
+  }
+  const indentLinesValid = indentForm.lines.length > 0 && indentForm.lines.every((l) => l.rawMaterialId && Number(l.qty) > 0);
+
+  async function raiseIndent() {
+    if (!indentForm.branchId || !indentLinesValid) return;
+    setIndentBusy(true);
+    try {
+      await requestJson("/api/purchase/indents", {
+        method: "POST",
+        body: JSON.stringify({ branchId: indentForm.branchId, lines: indentForm.lines.map((l) => ({ rawMaterialId: l.rawMaterialId, qty: l.qty })) }),
+      });
+      notify(uiText("Indent raised as DRAFT. Submit it for approval next.", "Indent DRAFT ke roop mein bani. Ab approval ke liye submit karo."));
+      setIndentForm({ branchId: "", lines: [{ rawMaterialId: "", qty: "" }] });
+      setRaiseOpen(false);
+      loadIndents();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not raise indent.")));
+    } finally {
+      setIndentBusy(false);
+    }
   }
 
-  function approveIndent(id: string) {
-    setIndents((prev) => prev.map((i) => (i.id === id ? { ...i, status: "APPROVED" } : i)));
-    notify(uiText(`Demo indent ${id} approved. No live purchase was created.`, `Demo indent ${id} approve hui. Live purchase create nahi hui.`));
+  async function submitIndentForApproval(id: string) {
+    setRowBusyId(id);
+    try {
+      await requestJson(`/api/purchase/indents/${id}/submit`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText("Indent submitted for approval.", "Indent approval ke liye submit hui."));
+      loadIndents();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not submit indent.")));
+    } finally {
+      setRowBusyId(null);
+    }
   }
-  function rejectIndent(id: string) {
-    setIndents((prev) => prev.map((i) => (i.id === id ? { ...i, status: "REJECTED" } : i)));
-    notify(uiText(`Demo indent ${id} rejected.`, `Demo indent ${id} reject hui.`));
+  async function approveIndent(id: string) {
+    setRowBusyId(id);
+    try {
+      await requestJson(`/api/purchase/indents/${id}/approve`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText("Indent approved. A Purchase Order can now be raised against it.", "Indent approve hui. Ab iske against PO raise ho sakta hai."));
+      loadIndents();
+      loadApprovedIndents();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not approve indent.")));
+    } finally {
+      setRowBusyId(null);
+    }
   }
-  function submitIndentForApproval(id: string) {
-    setIndents((prev) => prev.map((i) => (i.id === id ? { ...i, status: "PENDING_APPROVAL" } : i)));
-    notify(uiText(`Demo indent ${id} submitted for approval. No notification was sent.`, `Demo indent ${id} approval ke liye submit hui. Notification nahi bheja gaya.`));
-  }
-
-  function addPurchase() {
-    if (!poForm.branchId.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim()) return;
-    if (!poForm.isGeneral && !poForm.rawMaterialId) return;
-    const poNumber = `PO-${5522 + pos.length}`;
-    const branchName = branches.find((b) => b.id === poForm.branchId)?.name ?? poForm.branchId;
-    const material = materials.find((m) => m.id === poForm.rawMaterialId);
-    setPos((prev) => [
-      {
-        poNumber,
-        branch: branchName,
-        vendor: poForm.vendor.trim(),
-        isGeneralPurchase: poForm.isGeneral,
-        amountInr: Number(poForm.amountInr) || 0,
-        bought: true, // Step 1 happens at creation
-        billUploaded: false,
-        materialReceived: false,
-        createdAt: "Just now",
-        branchId: poForm.isGeneral ? undefined : poForm.branchId,
-        rawMaterialId: poForm.isGeneral ? undefined : poForm.rawMaterialId,
-        qty: poForm.isGeneral ? undefined : Number(poForm.qty) || 0,
-        unit: poForm.isGeneral ? undefined : material?.unit,
-      },
-      ...prev,
-    ]);
-    notify(uiText(`Demo ${poNumber} created (Step 1: Buy). Not saved to database.`, `Demo ${poNumber} bana (Step 1: Buy). Database mein save nahi hua.`));
-    setPoForm({ isGeneral: false, branchId: "", vendor: "", itemOrMaterial: "", rawMaterialId: "", qty: "", amountInr: "" });
-    setPoOpen(false);
+  async function rejectIndent(id: string) {
+    setRowBusyId(id);
+    try {
+      await requestJson(`/api/purchase/indents/${id}/reject`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText("Indent rejected.", "Indent reject hui."));
+      loadIndents();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not reject indent.")));
+    } finally {
+      setRowBusyId(null);
+    }
   }
 
-  function markBillUploaded(poNumber: string) {
-    setPos((prev) => prev.map((p) => (p.poNumber === poNumber ? { ...p, billUploaded: true } : p)));
-    notify(uiText(`Demo ${poNumber} — bill step marked complete. No file was uploaded.`, `Demo ${poNumber} — bill step complete mark hua. File upload nahi hui.`));
+  const selectedIndent = approvedIndents.find((i) => i.id === poForm.indentId && i.branchId === poForm.branchId);
+  const validRate = (value: string | undefined) => value !== undefined && /^\d{1,8}(\.\d{1,2})?$/.test(value);
+  const poFormValid = !!(
+    poForm.branchId.trim() && poForm.vendorId.trim() &&
+    (poForm.isGeneral ? poForm.itemDescription.trim() && validRate(poForm.rate) :
+      selectedIndent && selectedIndent.lines.length > 0 && selectedIndent.lines.every((_, index) => validRate(poForm.rates[index])))
+  );
+
+  async function addPurchase() {
+    if (!poFormValid) return;
+    setPoBusy(true);
+    try {
+      const lines = poForm.isGeneral
+        ? [{ itemDescription: poForm.itemDescription.trim(), qty: "1", rate: poForm.rate }]
+        : selectedIndent!.lines.map((line, index) => ({ rawMaterialId: line.rawMaterialId, qty: line.qty, rate: poForm.rates[index] }));
+      const result = await requestJson<{ purchaseOrder: { poNumber: string } }>("/api/purchase/orders", {
+        method: "POST",
+        body: JSON.stringify({ branchId: poForm.branchId, vendorId: poForm.vendorId, isGeneralPurchase: poForm.isGeneral, ...(!poForm.isGeneral ? { indentId: poForm.indentId } : {}), lines }),
+      });
+      notify(uiText(`${result.purchaseOrder.poNumber} created (Step 1: Buy).`, `${result.purchaseOrder.poNumber} bana (Step 1: Buy).`));
+      setPoForm({ isGeneral: false, branchId: "", vendorId: "", itemDescription: "", indentId: "", rates: {}, rate: "" });
+      setPoOpen(false);
+      loadOrders();
+      loadIndents();
+      loadApprovedIndents();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not create purchase order.")));
+    } finally {
+      setPoBusy(false);
+    }
   }
 
-  function markMaterialReceived(po: PurchaseOrderRow) {
-    setPos((prev) => prev.map((p) => (p.poNumber === po.poNumber ? { ...p, materialReceived: true } : p)));
-    const grnId = `GRN-${3311 + grns.length}`;
-    setGrns((prev) => [
-      {
-        id: grnId,
-        poNumber: po.poNumber,
-        branch: po.branch,
-        status: "PENDING",
-        qualityResult: "PENDING",
-        qtyFailed: 0,
-        uom: po.unit ?? "kg",
-        receivedBy: "You",
-        createdAt: "Just now",
-        branchId: po.branchId,
-        rawMaterialId: po.rawMaterialId,
-        qtyReceived: po.qty,
-        inventoryPosted: false,
-      },
-      ...prev,
-    ]);
-    notify(uiText(`Demo ${po.poNumber}: material received and ${grnId} created in page state. Try Quality Check.`, `Demo ${po.poNumber}: material receive hua aur page state mein ${grnId} bana. Quality Check try karo.`));
+  async function markBillUploaded(po: PurchaseOrderRow) {
+    setRowBusyId(po.id);
+    try {
+      await requestJson(`/api/purchase/orders/${po.id}/bill`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText(`${po.poNumber} — bill step marked complete (text/URL field only, no file-upload pipeline yet).`, `${po.poNumber} — bill step complete mark hua (abhi text/URL field hi, file upload pipeline nahi hai).`));
+      loadOrders();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not mark bill uploaded.")));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
+  async function markMaterialReceived(po: PurchaseOrderRow) {
+    setRowBusyId(po.id);
+    try {
+      const result = await requestJson<{ grn: { id: string } }>(`/api/purchase/orders/${po.id}/receive`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText(`${po.poNumber}: material received, GRN ${result.grn.id} created. Try Quality Check.`, `${po.poNumber}: material receive hua, GRN ${result.grn.id} bana. Quality Check try karo.`));
+      loadOrders();
+      loadGrns();
+    } catch (err) {
+      notify(uiText(errMsg(err, "Could not mark material received.")));
+    } finally {
+      setRowBusyId(null);
+    }
   }
 
   function openQualityCheck(grn: GrnRow) {
@@ -212,7 +323,7 @@ export default function PurchasePage() {
       }
       setQualityGrn(null);
     } catch (err) {
-      setQualityError(err instanceof Error ? err.message : "Could not post to Inventory. Quality result was not saved.");
+      setQualityError(errMsg(err, "Could not post to Inventory. Quality result was not saved."));
     } finally {
       setQualityBusy(false);
     }
@@ -222,9 +333,9 @@ export default function PurchasePage() {
     <AppShell activeHref="/purchase">
       <PageHeader
         title={uiText("Purchase & GRN")}
-        description={uiText("Indent (hand) → Manager Approval → Purchase (Buy → Bill Upload (optional) → Material Receive) → Quality Check → Inventory.")}
+        description={uiText("Indent → Manager Approval → Purchase (Buy → Bill Upload (optional) → Material Receive) → Quality Check → Inventory.")}
       >
-        <Dialog open={poOpen} onOpenChange={setPoOpen}>
+        <Dialog open={poOpen} onOpenChange={(open) => { if (!poBusy) { setPoOpen(open); if (open) loadApprovedIndents(); } }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Plus /> {uiText(" New Purchase ")}</Button>
@@ -235,19 +346,20 @@ export default function PurchasePage() {
               <DialogDescription>
                 {uiText(" Store-related material ya general (non-store) item — dono same 3-step flow follow karte hain. ")}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
+            <fieldset disabled={poBusy} className="space-y-3">
+              {loadError && <p role="alert" className="text-sm text-destructive">{uiText(loadError)}</p>}
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={poForm.isGeneral}
-                  onChange={(e) => setPoForm({ ...poForm, isGeneral: e.target.checked })}
+                  onChange={(e) => setPoForm({ ...poForm, isGeneral: e.target.checked, indentId: "", rates: {} })}
                 />
                 {uiText(" General purchase (store/raw-material se related nahi — no Indent needed) ")}</label>
               <Field label={uiText("Branch")}>
                 <select
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
                   value={poForm.branchId}
-                  onChange={(e) => setPoForm({ ...poForm, branchId: e.target.value })}
+                  onChange={(e) => setPoForm({ ...poForm, branchId: e.target.value, indentId: "", rates: {} })}
                 >
                   <option value="">{uiText("Select branch (required)")}</option>
                   {branches.map((b) => (
@@ -256,66 +368,76 @@ export default function PurchasePage() {
                 </select>
               </Field>
               <Field label={uiText("Vendor")}>
-                <input
+                <select
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={poForm.vendor}
-                  onChange={(e) => setPoForm({ ...poForm, vendor: e.target.value })}
-                  placeholder={uiText("Fresh Farms Supply Co.")}
-                />
+                  value={poForm.vendorId}
+                  onChange={(e) => setPoForm({ ...poForm, vendorId: e.target.value })}
+                >
+                  <option value="">{uiText("Select vendor (required)")}</option>
+                  {vendors.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name}</option>
+                  ))}
+                </select>
               </Field>
-              <Field label={poForm.isGeneral ? uiText("Item description") : uiText("Raw material / Indent reference")}>
-                <input
-                  className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={poForm.itemOrMaterial}
-                  onChange={(e) => setPoForm({ ...poForm, itemOrMaterial: e.target.value })}
-                  placeholder={poForm.isGeneral ? uiText("Office chair repair") : uiText("Chicken (boneless) — 20kg")}
-                />
-              </Field>
-              {!poForm.isGeneral && (
+              {poForm.isGeneral ? (
+                <Field label={uiText("Item description")}>
+                  <input
+                    className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                    value={poForm.itemDescription}
+                    onChange={(e) => setPoForm({ ...poForm, itemDescription: e.target.value })}
+                    placeholder={uiText("Office chair repair")}
+                  />
+                </Field>
+              ) : (
                 <>
-                  <Field label={uiText("Raw material (links to real Inventory)")}>
+                  <Field label={uiText("Approved indent", "Approved indent")}>
                     <select
+                      aria-label={uiText("Approved indent", "Approved indent")}
                       className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                      value={poForm.rawMaterialId}
-                      onChange={(e) => setPoForm({ ...poForm, rawMaterialId: e.target.value })}
+                      value={poForm.indentId}
+                      disabled={!poForm.branchId}
+                      onChange={(e) => setPoForm({ ...poForm, indentId: e.target.value, rates: {} })}
                     >
-                      <option value="">{uiText("Select material (required)")}</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      <option value="">{uiText("Select an approved indent", "Approved indent chuno")}</option>
+                      {approvedIndents.filter((i) => i.branchId === poForm.branchId).map((i) => (
+                        <option key={i.id} value={i.id}>{i.id.slice(0, 8)} — {i.lines.length} {uiText("lines", "lines")}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label={uiText("Quantity ordered")}>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                      value={poForm.qty}
-                      onChange={(e) => setPoForm({ ...poForm, qty: e.target.value })}
-                      placeholder={uiText("20")}
-                    />
-                  </Field>
+                  <p className="text-xs text-muted-foreground">{uiText("Store purchases require an approved indent. All approved materials and quantities are locked; enter a rate for each line.", "Store purchase ke liye approved indent zaroori hai. Approved materials aur quantities locked hain; har line ka rate bharo.")}</p>
+                  {selectedIndent?.lines.map((line, index) => (
+                    <div key={index} className="grid min-w-0 gap-2 rounded-md border p-3 sm:grid-cols-2">
+                      <p className="min-w-0 break-words text-sm">{line.name} — {line.qty} {line.unit}</p>
+                      <Field label={uiText("Rate (₹ per unit)")}>
+                        <input
+                          type="number" min="0" step="0.01"
+                          aria-label={`Rate for ${line.name}`}
+                          className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                          value={poForm.rates[index] ?? ""}
+                          onChange={(e) => setPoForm((prev) => ({ ...prev, rates: { ...prev.rates, [index]: e.target.value } }))}
+                        />
+                      </Field>
+                    </div>
+                  ))}
                 </>
               )}
-              <Field label={uiText("Amount (₹)")}>
+              {poForm.isGeneral && <Field label={uiText("Amount (₹)")}>
                 <input
                   type="number"
+                  min="0"
+                  step="0.01"
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={poForm.amountInr}
-                  onChange={(e) => setPoForm({ ...poForm, amountInr: e.target.value })}
+                  value={poForm.rate}
+                  onChange={(e) => setPoForm({ ...poForm, rate: e.target.value })}
                   placeholder={uiText("9400")}
                 />
-              </Field>
-            </div>
+              </Field>}
+            </fieldset>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPoOpen(false)}>
+              <Button variant="outline" onClick={() => setPoOpen(false)} disabled={poBusy}>
                 {uiText(" Cancel ")}</Button>
-              <Button
-                onClick={addPurchase}
-                disabled={!poForm.branchId.trim() || !poForm.vendor.trim() || !poForm.itemOrMaterial.trim() || !poForm.amountInr.trim() || (!poForm.isGeneral && !poForm.rawMaterialId)}
-              >
-                {uiText(" Create (Step 1: Buy) ")}</Button>
+              <Button onClick={addPurchase} disabled={poBusy || !poFormValid}>
+                {poBusy ? uiText(" Creating… ") : uiText(" Create (Step 1: Buy) ")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -332,36 +454,60 @@ export default function PurchasePage() {
             </DialogHeader>
             <div className="space-y-3">
               <Field label={uiText("Branch")}>
-                <input
+                <select
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={indentForm.branch}
-                  onChange={(e) => setIndentForm({ ...indentForm, branch: e.target.value })}
-                  placeholder={uiText("Gurugram")}
-                />
+                  value={indentForm.branchId}
+                  onChange={(e) => setIndentForm({ ...indentForm, branchId: e.target.value })}
+                >
+                  <option value="">{uiText("Select branch (required)")}</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
+                  ))}
+                </select>
               </Field>
-              <Field label={uiText("Raised by")}>
-                <input
-                  className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={indentForm.raisedBy}
-                  onChange={(e) => setIndentForm({ ...indentForm, raisedBy: e.target.value })}
-                  placeholder={uiText("Rahul Sharma")}
-                />
-              </Field>
-              <Field label={uiText("Number of line items")}>
-                <input
-                  type="number"
-                  min={1}
-                  className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
-                  value={indentForm.lineCount}
-                  onChange={(e) => setIndentForm({ ...indentForm, lineCount: e.target.value })}
-                />
-              </Field>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-muted-foreground">{uiText("Line items (1–50)")}</label>
+                {indentForm.lines.map((line, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <select
+                      className="flex-1 rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                      value={line.rawMaterialId}
+                      onChange={(e) => updateIndentLine(i, "rawMaterialId", e.target.value)}
+                    >
+                      <option value="">{uiText("Select material")}</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      className="w-28 rounded-md border border-input bg-card px-3 py-1.5 text-sm"
+                      value={line.qty}
+                      onChange={(e) => updateIndentLine(i, "qty", e.target.value)}
+                      placeholder={uiText("Qty")}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={indentForm.lines.length <= 1}
+                      onClick={() => removeIndentLine(i)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="outline" onClick={addIndentLine} disabled={indentForm.lines.length >= 50}>
+                  <Plus className="size-3.5" /> {uiText(" Add line ")}</Button>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRaiseOpen(false)}>
+              <Button variant="outline" onClick={() => setRaiseOpen(false)} disabled={indentBusy}>
                 {uiText(" Cancel ")}</Button>
-              <Button onClick={raiseIndent} disabled={!indentForm.branch.trim() || !indentForm.raisedBy.trim()}>
-                {uiText(" Raise ")}</Button>
+              <Button onClick={raiseIndent} disabled={indentBusy || !indentForm.branchId || !indentLinesValid}>
+                {indentBusy ? uiText(" Raising… ") : uiText(" Raise ")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -392,13 +538,13 @@ export default function PurchasePage() {
                 <TableBody>
                   {indents.map((i) => (
                     <TableRow key={i.id}>
-                      <TableCell className="font-medium">{i.id}</TableCell>
+                      <TableCell className="font-medium">{i.id.slice(0, 8)}</TableCell>
                       <TableCell>{i.branch}</TableCell>
                       <TableCell>{i.raisedBy}</TableCell>
                       <TableCell>{i.lineCount}</TableCell>
                       <TableCell>
                         {i.spikePercent != null ? (
-                          <Badge variant={i.spikePercent > 25 ? "destructive" : "outline"}>+{i.spikePercent.toFixed(1)}%</Badge>
+                          <Badge variant={Number(i.spikePercent) > 25 ? "destructive" : "outline"}>+{Number(i.spikePercent).toFixed(1)}%</Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -408,14 +554,14 @@ export default function PurchasePage() {
                       </TableCell>
                       <TableCell className="space-x-1">
                         {i.status === "DRAFT" && (
-                          <Button size="sm" variant="outline" onClick={() => submitIndentForApproval(i.id)}>
+                          <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => submitIndentForApproval(i.id)}>
                             {uiText(" Submit for Approval ")}</Button>
                         )}
                         {i.status === "PENDING_APPROVAL" && (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => approveIndent(i.id)}>
+                            <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => approveIndent(i.id)}>
                               <Check className="size-3.5 text-success" /> {uiText(" Approve ")}</Button>
-                            <Button size="sm" variant="outline" onClick={() => rejectIndent(i.id)}>
+                            <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => rejectIndent(i.id)}>
                               <X className="size-3.5 text-destructive" /> {uiText(" Reject ")}</Button>
                           </>
                         )}
@@ -443,36 +589,39 @@ export default function PurchasePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pos.map((p) => (
-                    <TableRow key={p.poNumber}>
-                      <TableCell className="font-medium">{p.poNumber}</TableCell>
-                      <TableCell>{p.branch}</TableCell>
-                      <TableCell>{p.vendor}</TableCell>
-                      <TableCell>
-                        <Badge variant={p.isGeneralPurchase ? "outline" : "secondary"}>
-                          {p.isGeneralPurchase ? uiText("General") : uiText("Store")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatInr(p.amountInr)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge variant="success">{uiText("1. Bought")}</Badge>
-                          {p.billUploaded ? (
-                            <Badge variant="success">{uiText("2. Bill ✓")}</Badge>
-                          ) : (
-                            <Button size="sm" variant="outline" onClick={() => markBillUploaded(p.poNumber)}>
-                              <Upload className="size-3.5" /> {uiText(" Upload Bill (optional) ")}</Button>
-                          )}
-                          {p.materialReceived ? (
-                            <Badge variant="success">{uiText("3. Received ✓")}</Badge>
-                          ) : (
-                            <Button size="sm" onClick={() => markMaterialReceived(p)}>
-                              <PackageCheck className="size-3.5" /> {uiText(" Mark Material Received ")}</Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pos.map((p) => {
+                    const amountInr = p.lines.reduce((sum, l) => sum + Number(l.qty) * Number(l.rate), 0);
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{p.poNumber}</TableCell>
+                        <TableCell>{p.branch}</TableCell>
+                        <TableCell>{p.vendor}</TableCell>
+                        <TableCell>
+                          <Badge variant={p.isGeneralPurchase ? "outline" : "secondary"}>
+                            {p.isGeneralPurchase ? uiText("General") : uiText("Store")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatInr(amountInr)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="success">{uiText("1. Bought")}</Badge>
+                            {p.billUploadedAt ? (
+                              <Badge variant="success">{uiText("2. Bill ✓")}</Badge>
+                            ) : (
+                              <Button size="sm" variant="outline" disabled={rowBusyId === p.id} onClick={() => markBillUploaded(p)}>
+                                <Upload className="size-3.5" /> {uiText(" Upload Bill (optional) ")}</Button>
+                            )}
+                            {p.materialReceivedAt ? (
+                              <Badge variant="success">{uiText("3. Received ✓")}</Badge>
+                            ) : (
+                              <Button size="sm" disabled={rowBusyId === p.id} onClick={() => markMaterialReceived(p)}>
+                                <PackageCheck className="size-3.5" /> {uiText(" Mark Material Received ")}</Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -498,7 +647,7 @@ export default function PurchasePage() {
                 <TableBody>
                   {grns.map((g) => (
                     <TableRow key={g.id}>
-                      <TableCell className="font-medium">{g.id}</TableCell>
+                      <TableCell className="font-medium">{g.id.slice(0, 8)}</TableCell>
                       <TableCell>{g.poNumber}</TableCell>
                       <TableCell>{g.branch}</TableCell>
                       <TableCell>{g.receivedBy}</TableCell>
@@ -546,7 +695,7 @@ export default function PurchasePage() {
       <Dialog open={!!qualityGrn} onOpenChange={(open) => !open && !qualityBusy && setQualityGrn(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{uiText("Quality Check — ")}{qualityGrn?.id}</DialogTitle>
+            <DialogTitle>{uiText("Quality Check — ")}{qualityGrn?.id.slice(0, 8)}</DialogTitle>
             <DialogDescription>
               {qualityGrn?.rawMaterialId
                 ? uiText(" Pass/Partial → passed quantity posts to the real Inventory table right now. Fail/Partial fail-qty return + Accounts refund entry is still demo-only. ", " Pass/Partial → passed quantity turant real Inventory table mein post hoti hai. Fail/Partial ki fail-qty return + Accounts refund entry abhi bhi demo hi hai. ")

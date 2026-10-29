@@ -11,7 +11,176 @@ first every time work resumes on this project.
 
 ---
 
-## PHASE 1 — DUMMY DATA CLEANUP + SECURITY AUDIT (October 28, 2026)
+## ACTIVE RELEASE + REMAINING-WORK TRACKER (October 28, 2026)
+
+User authorized committing/pushing/deploying the completed Phase 2/3 snapshot,
+then starting the remaining work and marking each item COMPLETE only after
+implementation, parent-run tests and review. Future schema changes, breaking
+dependency upgrades, paid providers and production business writes still need
+separate approval. Pending follow-up changes are not automatically part of the
+current authorized release snapshot.
+
+- [FIX REVIEWED — RELEASE PREFLIGHT] RELEASE-1: Store-PO approval bypass
+  repaired in the real POST and UI; parent ran 213/213 unit tests, clean
+  typecheck/build and 50/50 HTTP/PG checks on dev AND compiled app, including
+  no-write rejections, decimal concurrency and forced rollback. Browser
+  create/reload and exact two-line PG readback passed; pixel-level review is
+  not claimed. Evidence: `docs/purchase-release-verification.md` (October 29).
+  Independent scoped review passed with no blocking security/logic findings;
+  reviewer reran 14/14 focused DB-free purchase tests. Nonblocking suggestion:
+  paginate approved-indent choices beyond the current 200-row list cap.
+  Commit/push verified Phase 2/3 only after fresh production preflight;
+  confirm Vercel READY for the exact SHA, public smoke and release evidence.
+  Prior production preflight (recheck
+  before deployment): all 11 existing migrations already applied (0000–0010),
+  correct timestamps and LF-normalized SHA-256 hashes; local 0002 checkout has
+  CRLF only. owner_only and login_attempts already exist. No pending migration.
+- [PENDING — NEXT] GRN-1: Persist PASS/FAIL/PARTIAL plus per-line failed qty,
+  atomically post accepted inventory once, reject conflicting replay, support
+  all GRN lines, real reload readback and rollback/concurrency/auth tests.
+- [PENDING] GRN-2: Persist failed-material vendor-return/refund receivable
+  records and expose them to Accounts. Distinguish an owed refund/credit from
+  actual receipt of money; no invented cash payment or automatic journals.
+- [PENDING] TASKS-1: Add minimal branch-scoped assignee lookup/dropdown without
+  granting user administration or exposing salary/phone/credential fields.
+- [PENDING] FINANCE-1: Real, idempotent journal posting for agreed source events;
+  agree posting/reversal rules first. Current petty-cash/aggregator records do
+  not automatically create journal entries.
+- [PENDING] FINANCE-2: Connect actual revenue/COGS and labor allocation to P&L
+  and prime cost. Current recipe/rate food-cost report is an estimate, not a
+  historical posted COGS source; never silently treat it as an actual ledger.
+- [PENDING] AUTOMATION-1: Recurring occurrence generation, overdue escalation,
+  scheduled summaries/expiry alerts and real indent rolling-average/spike data.
+  Require authenticated, bounded/idempotent cron; no test messages to customers.
+- [PENDING — INFRA/APPROVAL] EVIDENCE-1: Real attachment storage, signed access,
+  camera/GPS capture and geofence checks. Current text/URL references are not
+  uploaded evidence; provider/retention/consent decisions precede deployment.
+- [PENDING] PURCHASE-3: Vendor invoices/three-way match/refund reconciliation
+  end-to-end acceptance; do not infer a complete money workflow from GRN stock.
+- [PENDING — APPROVAL] SECURITY-1: Separate tested breaking Drizzle/Next upgrade
+  passes for the recorded dependency advisories, then fresh dependency audit.
+- [PENDING] UX-1: Linked-data precheck for branch deletion; real Clone Branch
+  Wizard remains deferred. Complete hardened multi-device/pixel-level UI QA;
+  current DOM/geometry evidence is not a claim of exhaustive visual acceptance.
+
+## GPT TAKEOVER — PHASE 3 LOCAL INTEGRATION (October 28, 2026)
+
+Resumed exactly after Claude's quota stopped: Phase 3 agents had delivered
+MIS + Dashboard/Reports code, but parent integration/review was not done.
+Preserved all uncommitted Phase 2/3 work. No production operation, schema
+change/migration, dependency upgrade, commit/push/deploy authorized or done.
+
+Parent executed: full unit suite **207/207**, typecheck clean, isolated
+production build clean, Drizzle generation **57 tables/no schema changes**,
+compiled-app Dashboard/Reports **54/54** and MIS **17/17** real HTTP/Postgres
+checks. Evidence, exact coverage and limitations: `docs/phase3-verification.md`.
+Initial independent read-only review found four MEDIUM items; fixes and focused
+regressions are in place. Final bounded incremental review found **no blockers**
+in all four fixes (read-only source/test review, not a separate test execution).
+Phase 3 local integration is accepted within the documented scope.
+
+Takeover fixes: remove Dashboard MIS's production-breaking APP_ORIGIN/self-HTTP
+dependency; suppress obsolete shared useResource reloads after period changes;
+shared inclusive IST calendar UI -> half-open compute timestamps; exact-period
+Performance snapshot reads (historical Reports disclose periods); explicit
+cross-module permission prerequisite states without widening API grants;
+remove obsolete demo banners including report details, correct descriptions,
+and sync bilingual in-app/offline guides. No actual source imports mock-data
+remain in the consumer pages (one matching comment is not an import).
+
+Real browser interactions: Compute MIS persisted 100.0% task-only snapshot;
+Owner/staff operational privacy 579 vs 123; Sales Trend CSV matched filtered
+579 / 2-order row; Dashboard-only and Reports-only grant states checked;
+390px Dashboard/Reports document width 390. Screenshot/image analysis blocked,
+so do not claim complete visual/device/report acceptance. Own QA processes
+stopped, ports 4317/3043 free, own dist removed, both disposable QA databases
+read back empty; unrelated servers preserved; generated config diff-clean.
+
+Remaining project work is NOT silently complete: GRN quality persistence +
+repeat-posting risk and vendor returns/refunds; Tasks manual assignee IDs and
+future cron/upload/camera/GPS; current-rate recipe estimates are not historical
+COGS, Accounts P&L revenue/COGS and allocated labor/prime cost still unavailable;
+separate approval needed for breaking dependency upgrades and production release.
+
+## PHASE 2 — TASKS / PURCHASE / ACCOUNTS-LEDGER REAL DB WIRING (October 28, 2026)
+
+Dispatched 3 parallel bounded agents against `docs/phase2-contract.md`, same
+pattern as the earlier Workforce/Accounts build — disjoint files, each with
+its own isolated QA database+app port, no production/commit/push.
+
+**2a — Tasks & Checklist engine**: `src/lib/server/tasks.ts` +
+`src/app/api/tasks/{recurring,delegate,instances}/**` + rewired
+`src/app/tasks/page-content.tsx` off mock-data. Scope deliberately excludes
+WebRTC camera capture, GPS geofence math, and cron-based recurring
+generation/escalation (flagged as separate future infra). ONE_TIME tasks
+require a non-empty attachment to complete (400 without it); RECURRING
+does not. Self-vs-grant visibility on task instances. Known gap: no
+assignee dropdown (manual user-ID entry) because `GET /api/users` is
+gated `assertUserAdmin`, which a `TASKS_DELEGATION`-only role wouldn't
+pass — needs a follow-up `/api/users` read-scope relaxation, didn't widen
+it unilaterally since it's outside this module's lane. 21/21 real
+HTTP+Postgres checks passed on isolated QA.
+
+**2b — Purchase Indent + PO 3-step money workflow**: `src/lib/server/purchase.ts`
++ `src/app/api/purchase/{indents,orders,grns,vendors}/**` + rewired
+`src/app/purchase/page-content.tsx`'s Indents/PO tabs (GRN tab's existing
+quality-check dialog and its real `/api/inventory/receive` call left
+untouched, exactly as instructed — no duplicate logic). Indent
+DRAFT→submit→approve/reject, PO from an APPROVED indent or as a general
+purchase, Step 2 bill (text/URL only, no real upload pipeline — same
+"don't fake a file upload" convention as elsewhere), Step 3 creates the
+GRN row that feeds the already-real quality-check flow. Spike/
+daily-average deliberately left `null` rather than fabricated (no real
+rolling-average data source exists yet). Known gap: the GRN quality-check
+dialog's PASS/FAIL/PARTIAL result still isn't written back to the `grns`
+row itself (only the inventory stock posting persists) — a reload shows
+PENDING in the DB even after a real quality check; flagged for a future
+pass, not fixed here since the dialog/call was explicitly left intact.
+34/34 real HTTP+Postgres checks passed, including the real hand-off into
+unmodified `/api/inventory/receive` (+10kg stock verified).
+
+**2c — Accounts real ledger**: `src/lib/server/accounts-ledger.ts` +
+`src/app/api/accounts/{petty-cash,aggregator-orders,balance-sheet}/**` +
+rewired `src/app/accounts/legacy-demos.tsx`'s 3 tabs. Petty cash balance
+is a real SUM-of-all-rows (race-safe, not "last row read"). Aggregator
+`netPayout` always server-computed, never trusts a client value. Chart of
+accounts seeded HQ-level (`branchId: null`) because `ledgerAccounts.code`
+has a global unique constraint; a branch's balance sheet = shared HQ
+accounts + that branch's own journal entries. `GET /balance-sheet` never
+seeds as a side effect (`seeded:false` + real zeros until an Owner-only
+`POST` seeds it) — no fabricated "already balanced" number from nothing.
+Real bug caught by the agent's own unit test and fixed: the debit/credit
+sign flip for credit-normal accounts (LIABILITY/EQUITY/INCOME) vs
+debit-normal (ASSET/EXPENSE) was missing, which would have made
+Assets ≠ Liabilities + Equity. Petty-cash/aggregator writes do not
+auto-post journal entries yet (future work, scoped out of this pass).
+8/8 real HTTP+Postgres checks passed.
+
+**Parent-level integration verification** (after merging all 3 agents'
+disjoint changes into one tree — each agent only tested their own module
+in isolation): `npx tsc --noEmit --incremental false` — 0 errors across
+the combined tree. `npm test` — 174/174 (166 pre-existing + 8 new Tasks +
+8 new Purchase... — exact per-agent counts above). `npx next build` —
+clean, all new `/api/tasks`, `/api/purchase`, `/api/accounts/*` routes
+compiled. `npx drizzle-kit generate` — "No schema changes, nothing to
+migrate" (confirms no agent silently drifted the schema). Combined-module
+live smoke test against the local dev DB (not just each agent's own
+isolated QA DB): created a recurring task, listed indents, posted a petty
+cash entry, and confirmed the same-branch-assignee validation path for
+tasks all work correctly with all three modules' routes loaded together
+in one running server — no import collisions, no cross-module breakage.
+`tsconfig.json`/`next-env.d.ts` confirmed diff-clean against committed
+baseline after all three agents' QA runs.
+
+**NOT done yet**: nothing from Phase 2 has been committed/pushed or
+migrated to production — ask before either. Phase 3 (Dashboard/Reports/MIS
+aggregation) is now implemented and parent-verified as described in the GPT
+takeover checkpoint above; this older Phase 2 paragraph is historical. The two flagged
+gaps above (Tasks assignee dropdown needs a `/api/users` read-scope
+relaxation; GRN quality-check result not persisted to the `grns` row
+itself) are real, open items for a future pass.
+
+---
 
 User asked to go fully live: remove dummy data, run security/audit/review,
 then build out all remaining mock-data modules phase-wise, with explicit

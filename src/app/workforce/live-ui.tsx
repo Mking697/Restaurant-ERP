@@ -30,16 +30,20 @@ export function useResource<T>(url: string | null) {
   const [state, setState] = React.useState<{ url: string | null; data: T | null; loading: boolean; error: string }>({ url, data: null, loading: !!url, error: "" });
   const version = React.useRef(0);
   const mounted = React.useRef(false);
+  const currentUrl = React.useRef(url);
+  currentUrl.current = url;
   const reload = React.useCallback(async () => {
-    if (!url || !mounted.current) return null;
+    // A completed write may retain reload() from an older scope. It must
+    // not supersede the new scope's request or leave its view loading.
+    if (!url || !mounted.current || currentUrl.current !== url) return null;
     const current = ++version.current;
     setState({ url, data: null, loading: true, error: "" });
     try {
       const data = await requestJson<T>(url);
-      if (mounted.current && current === version.current) setState({ url, data, loading: false, error: "" });
+      if (mounted.current && currentUrl.current === url && current === version.current) setState({ url, data, loading: false, error: "" });
       return data;
     } catch (error) {
-      if (mounted.current && current === version.current) setState({ url, data: null, loading: false, error: error instanceof Error ? error.message : "Request failed" });
+      if (mounted.current && currentUrl.current === url && current === version.current) setState({ url, data: null, loading: false, error: error instanceof Error ? error.message : "Request failed" });
       throw error;
     }
   }, [url]);
