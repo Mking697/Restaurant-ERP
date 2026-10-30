@@ -43,3 +43,7 @@ export async function POST(request: Request) {
     return json({ error: "Database or server unavailable" }, 503);
   }
 }
+
+// Vercel Cron invokes GET; manual POST callers retain the identical auth,
+// transaction and idempotency guarantees. Never expose an unauthenticated tick.
+export const GET = POST;

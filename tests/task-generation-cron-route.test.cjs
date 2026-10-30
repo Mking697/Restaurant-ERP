@@ -24,6 +24,30 @@ function withMockedRoute(fn) {
   try { return fn(); } finally { Module._load = originalLoad; }
 }
 
+test('Vercel scheduler GET uses the same bearer-only handler as POST', async () => {
+  await withMockedRoute(async () => {
+    const previous = process.env.CRON_SECRET;
+    process.env.CRON_SECRET = 'scheduler-test-value';
+    try {
+      const route = require('../src/app/api/cron/tasks/route.ts');
+      assert.equal(typeof route.GET, 'function');
+      assert.equal(route.GET, route.POST);
+      const request = new Request('http://localhost:3030/api/cron/tasks', {
+        headers: { authorization: ['Bearer', process.env.CRON_SECRET].join(' ') },
+      });
+      const response = await route.GET(request);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { generated: 3, escalated: 2 });
+      assert.equal((await route.GET(new Request(request.url))).status, 401);
+      delete process.env.CRON_SECRET;
+      assert.equal((await route.GET(request)).status, 401);
+    } finally {
+      if (previous === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = previous;
+    }
+  });
+});
+
 function post(secret) {
   const headers = { 'content-type': 'application/json' };
   if (secret !== undefined) headers.authorization = `Bearer ${secret}`;
