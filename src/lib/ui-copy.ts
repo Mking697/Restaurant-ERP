@@ -512,10 +512,6 @@ const COPY: Record<string, readonly [string, string]> = {
     "Creates stock for one branch. Existing catalog names reuse the same material and unit; this does not create a purchase indent.",
     "Ek branch ka stock banata hai. Existing catalog naam par wahi material aur unit use hoti hai; purchase indent nahi banti."
   ],
-  "Owner creates branches; Branch Admin maintains own branch details. Cloning is not implemented — menus, BOM and checklists are not copied.": [
-    "Owner creates branches; Branch Admin maintains own branch details. Cloning is not implemented — menus, BOM and checklists are not copied.",
-    "Owner branch banata hai; Branch Admin apni branch ki details badalta hai. Cloning implement nahi hai — menus, BOM aur checklists copy nahi hote."
-  ],
   "Inventory Value": [
     "Inventory Value",
     "Stock ki value"

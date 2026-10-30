@@ -86,6 +86,6 @@ Evidence: `security-1-drizzle-upgrade-verification.md`.
 - EVIDENCE-1: user approved Vercel Blob Storage; awaiting the user to create a Blob store and supply `BLOB_READ_WRITE_TOKEN` before implementation starts.
 - PURCHASE-3: invoices/three-way matching/physical return/vendor acceptance/actual settlement. User said skip for now.
 - SECURITY-1: drizzle-orm/drizzle-kit upgrade done (above). Next.js 15->16 major upgrade still needs its own dedicated pass.
-- UX-1 remainder: Clone Branch Wizard done (above, UX-1c). Historical selector pagination done for Purchase/GRN (UX-1b); broader desktop/laptop/tablet/mobile/pixel acceptance across the rest of the app remains open.
+- UX-1 remainder: Clone Branch Wizard done (above, UX-1c). Historical selector pagination done for Purchase/GRN (UX-1b). Broader device QA across the rest of the app (login, setup, menu, warehouse, workforce, accounts cash-drop/GSTR tabs, admin settings/users/branches, guide) done 2026-10-31 at 390/1440 — clean except one flagged non-blocking retake (`warehouse-390` loading-state capture). Evidence: `ux1-remainder-device-qa-report.md`. Not repeated: the original report's full 5-viewport (390/768/1024/1440/1920) method — this pass used 2 widths only.
 
 GRN-2 baseline is committed locally as HEAD `8856d94`; this session has not verified its production deployment. Preserve that distinction rather than repeating CLAUDE.md's older uncommitted wording.
