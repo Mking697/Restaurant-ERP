@@ -119,14 +119,18 @@ part of this release.
   physical-return/vendor-acceptance evidence and actual refund/credit
   settlement/reconciliation end-to-end acceptance. GRN-2 expected claims are
   not a completed money workflow. User explicitly said skip for now.
-- [COMPLETE — LOCAL, drizzle half only] SECURITY-1: drizzle-orm 0.36.4->0.45.4,
-  drizzle-kit 0.28.1->0.31.11 (closes the HIGH SQL-injection advisory H1); no
-  app-code change needed, `drizzle-kit generate` reports "No schema changes".
-  Parent: 398/398 unit, clean typecheck/build, 34/34 real HTTP/PG through the
-  actual app under the new version. Evidence:
-  `docs/security-1-drizzle-upgrade-verification.md`. Next.js 15->16 (closes
-  H3's transitive postcss advisory) deliberately deferred to its own pass —
-  too large to bundle safely with this session's feature surface; still open.
+- [COMPLETE — LOCAL] SECURITY-1 (both halves): drizzle-orm 0.36.4->0.45.4,
+  drizzle-kit 0.28.1->0.31.11 (closes the HIGH SQL-injection advisory H1);
+  AND Next.js 15->16.4.3 + React 19.0->19.3.1 (closes H3's transitive
+  postcss advisory), previously deferred, now also done. drizzle half needed
+  no app-code change (`drizzle-kit generate`: no schema changes). Next half
+  needed a `middleware.ts`->`proxy.ts` rename (same behavior) and removing
+  an invalid `instant=false` Cache-Components marker that an interrupted
+  codemod run had inserted into 24 pages (this project does not opt into
+  Cache Components). Parent: 398/398 unit, clean typecheck/build both times,
+  34/34 real HTTP/PG against a live dev server actually running the new
+  Next/React versions. Evidence: `docs/security-1-drizzle-upgrade-
+  verification.md`, `docs/security-1-nextjs-upgrade-verification.md`.
 - [COMPLETE — LOCAL] UX-1 (partial): branch-deletion linked-data precheck/
   warning (UX-1a), historical exact-ID lookup for approved indents and
   finalized FAIL/PARTIAL GRNs beyond the latest-200 cap (UX-1b), and the real

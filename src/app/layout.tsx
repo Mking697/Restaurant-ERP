@@ -8,6 +8,7 @@ import { HttpError, safeUser } from "@/lib/server/permissions";
 import { SessionBootstrap } from "@/components/session-bootstrap";
 import "./globals.css";
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await readBranding();
