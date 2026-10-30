@@ -44,7 +44,7 @@ async function harness(options = {}) {
   if (options.page === 'accounts') {
     for (const [path, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'] })) dependencies[path] = Object.fromEntries(names.map(k => [k,k]));
     dependencies['../workforce/live-ui'] = { monthNow: () => '2026-10', Panel: 'Panel' };
-    dependencies['./legacy-demos'] = { default: 'LegacyAccountsDemo' }; dependencies['@/lib/expense-attempt'] = {}; dependencies['@/lib/csv-export'] = {}; dependencies['lucide-react'] = {};
+    dependencies['./legacy-demos'] = { default: 'LegacyAccountsDemo' }; dependencies['@/lib/expense-attempt'] = {}; dependencies['@/lib/csv-export'] = {}; dependencies['lucide-react'] = {}; dependencies['@/lib/utils'] = { formatCurrency: (v) => `TSh ${v}` };
     root = load('src/app/accounts/page-content.tsx').default;
   }
   function execute(fn, props, key) { visited.add(key); active = stores.get(key) || []; stores.set(key, active); cursor = 0; return fn(props); }

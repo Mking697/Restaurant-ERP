@@ -45,7 +45,11 @@ function paise(value: string) {
   return BigInt(whole) * BigInt(100) + BigInt(fraction.padEnd(2, "0"));
 }
 function decimal(value: bigint) { return `${value / BigInt(100)}.${String(value % BigInt(100)).padStart(2, "0")}`; }
-export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayroll: { amount: string }[]) {
+// revenue is a real SUM of completed pos_orders for the same branch/month,
+// already filtered through the Owner-only operational privacy rule by the
+// caller (see src/app/api/accounts/profit-loss/route.ts) — never null here,
+// coalesced to "0.00" at the SQL layer so a zero-sales month never crashes.
+export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayroll: { amount: string }[], revenue: string) {
   expenseMonth(month);
   const sums: Record<ExpenseCategory, bigint> = { RENT: BigInt(0), UTILITIES: BigInt(0), MARKETING: BigInt(0), OTHER: BigInt(0) };
   for (const row of rows) if (row.status === "POSTED") {
@@ -53,9 +57,25 @@ export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayro
     sums[row.category] += paise(row.amount);
   }
   const labor = finalizedPayroll.reduce((sum, row) => sum + paise(row.amount), BigInt(0));
+  const totalOperatingExpensesPaise = Object.values(sums).reduce((sum, amount) => sum + amount, labor);
   const expenses = { RENT: decimal(sums.RENT), UTILITIES: decimal(sums.UTILITIES), MARKETING: decimal(sums.MARKETING), OTHER: decimal(sums.OTHER) };
-  return { month, expenses, laborCost: decimal(labor), totalOperatingExpenses: decimal(Object.values(sums).reduce((sum, amount) => sum + amount, labor)), revenue: null, cogs: null, grossProfit: null, netProfit: null, salesConnected: false,
-    notes: ["Expense-side report only: revenue and COGS are not connected; gross and net profit are unavailable.", "Posted branch expenses are summed by expense date; voided expenses are excluded. No mock figures are used.", "Labor includes immutable finalized monthly payroll snapshots only, never draft previews; no money transfer is implied.", "Either Accounts Expenses or Payroll grant permits same-scope category and labor aggregates. Individual expense records require Accounts Expenses access."] };
+  // netProfit here is deliberately "revenue minus operating expenses (rent/
+  // utilities/marketing/other + finalized payroll labor)" ONLY — it is NOT a
+  // gross/net profit after COGS, because COGS stays unavailable below (this
+  // project's standing convention: current-recipe/rate food cost is an
+  // estimate, never presented as historical posted COGS).
+  const netPaise = paise(revenue) - totalOperatingExpensesPaise;
+  const netProfit = (netPaise < BigInt(0) ? "-" : "") + decimal(netPaise < BigInt(0) ? -netPaise : netPaise);
+  return { month, expenses, laborCost: decimal(labor), totalOperatingExpenses: decimal(totalOperatingExpensesPaise),
+    revenue, cogs: null, grossProfit: null, netProfit, salesConnected: true as const,
+    notes: [
+      "Revenue is connected: a real sum of completed POS sales for this branch/month, filtered through the same Owner-only operational privacy rule as the POS order list (/api/pos/orders) — a non-Owner viewer's revenue excludes any order marked owner-only/private.",
+      "COGS and gross profit remain unavailable: food cost uses current recipes/rates — an estimate, not a historical posted COGS source — and is never substituted here as if it were real.",
+      "netProfit means revenue minus posted operating expenses and finalized payroll labor only; it is NOT a gross/net profit after COGS (COGS is not connected above).",
+      "Posted branch expenses are summed by expense date; voided expenses are excluded. No mock figures are used.",
+      "Labor includes immutable finalized monthly payroll snapshots only, never draft previews; no money transfer is implied.",
+      "Either Accounts Expenses or Payroll grant permits same-scope category and labor aggregates. Individual expense records require Accounts Expenses access.",
+    ] };
 }
 export function parseExpense(input: Record<string, unknown>) {
   const fields = ["branchId", "date", "category", "subcategory", "amount", "description", "reference", "idempotencyKey"];

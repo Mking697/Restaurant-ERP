@@ -1,4 +1,4 @@
-import { boolean, index, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { branches } from "./platform";
 import { users } from "./auth";
 
@@ -121,11 +121,22 @@ export const journalEntries = pgTable(
     // deliberately not an FK, same convention as whatsAppMessageLog.
     referenceType: text("reference_type").notNull().default(""),
     referenceId: text("reference_id").notNull().default(""),
+    // A single source event (e.g. one aggregator settlement) can require more
+    // than one balanced debit/credit row (this table is single-debit/single-
+    // credit per row, not a multi-line journal) — `leg` distinguishes those
+    // rows for the SAME event (0, 1, 2, ...). Combined with
+    // (referenceType, referenceId) this is the real replay-safety key: a
+    // retried/duplicated event POST can never double-post the same leg twice
+    // (see journal_entries_posting_key_unique below), matching the existing
+    // idempotency convention used by GRN posting and recurring task
+    // generation elsewhere in this codebase.
+    leg: integer("leg").notNull().default(0),
     createdById: text("created_by_id").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("journal_entries_branch_date_idx").on(table.branchId, table.entryDate),
     index("journal_entries_reference_idx").on(table.referenceType, table.referenceId),
+    uniqueIndex("journal_entries_posting_key_unique").on(table.referenceType, table.referenceId, table.leg),
   ]
 );

@@ -8,6 +8,7 @@ import {
   taskFrequencyEnum,
   taskInstances,
   taskPriorityEnum,
+  taskProofs,
   taskStatusEnum,
   taskTypeEnum,
 } from "@/db/schema/tasks";
@@ -253,7 +254,74 @@ export async function completeInstance(tx: Executor, actor: Identity, id: string
   assertCanComplete(actor, row);
   if (row.status === "DONE") throw new HttpError(409, "Task already marked done");
   const attachmentUrl = optionalText(input.attachmentUrl, "attachmentUrl");
-  assertAttachmentForComplete(row.type, attachmentUrl);
-  await tx.update(taskInstances).set({ status: "DONE", completedAt: new Date(), attachmentUrl: attachmentUrl || row.attachmentUrl }).where(eq(taskInstances.id, id));
+  // EVIDENCE-1: a real uploaded photo (task_proofs row, via POST .../evidence)
+  // satisfies the ONE_TIME attachment requirement exactly like the older
+  // client-supplied attachmentUrl text/URL path did — check it BEFORE
+  // rejecting, and fall back to its real Blob pathname as the stored
+  // attachmentUrl so instanceDTO/readers see one consistent value either way.
+  const [proof] = await tx.select({ photoUrl: taskProofs.photoUrl }).from(taskProofs).where(eq(taskProofs.taskInstanceId, id));
+  const effectiveAttachment = attachmentUrl || proof?.photoUrl || row.attachmentUrl;
+  assertAttachmentForComplete(row.type, effectiveAttachment);
+  await tx.update(taskInstances).set({ status: "DONE", completedAt: new Date(), attachmentUrl: effectiveAttachment }).where(eq(taskInstances.id, id));
   return { instance: await instanceDTO(tx, id) };
+}
+
+// ---------------------------------------------------------------------------
+// EVIDENCE-1 — real camera-photo evidence (blob I/O lives in task-evidence.ts;
+// this module only ever touches Postgres, matching every other domain file's
+// separation of concerns). Upload permission mirrors assertCanComplete (the
+// assignee or a TASKS_DELEGATION/TASKS_RECURRING grant holder, scoped to the
+// task's own branch) since uploading evidence is part of the completion flow;
+// read permission mirrors listInstances' self-vs-grant visibility rule.
+// ---------------------------------------------------------------------------
+
+export async function loadInstanceForEvidence(tx: Executor, actor: Identity, id: string, mode: "write" | "read") {
+  const [row] = await tx.select().from(taskInstances).where(eq(taskInstances.id, id));
+  if (!row) throw new HttpError(404, "Task not found");
+  branchScope(actor, row.branchId);
+  if (mode === "write") {
+    assertCanComplete(actor, row);
+    if (row.status === "DONE") throw new HttpError(409, "Task already marked done; evidence cannot be changed after completion");
+  } else if (row.assignedToId !== actor.id && !canManageTasks(actor)) {
+    throw new HttpError(403, "Only the assignee or a grant holder may view this task's evidence");
+  }
+  return row;
+}
+
+export async function loadBranchForGeofence(tx: Executor, branchId: string) {
+  const [branch] = await tx.select({ lat: branches.lat, lng: branches.lng, geofenceRadiusM: branches.geofenceRadiusM }).from(branches).where(eq(branches.id, branchId));
+  if (!branch) throw new HttpError(404, "Branch not found");
+  return branch;
+}
+
+const proofDtoColumns = {
+  taskInstanceId: taskProofs.taskInstanceId,
+  withinGeofence: taskProofs.withinGeofence,
+  distanceFromBranchM: taskProofs.distanceFromBranchM,
+  createdAt: taskProofs.createdAt,
+};
+
+export async function upsertTaskProof(tx: Executor, taskInstanceId: string, photoUrl: string, geofence: { withinGeofence: boolean | null; distanceFromBranchM: number | null }, lat: number | null, lng: number | null) {
+  const existing = await tx.select({ id: taskProofs.id }).from(taskProofs).where(eq(taskProofs.taskInstanceId, taskInstanceId)).limit(1);
+  const values = {
+    photoUrl,
+    lat: lat === null ? null : String(lat),
+    lng: lng === null ? null : String(lng),
+    distanceFromBranchM: geofence.distanceFromBranchM === null ? null : String(geofence.distanceFromBranchM),
+    withinGeofence: geofence.withinGeofence,
+    exifTimestamp: new Date(),
+  };
+  if (existing.length) {
+    await tx.update(taskProofs).set(values).where(eq(taskProofs.taskInstanceId, taskInstanceId));
+  } else {
+    await tx.insert(taskProofs).values({ id: randomUUID(), taskInstanceId, ...values });
+  }
+  await tx.update(taskInstances).set({ attachmentUrl: photoUrl }).where(eq(taskInstances.id, taskInstanceId));
+  const [proof] = await tx.select(proofDtoColumns).from(taskProofs).where(eq(taskProofs.taskInstanceId, taskInstanceId));
+  return proof;
+}
+
+export async function getTaskProof(tx: Executor, taskInstanceId: string) {
+  const [proof] = await tx.select({ photoUrl: taskProofs.photoUrl, ...proofDtoColumns }).from(taskProofs).where(eq(taskProofs.taskInstanceId, taskInstanceId));
+  return proof ?? null;
 }

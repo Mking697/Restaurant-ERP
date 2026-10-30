@@ -7,7 +7,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { hasCurrentModule, useCurrentUser } from "@/lib/current-user";
+import { hasCurrentModule, requestJson, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 import { useTranslation } from "@/lib/i18n";
 import { Plus, Repeat, UserCheck, Paperclip, CheckCircle2 } from "lucide-react";
@@ -142,6 +142,46 @@ function RecurringPanel({ branchId, canManage, branches }: { branchId: string; c
   </div>;
 }
 
+function captureLocation(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null), // permission denied / unavailable -> fail open, never blocks completion
+      { timeout: 8000, maximumAge: 60000 },
+    );
+  });
+}
+async function uploadTaskEvidence(instanceId: string, photo: File, coords: { lat: number; lng: number } | null) {
+  const form = new FormData();
+  form.append("photo", photo);
+  if (coords) { form.append("lat", String(coords.lat)); form.append("lng", String(coords.lng)); }
+  const res = await fetch(`/api/tasks/instances/${encodeURIComponent(instanceId)}/evidence`, {
+    method: "POST", credentials: "same-origin", body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `Evidence upload failed (${res.status})`);
+  return data as { proof: { withinGeofence: boolean | null; distanceFromBranchM: string | null } };
+}
+
+function ViewEvidenceButton({ instanceId }: { instanceId: string }) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  async function view() {
+    setBusy(true); setError("");
+    try {
+      const data = await requestJson<{ url: string }>(`/api/tasks/instances/${encodeURIComponent(instanceId)}/evidence`);
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to load evidence"); }
+    finally { setBusy(false); }
+  }
+  return <span className="inline-flex items-center gap-1">
+    <Button variant="outline" size="sm" disabled={busy} onClick={view}><Paperclip className="size-3.5" /> {busy ? t("Loading…", "Load ho raha hai…") : t("View evidence", "Evidence dekho")}</Button>
+    {error && <span className="text-xs text-destructive">{error}</span>}
+  </span>;
+}
+
 function DelegationPanel({ branchId, canManage, branches }: { branchId: string; canManage: boolean; branches: { id: string; code: string; name: string }[] }) {
   const { t } = useTranslation();
   const resource = useResource<{ instances: InstanceRow[] }>(`/api/tasks/instances?${new URLSearchParams({ type: "ONE_TIME", ...(branchId ? { branchId } : {}) }).toString()}`);
@@ -151,7 +191,17 @@ function DelegationPanel({ branchId, canManage, branches }: { branchId: string; 
   const [entry, setEntry] = React.useState(blank);
   const assignees = useTaskAssignees(open, canManage, entry.branchId);
   const [doneTask, setDoneTask] = React.useState<InstanceRow | null>(null);
-  const [doneAttachment, setDoneAttachment] = React.useState("");
+  const [donePhoto, setDonePhoto] = React.useState<File | null>(null);
+  const [geoStatus, setGeoStatus] = React.useState<"idle" | "capturing" | "captured" | "unavailable">("idle");
+  const [geoCoords, setGeoCoords] = React.useState<{ lat: number; lng: number } | null>(null);
+  async function onPhotoSelected(file: File | null) {
+    setDonePhoto(file);
+    if (!file) return;
+    setGeoStatus("capturing");
+    const coords = await captureLocation();
+    setGeoCoords(coords);
+    setGeoStatus(coords ? "captured" : "unavailable");
+  }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!assignees.valid(entry.assignedToId)) return;
@@ -163,9 +213,10 @@ function DelegationPanel({ branchId, canManage, branches }: { branchId: string; 
   async function submitMarkDone() {
     if (!doneTask) return;
     if (await action.run(async () => {
-      await post(`/api/tasks/instances/${encodeURIComponent(doneTask.id)}/complete`, { attachmentUrl: doneAttachment || undefined });
+      if (donePhoto) await uploadTaskEvidence(doneTask.id, donePhoto, geoCoords);
+      await post(`/api/tasks/instances/${encodeURIComponent(doneTask.id)}/complete`, {});
       await resource.reload();
-    }, t("Marked Done.", "Done mark hua."))) { setDoneTask(null); setDoneAttachment(""); }
+    }, t("Marked Done.", "Done mark hua."))) { setDoneTask(null); setDonePhoto(null); setGeoStatus("idle"); setGeoCoords(null); }
   }
   return <div className="space-y-4">
     <div className="flex items-center justify-between gap-2">
@@ -196,24 +247,36 @@ function DelegationPanel({ branchId, canManage, branches }: { branchId: string; 
         <td className="font-medium">{i.title}</td><td>{i.branchName}</td>
         <td><span className="inline-flex items-center gap-1"><UserCheck className="size-3.5 text-muted-foreground" /> {i.assignedToName}</span></td>
         <td>{i.priority}</td><td className="whitespace-nowrap text-sm text-muted-foreground">{new Date(i.dueAt).toLocaleString()}</td>
-        <td>{i.attachmentUrl ? <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Paperclip className="size-3" /> {i.attachmentUrl}</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
+        <td>{!i.attachmentUrl ? <span className="text-xs text-muted-foreground">—</span>
+          : i.attachmentUrl.startsWith("evidence/") || /^https:\/\/[^/]+\.private\.blob\.vercel-storage\.com\//i.test(i.attachmentUrl)
+            ? <ViewEvidenceButton instanceId={i.id} />
+            // Older completions stored arbitrary text/URL references, not task_proofs.
+            // Keep them visible as inert text; never send them to the upload-only reader.
+            : <span className="break-all text-xs text-muted-foreground">{i.attachmentUrl}</span>}</td>
         <td>{i.status.replace(/_/g, " ")}</td>
-        <td>{i.status !== "DONE" && <Button variant="outline" size="sm" onClick={() => { setDoneTask(i); setDoneAttachment(""); }}>{t("Mark Done", "Done karo")}</Button>}</td>
+        <td>{i.status !== "DONE" && <Button variant="outline" size="sm" onClick={() => { setDoneTask(i); setDonePhoto(null); setGeoStatus("idle"); setGeoCoords(null); }}>{t("Mark Done", "Done karo")}</Button>}</td>
       </tr>)}
     </DataTable>}
     <Dialog open={!!doneTask} onOpenChange={(open) => !open && setDoneTask(null)}>
       <DialogContent>
         <DialogHeader><DialogTitle>{t("Mark Done — ", "Done karo — ")}{doneTask?.title}</DialogTitle>
-          <DialogDescription>{t("Evidence attachment REQUIRED — a delegated one-time task cannot be Done without it. No file upload pipeline in this pass; enter a reference link or filename.", "Evidence attachment ZAROORI hai — delegation task bina attachment Done nahi ho sakta. Is pass mein file upload nahi; reference link ya filename daalo.")}</DialogDescription>
+          <DialogDescription>{t("A real camera photo is REQUIRED — a delegated one-time task cannot be Done without it. Your location is captured best-effort for a geofence check; denying location access never blocks completion.", "Asli camera photo ZAROORI hai — delegation task bina photo Done nahi ho sakta. Location best-effort capture hota hai geofence check ke liye; location deny karne se completion block nahi hoga.")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Field label={t("Evidence attachment (required)", "Evidence attachment (zaroori)")}><input className={inputClass} value={doneAttachment} onChange={(e) => setDoneAttachment(e.target.value)} placeholder={t("e.g. https://… or receipt.jpg", "jaise https://… ya receipt.jpg")} /></Field>
-          {!doneAttachment.trim() && <p className="text-xs text-destructive">{t("Attachment is required before marking this delegation task Done.", "Is delegation task ko Done marking se pehle attachment zaroori hai.")}</p>}
+          <Field label={t("Evidence photo (required)", "Evidence photo (zaroori)")}>
+            <input type="file" accept="image/*" capture="environment" className={inputClass}
+              onChange={(e) => void onPhotoSelected(e.target.files?.[0] ?? null)} />
+          </Field>
+          {donePhoto && <p className="text-xs text-muted-foreground">{t("Selected", "Chuna gaya")}: {donePhoto.name} ({Math.round(donePhoto.size / 1024)} KB)</p>}
+          {geoStatus === "capturing" && <p className="text-xs text-muted-foreground">{t("Capturing location…", "Location capture ho raha hai…")}</p>}
+          {geoStatus === "captured" && <p className="text-xs text-success">{t("Location captured for geofence check.", "Geofence check ke liye location capture hui.")}</p>}
+          {geoStatus === "unavailable" && <p className="text-xs text-muted-foreground">{t("Location unavailable or denied — completion will still proceed; geofence status will be recorded as not available.", "Location unavailable ya deny hui — completion phir bhi hoga; geofence status \"not available\" record hoga.")}</p>}
+          {!donePhoto && <p className="text-xs text-destructive">{t("A photo is required before marking this delegation task Done.", "Is delegation task ko Done marking se pehle photo zaroori hai.")}</p>}
         </div>
         <ActionState action={action} />
         <DialogFooter>
           <Button variant="outline" onClick={() => setDoneTask(null)}>{t("Cancel", "Cancel")}</Button>
-          <Button onClick={submitMarkDone} disabled={action.busy || !doneAttachment.trim()}><CheckCircle2 /> {t("Mark Done", "Done karo")}</Button>
+          <Button onClick={submitMarkDone} disabled={action.busy || !donePhoto}><CheckCircle2 /> {t("Mark Done", "Done karo")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

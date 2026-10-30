@@ -95,6 +95,79 @@ test('status filters reject values outside the real enum', () => {
   assert.throws(() => p.parseStatusFilter('APPROVED', p.PO_STATUSES), e => e.status === 400);
 });
 
+test('aggregateIndentLinesByMaterial merges duplicate materials with exact decimal sums', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  assert.deepEqual(
+    p.aggregateIndentLinesByMaterial([{ rawMaterialId: 'a', qty: '0.1' }, { rawMaterialId: 'a', qty: '0.2' }, { rawMaterialId: 'b', qty: '5' }]).sort((x, y) => x.rawMaterialId.localeCompare(y.rawMaterialId)),
+    [{ rawMaterialId: 'a', qty: '0.300' }, { rawMaterialId: 'b', qty: '5.000' }],
+  );
+});
+
+test('evaluateIndentSpike: no real average for a material never fabricates a figure', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const result = p.evaluateIndentSpike([{ rawMaterialId: 'unknown-material', qty: '100' }], new Map());
+  assert.equal(result.dailyAvgQtyJson, null);
+  assert.equal(result.spikePercent, null);
+  assert.equal(result.hasData, false);
+  assert.equal(result.isSpike, false);
+});
+
+test('evaluateIndentSpike: mixed known/insufficient baselines never auto-approve or invent partial spike figures', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  for (const knownQty of ['11', '20']) {
+    for (const unknownAverage of [undefined, { rawMaterialId: 'rice', avgQtyMillis: 1000n, sampleCount: 2 }, { rawMaterialId: 'rice', avgQtyMillis: 0n, sampleCount: 3 }]) {
+      const averages = new Map([['chicken', { rawMaterialId: 'chicken', avgQtyMillis: 10000n, sampleCount: 3 }]]);
+      if (unknownAverage) averages.set('rice', unknownAverage);
+      for (const lines of [
+        [{ rawMaterialId: 'chicken', qty: knownQty }, { rawMaterialId: 'rice', qty: '999999' }],
+        [{ rawMaterialId: 'rice', qty: '999999' }, { rawMaterialId: 'chicken', qty: knownQty }],
+      ]) {
+        const result = p.evaluateIndentSpike(lines, averages);
+        assert.deepEqual(result, { hasData: false, isSpike: false, dailyAvgQtyJson: null, spikePercent: null });
+        assert.equal(result.isSpike || !result.hasData ? 'PENDING_APPROVAL' : 'APPROVED', 'PENDING_APPROVAL');
+      }
+    }
+  }
+});
+
+test('evaluateIndentSpike: real average exists, requested qty within 25% does not spike', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const averages = new Map([['chicken', { rawMaterialId: 'chicken', avgQtyMillis: 10000n, sampleCount: 3 }]]);
+  const result = p.evaluateIndentSpike([{ rawMaterialId: 'chicken', qty: '11' }], averages);
+  assert.equal(result.isSpike, false);
+  assert.equal(result.dailyAvgQtyJson, null);
+  assert.equal(result.spikePercent, null);
+  assert.equal(result.hasData, true);
+});
+
+test('evaluateIndentSpike: real average exists, requested qty over 25% spikes with accurate stored percent', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const averages = new Map([['chicken', { rawMaterialId: 'chicken', avgQtyMillis: 10000n, sampleCount: 3 }]]);
+  const result = p.evaluateIndentSpike([{ rawMaterialId: 'chicken', qty: '20' }], averages);
+  assert.equal(result.isSpike, true);
+  assert.equal(result.spikePercent, '100.00');
+  assert.deepEqual(result.dailyAvgQtyJson, { chicken: { avgQty: '10.000', sampleCount: 3, requestedQty: '20.000', pctOverAvg: 100 } });
+});
+
+test('evaluateIndentSpike: exactly at the 25% boundary does not spike (strictly greater-than only)', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const averages = new Map([['chicken', { rawMaterialId: 'chicken', avgQtyMillis: 10000n, sampleCount: 3 }]]);
+  assert.equal(p.evaluateIndentSpike([{ rawMaterialId: 'chicken', qty: '12.5' }], averages).isSpike, false);
+  assert.equal(p.evaluateIndentSpike([{ rawMaterialId: 'chicken', qty: '12.501' }], averages).isSpike, true);
+});
+
+test('evaluateIndentSpike: multi-line indent reports the highest line\'s % over average and only spiking lines trigger it', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const averages = new Map([
+    ['chicken', { rawMaterialId: 'chicken', avgQtyMillis: 10000n, sampleCount: 3 }],
+    ['rice', { rawMaterialId: 'rice', avgQtyMillis: 5000n, sampleCount: 5 }],
+  ]);
+  const result = p.evaluateIndentSpike([{ rawMaterialId: 'chicken', qty: '11' }, { rawMaterialId: 'rice', qty: '20' }], averages);
+  assert.equal(result.isSpike, true);
+  assert.equal(result.spikePercent, '300.00');
+  assert.ok(result.dailyAvgQtyJson.chicken && result.dailyAvgQtyJson.rice);
+});
+
 test('allowedFields fails closed on unknown keys, same convention as every other module', () => {
   const p = require('../src/lib/server/purchase.ts');
   assert.throws(() => p.allowedFields({ branchId: 'b', extra: 1 }, ['branchId']), e => e.status === 400);

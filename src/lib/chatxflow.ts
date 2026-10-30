@@ -46,15 +46,15 @@ interface SendResult {
   error?: string;
 }
 
-/** ChatXFlow expects a full number with country code (e.g. "919876543210").
- * Staff/vendor/owner phone numbers are stored as bare 10-digit Indian mobile
- * numbers in most places in this schema (users.phoneE164 is the exception —
- * that one is already E.164). Anything that already looks like it carries a
- * country code is left untouched rather than guessed at. */
+/** ChatXFlow expects a full number with country code (e.g. "255712345678").
+ * Staff/vendor/customer phone numbers are stored as bare 9-digit Tanzanian
+ * mobile numbers in most places in this schema (users.phoneE164 is the
+ * exception — that one is already E.164). Anything that already looks like
+ * it carries a country code is left untouched rather than guessed at. */
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
+  if (digits.length === 9) return `255${digits}`;
+  if (digits.length === 10 && digits.startsWith("0")) return `255${digits.slice(1)}`;
   return digits;
 }
 

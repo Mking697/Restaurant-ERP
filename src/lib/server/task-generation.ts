@@ -255,7 +255,20 @@ export async function generateRecurringOccurrences(tx: Executor, now: Date = new
   return generated;
 }
 
-export async function escalateOverdueInstances(tx: Executor, now: Date = new Date()): Promise<number> {
+// AUTOMATION-1b — each returned row is exactly one occurrence that JUST
+// flipped PENDING/IN_PROGRESS -> OVERDUE on THIS call (the WHERE isNull(
+// overdueEscalatedAt) guard is the one-shot trigger). The caller sends
+// exactly one escalation notice per returned row and never re-fetches this
+// set — an occurrence already escalated on a prior tick is excluded by
+// construction, so retries/duplicate ticks can never double-notify.
+export interface EscalatedInstance {
+  id: string;
+  branchId: string;
+  assignedToId: string;
+  title: string;
+  dueAt: Date;
+}
+export async function escalateOverdueInstances(tx: Executor, now: Date = new Date()): Promise<EscalatedInstance[]> {
   const threshold = new Date(now.getTime() - ESCALATION_THRESHOLD_MS);
   const rows = await tx
     .update(taskInstances)
@@ -267,6 +280,48 @@ export async function escalateOverdueInstances(tx: Executor, now: Date = new Dat
         isNull(taskInstances.overdueEscalatedAt)
       )
     )
-    .returning({ id: taskInstances.id });
-  return rows.length;
+    .returning({
+      id: taskInstances.id,
+      branchId: taskInstances.branchId,
+      assignedToId: taskInstances.assignedToId,
+      title: taskInstances.title,
+      dueAt: taskInstances.dueAt,
+    });
+  return rows;
+}
+
+// AUTOMATION-1b — "first becomes due" reminder trigger. Unlike escalation,
+// becoming due is not itself a status transition (status stays PENDING/
+// IN_PROGRESS), so there is no existing state flip to piggyback on — this
+// adds its own one-shot flag (reminderSentAt) guarded the same way: the
+// UPDATE's WHERE isNull(reminderSentAt) makes claiming atomic, and only rows
+// this exact call actually claimed (RETURNING) are returned, so a retried or
+// overlapping tick can never claim (and therefore never notify for) the same
+// occurrence twice.
+export interface DueReminderInstance {
+  id: string;
+  branchId: string;
+  assignedToId: string;
+  title: string;
+  dueAt: Date;
+}
+export async function claimDueTaskReminders(tx: Executor, now: Date = new Date()): Promise<DueReminderInstance[]> {
+  const rows = await tx
+    .update(taskInstances)
+    .set({ reminderSentAt: now })
+    .where(
+      and(
+        inArray(taskInstances.status, ["PENDING", "IN_PROGRESS"]),
+        lt(taskInstances.dueAt, now),
+        isNull(taskInstances.reminderSentAt)
+      )
+    )
+    .returning({
+      id: taskInstances.id,
+      branchId: taskInstances.branchId,
+      assignedToId: taskInstances.assignedToId,
+      title: taskInstances.title,
+      dueAt: taskInstances.dueAt,
+    });
+  return rows;
 }

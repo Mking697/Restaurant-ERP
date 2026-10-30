@@ -1,10 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { branchExpenses } from "@/db/schema/expenses";
 import { payrollSnapshots } from "@/db/schema/workforce";
+import { posOrders } from "@/db/schema/pos";
 import { requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
 import { expenseMonth, expensePermission, expenseProfitLoss, expenseScope } from "@/lib/server/expenses";
+import { operationalOrderVisibility } from "@/lib/server/order-visibility";
 import { ensureExpenseBranch, expenseWindow } from "../_shared";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,5 +19,20 @@ export async function GET(request: Request) { return api(async () => {
   // payrollSnapshots contains finalized rows ONLY. Do not read draft preview rows,
   // payroll rates, the old branchFinancials demo table, or arbitrary journals.
   const payroll = await db.select({ amount: payrollSnapshots.amount }).from(payrollSnapshots).where(and(eq(payrollSnapshots.month, range.month), scope ? eq(payrollSnapshots.branchId, scope) : undefined));
-  return json(expenseProfitLoss(range.month, expenses, payroll));
+  // Revenue — real SUM of completed POS sales for this branch/month. Applies
+  // the exact same owner-only operational privacy rule GET /api/pos/orders
+  // uses (src/lib/server/order-visibility.ts): a non-Owner viewer's figure
+  // never includes an order marked private. coalesce(...,0) guarantees a
+  // real "0.00" for a zero-sales branch/month, never null/undefined.
+  const [revenueRow] = await db
+    .select({ revenue: sql<string>`coalesce(sum(${posOrders.totalAmount}), 0)::numeric(20,2)::text` })
+    .from(posOrders)
+    .where(and(
+      scope ? eq(posOrders.branchId, scope) : undefined,
+      gte(posOrders.createdAt, new Date(range.start)),
+      lt(posOrders.createdAt, new Date(range.end)),
+      eq(posOrders.status, "COMPLETED"),
+      operationalOrderVisibility(actor)
+    ));
+  return json(expenseProfitLoss(range.month, expenses, payroll, revenueRow.revenue));
 }); }

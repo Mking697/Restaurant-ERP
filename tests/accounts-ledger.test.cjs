@@ -57,34 +57,129 @@ test('aggregator input is allowlisted, server never trusts a client netPayout fi
 });
 test('postPettyCashEntry derives balance from the sum of real rows and rejects a negative result', async () => {
   const { postPettyCashEntry } = load();
-  let call = 0;
   function chain(rows) { const p = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); return p; }
+  // Queue matches the real call order: ensureLedgerBranch, running-balance sums,
+  // then postPettyCashJournal's own accountsByCode lookup and existing-journal check.
+  const queue = [
+    [{ id: 'branch-a' }],
+    [{ totalIn: '100.00', totalOut: '90.00' }],
+    [{ id: 'cash', code: '1000' }, { id: 'equity', code: '3000' }, { id: 'other', code: '5400' }],
+    [],
+  ];
   const tx = {
-    select: () => ({ from: () => ({ where: () => chain(++call % 2 === 1 ? [{ id: 'branch-a' }] : [{ totalIn: '100.00', totalOut: '90.00' }]) }) }),
+    select: () => ({ from: () => ({ where: () => chain(queue.length > 1 ? queue.shift() : queue[0]) }) }),
     insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }),
   };
   const row = await postPettyCashEntry(tx, pettyUser, { ...pettyInput(), entryType: 'OUT', amount: '5.00' });
   assert.equal(row.balanceAfterInr, '5.00'); // 100 - 90 - 5
-  await assert.rejects(() => postPettyCashEntry(tx, pettyUser, { ...pettyInput(), entryType: 'OUT', amount: '50.00' }), { status: 400 }); // would go to -40
-  await assert.rejects(() => postPettyCashEntry(tx, denied, pettyInput()), { status: 403 });
-  await assert.rejects(() => postPettyCashEntry(tx, { ...pettyUser, branchId: 'branch-b' }, pettyInput()), { status: 403 });
+  const negativeTx = { select: () => ({ from: () => ({ where: () => chain([{ id: 'branch-a' }]) }) }), insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }) };
+  let call = 0;
+  negativeTx.select = () => ({ from: () => ({ where: () => chain(++call % 2 === 1 ? [{ id: 'branch-a' }] : [{ totalIn: '100.00', totalOut: '90.00' }]) }) });
+  await assert.rejects(() => postPettyCashEntry(negativeTx, pettyUser, { ...pettyInput(), entryType: 'OUT', amount: '50.00' }), { status: 400 }); // would go to -40, rejected before any journal lookup
+  await assert.rejects(() => postPettyCashEntry(negativeTx, denied, pettyInput()), { status: 403 });
+  await assert.rejects(() => postPettyCashEntry(negativeTx, { ...pettyUser, branchId: 'branch-b' }, pettyInput()), { status: 403 });
 });
 test('postAggregatorOrder always computes netPayout server-side, ignoring any client value', async () => {
   const { postAggregatorOrder } = load();
   function chain(rows) { const p = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); return p; }
+  // Queue: ensureLedgerBranch, postAggregatorJournal's accountsByCode, then one
+  // existing-journal check per leg (two legs here since commission+ads > 0).
+  const queue = [
+    [{ id: 'branch-a' }],
+    [{ id: 'bank', code: '1020' }, { id: 'revenue', code: '4000' }, { id: 'other', code: '5400' }],
+    [], [],
+  ];
   const tx = {
-    select: () => ({ from: () => ({ where: () => chain([{ id: 'branch-a' }]) }) }),
+    select: () => ({ from: () => ({ where: () => chain(queue.length > 1 ? queue.shift() : queue[0]) }) }),
     insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }),
   };
   const row = await postAggregatorOrder(tx, reconUser, aggInput());
   assert.equal(row.netPayout, '415.00'); // 500 - 75 - 10 - 0
-  await assert.rejects(() => postAggregatorOrder(tx, denied, aggInput()), { status: 403 });
+  const deniedTx = { select: () => ({ from: () => ({ where: () => chain([{ id: 'branch-a' }]) }) }), insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }) };
+  await assert.rejects(() => postAggregatorOrder(deniedTx, denied, aggInput()), { status: 403 });
 });
-test('seedLedgerAccounts is HQ-level (branchId null) and documents exactly 6 accounts', () => {
+test('seedLedgerAccounts is HQ-level (branchId null) and documents exactly 13 accounts (FINANCE-1 approved 12 + legacy Petty Cash)', () => {
   const { SEED_LEDGER_ACCOUNTS } = load();
-  assert.equal(SEED_LEDGER_ACCOUNTS.length, 6);
-  assert.deepEqual(SEED_LEDGER_ACCOUNTS.map(a => a.code).sort(), ['1000', '1010', '2000', '3000', '4000', '5000']);
+  assert.equal(SEED_LEDGER_ACCOUNTS.length, 13);
+  assert.deepEqual(SEED_LEDGER_ACCOUNTS.map(a => a.code).sort(), ['1000', '1010', '1020', '2000', '2100', '3000', '4000', '5000', '5100', '5200', '5300', '5400', '5500']);
   assert.deepEqual(new Set(SEED_LEDGER_ACCOUNTS.map(a => a.type)), new Set(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']));
+});
+test('postJournalLeg is idempotent per (referenceType, referenceId, leg) and skips a zero amount', async () => {
+  const { postJournalLeg } = load();
+  let inserted = 0;
+  const existingRows = { current: [] };
+  const tx = {
+    select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve(existingRows.current) }) }) }),
+    insert: () => ({ values: (v) => ({ returning: () => { inserted++; existingRows.current = [{ ...v }]; return Promise.resolve([{ ...v }]); } }) }),
+  };
+  const params = { branchId: 'branch-a', description: 'QA leg', debitAccountId: 'd', creditAccountId: 'c', amount: '10.00', referenceType: 'QA', referenceId: 'evt-1', createdById: 'u1' };
+  const first = await postJournalLeg(tx, params);
+  assert.ok(first); assert.equal(inserted, 1);
+  const replay = await postJournalLeg(tx, params);
+  assert.equal(inserted, 1, 'replay must not insert a second row'); assert.deepEqual(replay, first);
+  const zero = await postJournalLeg({ ...tx, select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }) }, { ...params, referenceId: 'evt-2', amount: '0.00' });
+  assert.equal(zero, null, 'a zero amount leg must never be posted');
+});
+function expenseVoidTx(originals = [], reversals = []) {
+  const { journalEntries, ledgerAccounts } = require('../src/db/schema/accounts.ts');
+  const { PgDialect } = require('drizzle-orm/pg-core');
+  const dialect = new PgDialect(), inserted = [], lookups = [];
+  return {
+    inserted, lookups,
+    select: () => ({ from: table => ({ where: predicate => {
+      const params = dialect.sqlToQuery(predicate).params;
+      lookups.push({ table, params });
+      const rows = table === ledgerAccounts
+        ? [{ id: 'current-rent', code: '5100' }, { id: 'current-payable', code: '2000' }]
+        : [...originals, ...reversals].filter(row => params.includes(row.referenceType) && params.includes(row.referenceId) && params.includes(row.leg));
+      const result = Promise.resolve(rows); result.limit = n => Promise.resolve(rows.slice(0, n)); return result;
+    } }) }),
+    insert: table => ({ values: value => ({ returning: async () => {
+      assert.equal(table, journalEntries); inserted.push(value); reversals.push(value); return [value];
+    } }) }),
+  };
+}
+
+test('postExpenseVoidJournal: legacy expense with no original EXPENSE creates no invented ledger reversal', async () => {
+  const tx = expenseVoidTx();
+  const result = await load().postExpenseVoidJournal(tx, owner, { id: 'legacy-expense', branchId: 'branch-a', category: 'RENT', amount: '123.45' });
+  assert.equal(result, null, 'legacy no-journal void must be an explicit safe no-op');
+  assert.deepEqual(tx.inserted, []);
+  assert.ok(tx.lookups.some(({ params }) => params.includes('EXPENSE') && params.includes('legacy-expense')), 'must look up the actual original by source id');
+});
+
+test('postExpenseVoidJournal: reverses persisted accounts/amount despite changed source category and preserves immutable replay', async () => {
+  const original = { id: 'original-journal', branchId: 'branch-a', referenceType: 'EXPENSE', referenceId: 'expense-1', leg: 0, debitAccountId: 'historical-expense', creditAccountId: 'historical-payable', amount: '97.31' };
+  const untouched = { ...original }, tx = expenseVoidTx([original]);
+  const expense = { id: 'expense-1', branchId: 'branch-a', category: 'RENT', amount: '999.99' };
+  const row = await load().postExpenseVoidJournal(tx, owner, expense);
+  assert.equal(row.debitAccountId, original.creditAccountId);
+  assert.equal(row.creditAccountId, original.debitAccountId);
+  assert.equal(row.amount, '97.31');
+  assert.equal(row.referenceType, 'EXPENSE_VOID');
+  const replay = await load().postExpenseVoidJournal(tx, { ...owner, id: 'another-actor' }, { ...expense, category: 'UNMAPPED', amount: '1.00' });
+  assert.deepEqual(replay, row);
+  assert.equal(tx.inserted.length, 1);
+  assert.deepEqual(original, untouched);
+  const { ledgerAccounts } = require('../src/db/schema/accounts.ts');
+  assert.ok(tx.lookups.every(({ table }) => table !== ledgerAccounts), 'reversal must not consult current mappings/COA');
+});
+
+test('postPettyCashJournal debits/credits Cash depending on IN/OUT direction, never the legacy Petty Cash account', async () => {
+  const { postPettyCashJournal } = load();
+  const accounts = [{ id: 'cash', code: '1000' }, { id: 'equity', code: '3000' }, { id: 'other', code: '5400' }];
+  function chain(rows) { const p = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); return p; }
+  function chainTx() {
+    const queue = [accounts, []]; // accountsByCode (no .limit call), then the existing-journal-row check (.limit(1))
+    return {
+      select: () => ({ from: () => ({ where: () => chain(queue.length > 1 ? queue.shift() : queue[0]) }) }),
+      insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }),
+    };
+  }
+  const inRow = await postPettyCashJournal(chainTx(), owner, { id: 'pc-in', branchId: 'branch-a', entryType: 'IN', amount: '100.00' });
+  assert.equal(inRow.debitAccountId ?? inRow.debit_account_id, 'cash'); assert.equal(inRow.creditAccountId ?? inRow.credit_account_id, 'equity');
+  const outRow = await postPettyCashJournal(chainTx(), owner, { id: 'pc-out', branchId: 'branch-a', entryType: 'OUT', amount: '40.00' });
+  assert.equal(outRow.debitAccountId ?? outRow.debit_account_id, 'other'); assert.equal(outRow.creditAccountId ?? outRow.credit_account_id, 'cash');
 });
 test('computeBalanceSheet reports honest zeros with seeded:false when no accounts exist, and real net per account otherwise', async () => {
   const { computeBalanceSheet } = load();

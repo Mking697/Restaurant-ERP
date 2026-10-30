@@ -1,6 +1,6 @@
 # CLAUDE.md — Multi-Branch Restaurant Chain ERP + WhatsApp Automation
 
-Project root: `G:\restaurant erp`
+Project root: `D:\restaurant erp`
 Scope: 6 branches now, scalable to N via `branch_id` multi-tenant isolation.
 Stack explicitly confirmed with user: **Next.js + Drizzle ORM + Postgres**,
 matching the user's other project Pro ERP (github Mking697/Pro-ERP) for
@@ -11,6 +11,49 @@ first every time work resumes on this project.
 
 ---
 
+## CURRENT RELEASE CHECKPOINT — October 30, 2026
+
+User explicitly authorized commit + push + deploy of the approved Tanzania
+currency/phone and five-module backlog snapshot. User separately approved
+production migration `0011_rare_bucky` on Neon `restaurant-erp` / `main`,
+and initialization of the previously approved chart of accounts (reference
+accounts only, no opening balances or fabricated transactions).
+
+Independent pre-commit review findings were fixed with RED/GREEN tests:
+recipient-specific daily-summary owner-only-sales privacy, exact original-
+journal expense reversals (legacy unposted expenses do not invent reversals),
+complete baseline coverage for indent auto-approval, and legacy text/URL
+evidence display. Parent also added a scoped first-party camera/location
+header override for Tasks; other pages retain denied permissions.
+
+Final parent-run tests: 426/426 unit/UI tests, clean TypeScript, successful
+compiled `.next-releaseqa` build. Against that exact compiled artifact,
+fresh disposable DB integrations passed: accounts ledger 15/15, expenses
+17/17 (including legacy void), indent spike 10/10 (including mixed-history
+requests), notifications 13/13 (sandbox-only, manager 1 vs Owner 3 completed
+sales), private Blob evidence 18/18. The compiled Tasks permission header
+was verified over HTTP. Servers, databases and QA build output were removed;
+TypeScript generated paths were restored to defaults.
+
+Production migration `0011_rare_bucky` APPLIED with explicit approval.
+Postflight verified exact ordered hashes/timestamps for all 12 migrations,
+six changed columns and three indexes. Approved chart initialization inserted
+13 reference accounts (12 approved + retained legacy Petty Cash); no business
+transactions/balances were fabricated. Existing users/branches/POS/journal/
+task/proof row counts were unchanged. Immediate replay applied no migration
+and inserted zero accounts. A transient pre-connect Neon DNS failure was
+retried once; the subsequent apply and both postflight checks succeeded.
+
+Local upgrade proof applied 0000–0010, inserted legacy rows in two branch
+scopes across six tables, applied 0011, verified original values unchanged
+and no invented notification/journal records, then reran migration as a no-op.
+Disposable upgrade database was removed. Final independent re-review PASSED
+with no remaining security/logic blockers. Git/Vercel release verification
+is the only remaining release step; production schema is ready.
+
+The dated sections below are historical checkpoints; this section takes
+precedence when their authorization/status wording differs.
+
 ## ACTIVE RELEASE + REMAINING-WORK TRACKER (October 29, 2026)
 
 User authorized committing/pushing/deploying the completed Phase 2/3 snapshot,
@@ -20,13 +63,314 @@ dependency upgrades, paid providers and production business writes still need
 separate approval. Pending follow-up changes are not automatically part of the
 current authorized release snapshot.
 
-Latest user instruction (October 30, 2026): commit, push and deploy ALL
-completed, locally-accepted work from this session — TASKS-1, UX-1a, UX-1b,
-UX-1c, AUTOMATION-1a, and the drizzle-orm half of SECURITY-1 (all listed
-below with COMPLETE status and real evidence). FINANCE-1/2, EVIDENCE-1,
-PURCHASE-3, the Next.js half of SECURITY-1, AUTOMATION-1b/1c and the rest of
-UX-1 remain pending/deferred per the user's own explicit answers and are NOT
-part of this release.
+Latest user instruction (October 30, 2026): finish only (1) responsive/device
+QA with confirmed bug fixes and retests, and (2) production scheduled-cron
+execution verification. Defer all other backlog to the next work session
+(user: tomorrow); do not start those domains early.
+
+Release checkpoint: `bbbde11`/`a43e876` feature release and `0e95c92`
+Next.js/React upgrade were pushed; GitHub Vercel statuses reported success
+and production public HTTP smoke checks passed. SECURITY-1's Next.js half
+is no longer pending. These checks do NOT establish scheduled-cron success.
+
+Today's remaining acceptance gates:
+- [COMPLETE] UX-1 device QA: real internet outage interrupted this task mid-
+  session (screenshots captured, every "Visual observations" line left as a
+  genuine "pending inspection" placeholder, 3 pages not yet re-settled).
+  Resumed same day: Docker/local Postgres and the isolated QA app had both
+  stopped; the QA database no longer existed and was recreated, remigrated
+  and reseeded with a fresh disposable Owner/session identical to the
+  original setup. All 10 fully-available settled screenshots (`dashboard`,
+  `reports`, `reports/sales-trend`, `performance`, `tasks`, `inventory`,
+  `purchase`, `pos` at 390/1440, plus 3 multi-page comparison collages) were
+  actually visually inspected — zero layout defects found; only a cosmetic
+  Next.js dev-mode badge overlapping the bottom of a few mobile screenshots
+  (not a production bug) was noted. `/admin/users` and `/admin/branches`
+  screenshots are STALE pre-origin-fix loading-state captures that could not
+  be retaken this resumed pass — local browser automation repeatedly failed
+  to hold a connection (`Page.navigate timed out`, `local browser could not
+  be started`) even with Docker/the QA server confirmed healthy. Substituted
+  direct authenticated `GET /api/users` / `GET /api/branches` checks against
+  the same QA session, confirming both resolve to real settled data (not
+  stuck loading) — same evidence class as the other 10 pages, but explicitly
+  NOT a pixel screenshot; flagged for a real re-capture next time browser
+  automation is stable. Full write-up: `docs/ux1-device-qa-report.md`. QA
+  fixtures/dev server/dist dir cleaned up after; QA DB left migrated for
+  reuse.
+- [COMPLETE — awaiting next scheduled window] AUTOMATION-1a production: GET
+  fix `208d8e2` deployed READY as `dpl_6i84X5ksdBFpRpzimSFXuhdaqEqJ`;
+  CRON_SECRET provisioned securely, parent env-list readback confirmed.
+  Parent full unit suite 399/399, clean build and independent review (6/6
+  focused, no blockers). Native Vercel Run invoked at
+  `2026-10-30T12:50:46.938Z`; exact production request
+  `xm6gl-1793364647066-978465868da5` read back GET /api/cron/tasks, HTTP 200,
+  cache BYPASS. Public unauthenticated GET remains 401. MANUAL PLATFORM
+  EXECUTION VERIFIED, not inferred from trigger ack. Autonomous timer
+  delivery still awaits the next daily window (`0 3 * * *` UTC, next nominal
+  run 2026-10-31 03:00 UTC / 08:30 IST) — this has NOT happened yet as of
+  this checkpoint and cannot be verified before that window passes; do not
+  claim it already occurred. Evidence: `docs/production-cron-verification.md`.
+
+- **[PROVISIONED — infra only, not yet implemented] EVIDENCE-1**: user
+  approved real-time Vercel browser login (device flow,
+  `vercel.com/oauth/device`), confirmed signed in as `mking697`. Linked this
+  local working copy to the Vercel project (`manojs-projects-30be2a32/
+  restaurant-erp`). Created a new **private** Vercel Blob store
+  `restaurant-erp-evidence` (`store_BsYqQymhVkTPYDBa`, region `iad1`) and
+  linked it to the project; `BLOB_READ_WRITE_TOKEN` is now set for
+  Production, Preview AND Development environments (confirmed via
+  `vercel env ls production`), and `.env.local` was updated locally with
+  the same token for local dev (confirmed `.gitignore` covers `.env*`, so
+  this never reaches git). No application code was written this step —
+  actual camera/GPS capture UI, the real upload endpoint, signed-URL
+  read access and geofence checks are a separate implementation pass,
+  now unblocked to start.
+
+## PARALLEL BACKLOG PUSH — 5 agents dispatched same session (FINANCE-1/2, AUTOMATION-1b/1c, EVIDENCE-1)
+
+User approved proceeding on all remaining backlog items in one go after a
+scoped clarify round: FINANCE-1's chart of accounts, AUTOMATION-1b's
+staff-only WhatsApp scope (sandbox-only, no live send), and EVIDENCE-1's
+Blob-storage login were each explicitly confirmed; PURCHASE-3 stays
+explicitly skipped (user re-confirmed). 5 subagents ran concurrently against
+the SAME working tree (AUTOMATION-1c, FINANCE-2, FINANCE-1, AUTOMATION-1b,
+EVIDENCE-1) — all 5 delivered real application code; 2 of them
+(AUTOMATION-1c, FINANCE-2) were interrupted by their own runtime/turn limit
+before reaching their final verification+cleanup step, so the parent
+(this session) finished verification and cleanup for the whole batch
+instead of trusting each child's self-report.
+
+**Real bug found and fixed by parent verification, not by any agent**:
+the EVIDENCE-1 and AUTOMATION-1b agents each generated a Drizzle migration
+(`0012_evidence1_task_proofs_nullable.sql`, `0013_automation1b_reminder_and_
+daily_summary.sql`) but neither produced its matching `drizzle/meta/NNNN_
+snapshot.json` — concurrent `drizzle-kit generate` runs across the shared
+tree clobbered each other's snapshot bookkeeping. This silently broke the
+migration chain: a later `drizzle-kit generate` mis-detected drift against
+a stale snapshot and emitted a bogus duplicate migration
+(`0014_misty_chimera.sql`, re-doing exactly what 0012 already did), and
+(worse) a second, unrelated stray `0014_snapshot.json` file was left behind
+from that same race, which then made a *subsequent* `generate` wrongly
+report "No schema changes" by accident-matching against it instead of the
+real last-good snapshot. Fixed by: confirming via direct Postgres query that
+0011–0014 were NEVER applied to any shared/persistent database (only to
+disposable per-agent QA databases, already dropped) — so it was safe to
+delete all of 0011/0012/0013/0014's `.sql` files, the orphaned
+`0011_snapshot.json` and `0014_snapshot.json`, roll `_journal.json` back to
+end at `0010`, and run ONE fresh `drizzle-kit generate` against the full
+current (already cumulative) `schema.ts`. This produced a single correct
+consolidated migration, `drizzle/0011_rare_bucky.sql` (new `daily_summary_
+log` table + FKs/indexes, `task_proofs` 4 geofence columns now nullable,
+`task_instances.reminder_sent_at`, `journal_entries.leg` + its posting-key
+unique index), with a matching real snapshot. Verified clean: applied to a
+fresh disposable QA database from scratch with zero errors, then a repeat
+`drizzle-kit generate` against that confirmed database reported "No schema
+changes" (the correct, honest outcome this time — not the earlier
+accidental false match). **Lesson for future multi-agent passes on this
+project: concurrent subagents must never run `drizzle-kit generate`
+independently against the same shared working tree — serialize schema
+migration generation through the parent, or give each agent its own git
+worktree/branch.**
+
+**Also fixed by parent, not caught by any single agent**: a known recurring
+contamination risk (already documented elsewhere in this file) bit again —
+`APP_ORIGIN`, `PGDATABASE`, `NEXT_DIST_DIR` and other `PG*` vars leaked into
+this session's own shell from earlier QA server launches, which (a) made one
+real test (`branding.test.cjs`) falsely fail with 403 instead of 400 purely
+from environment contamination, not a code bug, and (b) made `next build`
+silently regenerate `tsconfig.json`/`next-env.d.ts` pointing at a stale
+`NEXT_DIST_DIR=.next-indent1c-buildqa` value instead of the default `.next`.
+Fixed by explicitly `unset`-ing every leaked var before each verification
+run and re-patching `tsconfig.json`/`next-env.d.ts` back to default,
+re-verified clean after.
+
+**Cleanup performed by parent** (each agent's own cleanup was incomplete
+given the interruptions above): killed 3 stray listening dev-server
+processes (ports 3031/3091/3915) left running by terminated children;
+removed 9 stray `.next-*` QA dist directories; dropped 7 disposable QA
+Postgres databases (`restaurant_erp_accounts_ledger_qa_20261030`,
+`restaurant_erp_automation1b_qa_20261030`, `restaurant_erp_evidence_qa_
+20261030`, `restaurant_erp_finance1_qa_20261030`, `restaurant_erp_
+indentspike_qa_20261030`, `restaurant_erp_purchase_qa_20261030`,
+`restaurant_erp_workforce_qa_20261030`) that were left behind when their
+owning subagent was interrupted before its own `finally`-style cleanup ran.
+
+**Final parent-run full regression after all 5 agents' work + the fixes
+above**: `npx tsc --noEmit --incremental false` — 0 errors. `npm test` —
+**414/414 passed** (up from 399 before this batch; 15 new unit tests across
+indent-spike, task-evidence, task-notifications, daily-summary-cron).
+`npx next build` — clean, new routes `/api/tasks/instances/[id]/evidence`
+and `/api/cron/daily-summary` present. A fresh-database migration replay
+(see the migration-chain fix above) applied cleanly end-to-end. No
+commit/push/production/Neon change — all of this is local, uncommitted;
+ask before committing/deploying.
+
+**Beyond unit tests — every relevant real HTTP+Postgres integration test
+was actually parent-run** (not just trusted from an interrupted agent's own
+claim), each against its own freshly migrated disposable QA database +
+isolated dev-server instance on a dedicated port, then torn down (server
+killed, QA database dropped, `.next-*` dist dir removed) immediately after:
+- `tests/accounts-ledger.integration.cjs` (FINANCE-1) — **15/15 passed**,
+  including the Balance Sheet staying balanced (Assets = Liabilities +
+  Equity) after a representative mix of all 5 posting event types.
+- `tests/indent-spike.integration.cjs` (AUTOMATION-1c) — **8/8 passed**.
+- `tests/task-notifications.integration.cjs` (AUTOMATION-1b) — **12/12
+  passed**, including the explicit precondition check that ChatXFlow is
+  NOT configured in that QA database so no live send was even possible.
+- `tests/expenses.integration.cjs` (FINANCE-1 expense/void journals +
+  FINANCE-2 revenue connection) — **16/16 passed**.
+- `tests/task-evidence.integration.cjs` (EVIDENCE-1) — **18/18 passed**,
+  but only after a real bug was found and fixed (next paragraph) — the
+  first run genuinely failed one check.
+
+**Real bug found by this parent integration run, not by the EVIDENCE-1
+agent's own (interrupted) verification**: `completeInstance` in
+`src/lib/server/tasks.ts` only ever checked a client-supplied
+`attachmentUrl` field (or the task instance's own already-stored
+`attachmentUrl` column) to satisfy the ONE_TIME "non-empty evidence"
+requirement. The new EVIDENCE-1 photo-upload flow writes its real evidence
+to a SEPARATE `task_proofs` row (keyed by `taskInstanceId`), never to
+`taskInstances.attachmentUrl` — so completing a task right after a real,
+successful photo upload still incorrectly 400'd with "Evidence attachment
+is required", even though real evidence had just been uploaded. Fixed by
+having `completeInstance` also look up any existing `task_proofs` row for
+that instance and treat its `photoUrl` as satisfying the requirement
+(falling back to it as the stored `attachmentUrl` too, so `instanceDTO`
+and every other reader see one consistent value regardless of which
+evidence path — old text/URL or new real photo — was used). Re-ran the
+full `task-evidence.integration.cjs` suite after the fix: 18/18 passed
+(was 5/6 before). Also reran `npm test` (414/414) and `tsc --noEmit`
+(0 errors) afterward to confirm the fix caused no regression elsewhere.
+
+**Lesson reinforced**: an individual subagent's own "all tests passed"
+claim, especially from one that was interrupted before its final
+verification step actually completed, is not sufficient evidence on this
+project — the parent must independently re-run the real HTTP+Postgres
+suites itself before accepting a status as COMPLETE, exactly as this
+batch's `task-evidence.integration.cjs` result demonstrates (an agent-
+reported "should be fine" would have shipped a real functional bug).
+
+Each individual item's own detailed implementation notes (account mapping,
+geofence behavior, message templates, rolling-average window) are expected
+to also appear further down in this file from each agent's own CLAUDE.md
+append — treat those as supplementary detail only; this section (with its
+own independently-executed test evidence) is the authoritative status.
+
+- FINANCE-1: real double-entry journal posting implemented against the
+  user-approved chart of accounts (Cash/Bank/Sales Revenue/Purchases-COGS/
+  VAT Payable/Accounts Payable/Rent/Utilities/Marketing/Other Expense/Salary
+  Expense/Owner's Equity) for petty cash IN/OUT, expense posting, finalized
+  payroll and aggregator settlement. Parent-verified via its own real
+  15/15 integration run above, not just the agent's claim.
+- FINANCE-2: real completed-POS revenue now connects into
+  `/api/accounts/profit-loss`; COGS/gross-profit remain explicitly
+  unavailable (not fabricated from recipe estimates), matching the existing
+  project-wide honesty convention. Parent-verified via the real 16/16
+  `expenses.integration.cjs` run above.
+- AUTOMATION-1c: real 30-day rolling-average spike detection against actual
+  posted GRN receipts now drives indent submission's APPROVED vs
+  PENDING_APPROVAL path (fixed >25% threshold, unchanged); fewer than 3 real
+  samples still correctly leaves spike data null rather than fabricated.
+  Parent-verified via its own real 8/8 integration run above.
+- AUTOMATION-1b: real staff/owner-facing WhatsApp automation (task due
+  reminders, overdue escalation, daily ~8AM summary) built on the existing
+  cron infrastructure; a NEW daily cron route `/api/cron/daily-summary` was
+  added to `vercel.json` — confirm it lands on a DIFFERENT hour than the
+  existing `/api/cron/tasks` `0 3 * * *` job and stays within this Vercel
+  plan's daily-only cron-frequency limit before ever deploying. No live
+  WhatsApp send occurred in any test (mocked/sandbox only, per instruction).
+  Confirmed already set correctly: `30 2 * * *` (02:30 UTC), a different
+  hour than the existing `0 3 * * *` job, both daily-only. Parent-verified
+  via its own real 12/12 integration run above.
+- EVIDENCE-1: real camera-capture + GPS-geofence + private-Blob-upload/
+  signed-URL-read flow now implemented for ONE_TIME task completion
+  evidence, replacing the old text/URL-only placeholder, on top of the
+  Blob store provisioned earlier this session. Parent-verified via its own
+  real 18/18 integration run above — the first run found and this session
+  fixed a real bug (see above): completion didn't recognize a freshly
+  uploaded real photo as satisfying the attachment requirement.
+- PURCHASE-3: still explicitly skipped, user re-confirmed this session.
+
+## LOCALIZATION — Tanzania currency + phone (scoped pass, this session)
+
+Restaurant operates in Tanzania. User explicitly scoped this pass to currency
+display + phone number format ONLY — GST/GSTR/HSN tax-rule logic is
+deliberately UNCHANGED and deferred until the user confirms Tanzania's actual
+VAT/TRA/TIN rules; do not silently reinterpret GST module semantics as VAT.
+
+- **Currency**: `src/lib/utils.ts` `formatInr()` renamed to `formatCurrency()`
+  (TZS, displayed as `TSh 12,345` — grouped integer, no `Intl` "currency"
+  style since `en-TZ`/`sw-TZ` ICU currency formatting isn't reliably
+  supported). Old `formatInr` name kept as an exported alias so none of its
+  6 existing call sites (`dashboard`, `cash-drop`, `purchase`, `pos`,
+  `shift-gate` page-contents) needed touching — they now render TZS
+  automatically. Raw hardcoded `₹` literals (not going through the
+  formatter) were changed to `TSh` in the actual app chrome: `ui-copy.ts`
+  translation catalog ("Amount (₹)"→"Amount (TSh)", "Coins (₹)"→
+  "Coins (TSh)", with matching call-site updates in `purchase/page-
+  content.tsx`, `accounts/legacy-demos.tsx`, `cash-drop/page-content.tsx` so
+  the Hinglish translation lookup keys stay matched).
+- **Phone**: Tanzanian mobile = 9 digits starting 6 or 7 (e.g. `712345678`),
+  optionally entered with a leading 0, normalized to `+255` E.164 — replaces
+  the old 10-digit-starting-6-9 Indian `+91` convention everywhere:
+  `src/lib/server/http.ts` `phone()` (login/user creation — the canonical
+  identifier), `src/lib/server/whatsapp-triggers.ts` `validOptionalPhone()`
+  (POS customer phone for WhatsApp Thank You), `src/lib/chatxflow.ts`
+  `normalizePhone()` (outbound ChatXFlow API call format). Client-side input
+  patterns/labels updated in `login/auth-form.tsx` and `admin/users/page-
+  content.tsx` (9-digit pattern, `255` strip-for-display regex instead of
+  `91`). `ui-copy.ts` validation message and the in-app/offline Guide Book's
+  Users & Access + preferences text updated to say "9-digit ... without
+  +255" instead of "10-digit ... without +91" (`guide-content.ts`,
+  `guide/page-content.tsx`, `docs/restaurant-erp-archify.html`'s embedded
+  MODULES/EXAMPLES JSON kept in parity).
+- **Explicitly NOT touched this pass** (user's own scope decision): GST rate/
+  calculation logic (`src/lib/server/gst.ts`), GSTR-1 HSN export
+  (`src/app/api/gst/gstr1-hsn-summary`, `src/lib/server/gstr.ts`,
+  `/gst-export` page), `GSTIN`/HSN field names and the GST-state-code vendor/
+  branch fields, and the large historical prose in `guide-examples.ts`'s
+  practice-walkthrough `₹` amount examples (lower-risk informational text,
+  not functional code — flagged as a known follow-up, not silently dropped).
+  Database column/field names (`refundAmountInr`, `cashVarianceInr`, etc.)
+  were also deliberately left as-is — renaming them is a schema-adjacent
+  naming change outside this pass's scope, not a currency-display bug.
+- **Verification**: 2 existing tests broke from this change and were fixed
+  (not weakened) to match the new Tanzania format: `tests/auth.test.cjs`
+  (`phone()` normalization), `tests/whatsapp-triggers.test.cjs`
+  (`validOptionalPhone()`), `tests/purchase-ui.test.cjs` (stale `Amount (₹)`
+  field-lookup string), `tests/guide-examples.test.cjs` (standalone HTML
+  parity, fixed by syncing `restaurant-erp-archify.html`'s embedded JSON).
+  Full regression after all fixes: `npm test` **399/399 passed**,
+  `npx tsc --noEmit --incremental false` **0 errors**, `npx next build`
+  **clean**, all existing routes compiled. No database migration, no
+  committed/pushed/deployed change — this is local, uncommitted source only;
+  ask before committing/deploying.
+- **Follow-up, explicitly deferred to a future session** (user's own
+  choice): GST→Tanzania VAT (18% standard rate, TRA/TIN instead of GSTIN/
+  HSN) conversion of the tax calculation/filing-export module; EFD
+  (Electronic Fiscal Device) receipt requirements if applicable; syncing the
+  remaining `₹`-amount prose in `guide-examples.ts`'s walkthrough text.
+
+## NEXT SESSION — DEFERRED BACKLOG (user requested tomorrow)
+
+Work one item at a time after checking current source and this checkpoint.
+No implementation of these items is authorized for today's two-item scope.
+- FINANCE-1: obtain accountant-approved source-event debit/credit accounts,
+  posting dates, rounding, reversal/cancellation and replay rules; then
+  implement idempotent journals with rollback/replay/real-PG acceptance.
+- FINANCE-2: agree actual revenue/posted COGS and labor allocation sources;
+  connect P&L/prime cost without presenting recipe estimates as actual COGS.
+- EVIDENCE-1: provision approved Blob storage and securely configure provider
+  access (never paste tokens into chat). Confirm private access/retention,
+  consent, GPS/geofence rules; then implement and test real upload/access.
+- AUTOMATION-1b: confirm WhatsApp recipients, consent, schedule, templates,
+  escalation/expiry policy and sandbox acceptance; no customer test sends.
+- AUTOMATION-1c: confirm indent rolling-average window, exclusions, minimum
+  samples and spike thresholds; implement against actual persisted data.
+- PURCHASE-3: remains user-deferred; only resume on explicit approval.
+  Scope: vendor invoices/three-way matching, physical-return and acceptance
+  evidence, actual refund/credit settlement and reconciliation.
+
 
 - [COMPLETE] RELEASE-1: Phase 2/3 deployed as `5686996` after the store-PO approval fix
   in the real POST and UI; parent ran 213/213 unit tests, clean
@@ -105,7 +449,8 @@ part of this release.
   recurring occurrences (idempotent via existing unique indexes, bounded
   missed-day catch-up, one instance per active branch for a global definition)
   and escalates anything 30+ minutes overdue (single-shot WHERE-guarded
-  update). `vercel.json` gained a `crons` entry, config only, not deployed.
+  update). Daily Vercel cron is deployed; GET/auth fix and actual platform
+  Run HTTP-200 evidence are recorded in today's checkpoint above.
   Parent: 398/398 unit, 41/41 focused, clean typecheck/build, 7/7 real HTTP/PG
   dev+compiled; browser cron-POST->visible-on-/tasks confirmed; independent
   review passed, no blockers. AUTOMATION-1b/1c (WhatsApp sends, indent

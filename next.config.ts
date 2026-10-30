@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
   // Isolated QA/build output avoids corrupting a concurrently running local dev server.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      // Evidence capture needs first-party camera/GPS permission on Tasks only;
+      // every other page retains the restrictive default above.
+      { source: "/tasks", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self)" }] },
+    ];
   },
 };
 

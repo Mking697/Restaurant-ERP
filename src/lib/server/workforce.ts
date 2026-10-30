@@ -7,6 +7,7 @@ import { employees, employeeCompensation, workforceAttendance, workforceLeaves, 
 import { mutate, requireIdentity, type Executor } from './auth';
 import { api, body, json, string } from './http';
 import { assertModule, branchScope, HttpError, type Identity } from './permissions';
+import { postPayrollFinalizeJournal } from './accounts-ledger';
 import { allowedFields as fields, assertEmployeeUserLinkChange, assertReviewActor, canSubmitOthers, rateEffectiveDate, leaveReviewMetadata } from './workforce-policy';
 import { businessDate, calculatePayroll, day, money, monthRange, paise } from './workforce-calculation';
 
@@ -85,7 +86,7 @@ export async function payroll(tx:Executor,actor:Identity,branch:unknown,monthVal
  if(finalize&&end>=businessDate())throw new HttpError(409,'Only completed calendar months can be finalized');
  const es=(await tx.select().from(employees).where(and(eq(employees.branchId,b),lte(employees.joinedOn,end))).orderBy(employees.id)).filter(e=>!e.leftOn||e.leftOn>=start);const rows=[];
  for(const e of es){const rates=await compensation(tx,e.id),marks=await tx.select().from(workforceAttendance).where(and(eq(workforceAttendance.employeeId,e.id),gte(workforceAttendance.date,start),lte(workforceAttendance.date,end))),leaves=await tx.select().from(workforceLeaves).where(and(eq(workforceLeaves.employeeId,e.id),lte(workforceLeaves.startDate,end),gte(workforceLeaves.endDate,start)));rows.push(calculatePayroll(e,rates,marks,leaves,month));}
- if(finalize){if(rows.some(r=>r.missingDates.length))throw new HttpError(409,'Missing attendance dates block payroll finalization');const runId=randomUUID();await tx.insert(payrollRuns).values({id:runId,branchId:b,month,finalizedById:actor.id});for(const row of rows){row.status='FINAL';await tx.insert(payrollSnapshots).values({id:randomUUID(),runId,branchId:b,employeeId:row.employeeId,month,amount:row.amount,snapshot:row});}}
+ if(finalize){if(rows.some(r=>r.missingDates.length))throw new HttpError(409,'Missing attendance dates block payroll finalization');const runId=randomUUID();const [run]=await tx.insert(payrollRuns).values({id:runId,branchId:b,month,finalizedById:actor.id}).returning();for(const row of rows){row.status='FINAL';await tx.insert(payrollSnapshots).values({id:randomUUID(),runId,branchId:b,employeeId:row.employeeId,month,amount:row.amount,snapshot:row});}const total=money(rows.reduce((n,r)=>n+decimalPaise(r.amount),BigInt(0)));await postPayrollFinalizeJournal(tx,actor,{id:run.id,branchId:b},total);}
  return {month,rows,total:money(rows.reduce((n,r)=>n+decimalPaise(r.amount),BigInt(0))),finalized:finalize};
 }
 function decimalPaise(value:string){const [a,b='']=value.split('.');return BigInt(a)*BigInt(100)+BigInt(b.padEnd(2,'0'));}

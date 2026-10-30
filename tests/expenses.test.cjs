@@ -45,7 +45,7 @@ test('idempotent replay is exact payload only and void keeps immutable entry plu
  assert.throws(() => voidExpenseChanges({ ...original, status: 'VOID' }, { reason: 'Duplicate invoice entry' }, accountant), { status: 409 });
  for (const value of [{ reason: '' }, { reason: 'x' }, { reason: 'Valid reason', amount: '1' }]) assert.throws(() => voidExpenseChanges(original, value, accountant), { status: 400 });
 });
-test('expense-side P&L sums paise exactly, excludes voids and never invents sales or profit', () => {
+test('expense-side P&L sums paise exactly, excludes voids, connects real revenue and never invents COGS/gross profit', () => {
  const { expenseProfitLoss } = load();
  const rows = [
   { category: 'RENT', amount: '100.10', status: 'POSTED' },
@@ -53,13 +53,20 @@ test('expense-side P&L sums paise exactly, excludes voids and never invents sale
   { category: 'OTHER', amount: '999.00', status: 'VOID' },
   { category: 'MARKETING', amount: '20.00', status: 'POSTED' },
  ];
- const report = expenseProfitLoss('2024-02', rows, [{ amount: '103.33' }, { amount: '99.99' }]);
+ const report = expenseProfitLoss('2024-02', rows, [{ amount: '103.33' }, { amount: '99.99' }], '500.00');
  assert.deepEqual(report.expenses, { RENT: '100.30', UTILITIES: '0.00', MARKETING: '20.00', OTHER: '0.00' });
  assert.equal(report.laborCost, '203.32'); assert.equal(report.totalOperatingExpenses, '323.62');
- for (const key of ['revenue', 'cogs', 'grossProfit', 'netProfit']) assert.equal(report[key], null);
- assert.equal(report.salesConnected, false); assert.match(report.notes.join(' '), /finalized/i); assert.match(report.notes.join(' '), /aggregate/i);
- assert.equal(expenseProfitLoss('2024-02', [], []).totalOperatingExpenses, '0.00');
- assert.throws(() => expenseProfitLoss('2024-02', [{ category: 'RENT', amount: 'NaN', status: 'POSTED' }], []));
+ assert.equal(report.revenue, '500.00'); assert.equal(report.netProfit, '176.38');
+ assert.equal(report.cogs, null); assert.equal(report.grossProfit, null);
+ assert.equal(report.salesConnected, true); assert.match(report.notes.join(' '), /finalized/i); assert.match(report.notes.join(' '), /COGS/i);
+ // Revenue below operating expenses correctly produces a negative net-of-opex figure, not a crash/clamp to zero.
+ const loss = expenseProfitLoss('2024-02', rows, [{ amount: '103.33' }, { amount: '99.99' }], '100.00');
+ assert.equal(loss.netProfit, '-223.62');
+ assert.equal(expenseProfitLoss('2024-02', [], [], '0.00').totalOperatingExpenses, '0.00');
+ // Zero completed sales for the month must show a real "0.00" revenue, never null/crash.
+ const zeroSales = expenseProfitLoss('2024-02', [], [], '0.00');
+ assert.equal(zeroSales.revenue, '0.00'); assert.equal(zeroSales.netProfit, '0.00');
+ assert.throws(() => expenseProfitLoss('2024-02', [{ category: 'RENT', amount: 'NaN', status: 'POSTED' }], [], '0.00'));
 });
 test('expense schema enforces scoped replay uniqueness, positive money and complete void audit', () => {
  const { getTableConfig } = require('drizzle-orm/pg-core');

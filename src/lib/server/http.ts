@@ -37,9 +37,12 @@ export function phone(value: unknown) {
   const result = string(value, "mobile number", 16);
   // Keep the canonical identifier unchanged so existing accounts, unique keys,
   // WhatsApp delivery and login throttling use the same value in both formats.
-  if (/^[6-9]\d{9}$/.test(result)) return `+91${result}`;
+  // Tanzanian mobile numbers: 9 digits starting 6 or 7 (local E.164 national
+  // number, e.g. 712345678), optionally entered with a leading 0 (0712345678).
+  if (/^[67]\d{8}$/.test(result)) return `+255${result}`;
+  if (/^0[67]\d{8}$/.test(result)) return `+255${result.slice(1)}`;
   if (/^\+[1-9]\d{7,14}$/.test(result)) return result; // Existing API clients.
-  throw new HttpError(400, "Enter a valid 10-digit mobile number");
+  throw new HttpError(400, "Enter a valid Tanzanian mobile number");
 }
 export function numeric(value: unknown, field: string, fallback = "0"): string {
   const result = value === undefined ? fallback : String(value);

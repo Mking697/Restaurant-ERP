@@ -11,7 +11,14 @@ function withMockedRoute(fn) {
   Module._load = function (request, parent, isMain) {
     if (request === '@/db/client') return { db: { transaction: async (run) => run({ execute: async () => {} }) } };
     if (request === '@/lib/server/task-generation') {
-      return { generateRecurringOccurrences: async () => 3, escalateOverdueInstances: async () => 2 };
+      return {
+        generateRecurringOccurrences: async () => 3,
+        escalateOverdueInstances: async () => ([{ id: 'e1', branchId: 'b1', assignedToId: 'u1', title: 'T', dueAt: new Date() }, { id: 'e2', branchId: 'b1', assignedToId: 'u2', title: 'T2', dueAt: new Date() }]),
+        claimDueTaskReminders: async () => ([{ id: 'r1', branchId: 'b1', assignedToId: 'u3', title: 'T3', dueAt: new Date() }]),
+      };
+    }
+    if (request === '@/lib/server/task-notifications') {
+      return { sendDueTaskReminders: async () => 1, sendTaskEscalationNotices: async () => 2 };
     }
     if (request.startsWith('@/')) return originalLoad.call(this, path.join(__dirname, '../src', request.slice(2)), parent, isMain);
     return originalLoad.call(this, request, parent, isMain);
@@ -19,7 +26,8 @@ function withMockedRoute(fn) {
   // Force a fresh require of the route + its dependency chain under the mocks.
   for (const key of Object.keys(require.cache)) {
     if (key.includes(`${path.sep}src${path.sep}app${path.sep}api${path.sep}cron${path.sep}tasks${path.sep}route`) ||
-        key.includes(`${path.sep}src${path.sep}lib${path.sep}server${path.sep}auth`)) delete require.cache[key];
+        key.includes(`${path.sep}src${path.sep}lib${path.sep}server${path.sep}auth`) ||
+        key.includes(`${path.sep}src${path.sep}lib${path.sep}server${path.sep}cron-auth`)) delete require.cache[key];
   }
   try { return fn(); } finally { Module._load = originalLoad; }
 }
@@ -37,7 +45,7 @@ test('Vercel scheduler GET uses the same bearer-only handler as POST', async () 
       });
       const response = await route.GET(request);
       assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), { generated: 3, escalated: 2 });
+      assert.deepEqual(await response.json(), { generated: 3, escalated: 2, remindersSent: 1, escalationNoticesSent: 2 });
       assert.equal((await route.GET(new Request(request.url))).status, 401);
       delete process.env.CRON_SECRET;
       assert.equal((await route.GET(request)).status, 401);
@@ -109,7 +117,7 @@ test('cron route runs generation then escalation and returns exact counts on a c
       const route = require('../src/app/api/cron/tasks/route.ts');
       const res = await route.POST(post('correct-secret-value-123'));
       assert.equal(res.status, 200);
-      assert.deepEqual(await res.json(), { generated: 3, escalated: 2 });
+      assert.deepEqual(await res.json(), { generated: 3, escalated: 2, remindersSent: 1, escalationNoticesSent: 2 });
     } finally { if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous; }
   });
 });

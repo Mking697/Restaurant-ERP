@@ -16,3 +16,4 @@ export * from "./whatsapp";
 export * from "./warehouses";
 export * from "./currency";
 export * from "./shifts";
+export * from "./notifications";

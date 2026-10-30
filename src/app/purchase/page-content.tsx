@@ -409,7 +409,7 @@ export default function PurchasePage() {
                   ))}
                 </>
               )}
-              {poForm.isGeneral && <Field label={uiText("Amount (₹)")}>
+              {poForm.isGeneral && <Field label={uiText("Amount (TSh)")}>
                 <input
                   type="number"
                   min="0"

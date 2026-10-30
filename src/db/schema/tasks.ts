@@ -136,6 +136,12 @@ export const taskInstances = pgTable(
     // not here — a DB CHECK constraint can't see "was this just completed".
     attachmentUrl: text("attachment_url").notNull().default(""),
     overdueEscalatedAt: timestamp("overdue_escalated_at", { withTimezone: true }), // 30-min overdue cron
+    // AUTOMATION-1b — one-shot WhatsApp due-reminder guard. Set exactly once,
+    // atomically, the first time a cron tick observes dueAt <= now while this
+    // is still PENDING/IN_PROGRESS (see claimDueTaskReminders). NULL = no
+    // reminder sent yet; never cleared/updated afterward, same immutable-once-
+    // set convention as overdueEscalatedAt above.
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     misPenaltyPoints: numeric("mis_penalty_points", { precision: 5, scale: 2 }),
     // Durable per-cycle identity independent of which calendar day the occurrence was
     // actually generated on — a missed cycle carried forward across two different
@@ -156,17 +162,29 @@ export const taskInstances = pgTable(
   ]
 );
 
+// EVIDENCE-1 (real implementation): one row per ONE_TIME task instance's
+// uploaded completion photo. photoUrl stores the PRIVATE Vercel Blob
+// pathname (e.g. "evidence/<branchId>/<taskInstanceId>/<ts>-<rand>.jpg"),
+// never a public URL — the store is private, so reads always go through a
+// short-lived signed URL (see src/lib/server/task-evidence.ts). lat/lng/
+// distanceFromBranchM/withinGeofence are nullable: geolocation is captured
+// best-effort client-side and this feature FAILS OPEN — permission denied
+// or an unconfigured branch (no real lat/lng yet) must never block task
+// completion, and a null here always means "not available", never a
+// fabricated true/false. exifTimestamp is set server-side to the upload
+// time (not decoded from file EXIF, which browsers strip on file-input
+// capture) — kept NOT NULL since the server always knows this.
 export const taskProofs = pgTable("task_proofs", {
   id: text("id").primaryKey(),
   taskInstanceId: text("task_instance_id")
     .notNull()
     .unique()
     .references(() => taskInstances.id),
-  photoUrl: text("photo_url").notNull(), // live WebRTC capture only, no gallery upload
-  lat: numeric("lat").notNull(),
-  lng: numeric("lng").notNull(),
-  distanceFromBranchM: numeric("distance_from_branch_m").notNull(),
-  withinGeofence: boolean("within_geofence").notNull(),
+  photoUrl: text("photo_url").notNull(),
+  lat: numeric("lat"),
+  lng: numeric("lng"),
+  distanceFromBranchM: numeric("distance_from_branch_m"),
+  withinGeofence: boolean("within_geofence"),
   exifTimestamp: timestamp("exif_timestamp", { withTimezone: true }).notNull(),
   livenessVerified: boolean("liveness_verified").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

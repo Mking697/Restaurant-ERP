@@ -110,7 +110,7 @@ function PettyCashPanel({ branchId, month, setMonth }: { branchId: string; month
                 <option value="IN">{uiText("IN (top-up / refund)", "IN (top-up / refund)")}</option>
               </select>
             </Field>
-            <Field label={uiText("Amount (₹)", "Amount (₹)")}>
+            <Field label={uiText("Amount (TSh)", "Amount (TSh)")}>
               <input className={inputClass} type="number" min="0.01" step="0.01" required value={entry.amount} onChange={e => setEntry({ ...entry, amount: e.target.value })} />
             </Field>
             <Field label={uiText("Description", "Vivaran")}>

@@ -105,7 +105,7 @@ test('leave review controls never expose own requests or unverified identity met
 test('Payroll-only grant can view aggregate P&L but cannot post or inspect expenses', () => {
   const html = render('src/app/accounts/page-content.tsx',['PAYROLL']);
   assert.match(html,/Profit &amp; Loss/);
-  assert.match(html,/not connected, not zero/);
+  assert.match(html,/COGS and gross profit remain unavailable/);
   assert.doesNotMatch(html,/Post expense|Save expense|Saved expenses<|Reference<|Petty Cash Entry/);
 });
 module.exports = {render};

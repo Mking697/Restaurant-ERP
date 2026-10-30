@@ -9,11 +9,12 @@ const test = require("node:test"); const assert = require("node:assert/strict");
 const { hashPassword, verifyPassword, validPassword } = require("../src/lib/server/password.ts");
 const { branchScope, assertDelegation, assertUserAdmin, assertOwner, assertModule, validateGrants, safeUser } = require("../src/lib/server/permissions.ts");
 const { assertSameOrigin, phone } = require("../src/lib/server/http.ts");
-test("ten-digit mobile login normalizes to the existing Indian account identifier", () => {
- assert.equal(phone("6392578428"), "+916392578428");
- assert.equal(phone(" 6392578428 "), "+916392578428");
- assert.equal(phone("+916392578428"), "+916392578428");
- for (const value of ["639257842", "63925784289", "63925a8428", "", null, 6392578428]) assert.throws(() => phone(value));
+test("nine-digit mobile login normalizes to the Tanzanian E.164 identifier", () => {
+ assert.equal(phone("712345678"), "+255712345678");
+ assert.equal(phone(" 712345678 "), "+255712345678");
+ assert.equal(phone("0712345678"), "+255712345678");
+ assert.equal(phone("+255712345678"), "+255712345678");
+ for (const value of ["71234567", "7123456789", "71234a678", "", null, 712345678]) assert.throws(() => phone(value));
 });
 const owner = { id: "owner", name: "Owner", phoneE164: "+919999999999", role: "SUPER_ADMIN", branchId: null, moduleAccess: [], status: "Active" };
 const manager = { ...owner, id: "manager", role: "BRANCH_MANAGER", branchId: "b1", moduleAccess: ["INVENTORY", "USER_ADMIN"] };

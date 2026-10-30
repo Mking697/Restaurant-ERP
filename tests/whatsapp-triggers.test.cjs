@@ -5,12 +5,13 @@ const ts = require('typescript');
 require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
 const load = () => require('../src/lib/server/whatsapp-triggers.ts');
 
-test('validOptionalPhone accepts empty, bare 10-digit and 91-prefixed; rejects junk', () => {
+test('validOptionalPhone accepts empty, bare 9-digit and 255-prefixed; rejects junk', () => {
   const { validOptionalPhone } = load();
   assert.equal(validOptionalPhone(undefined), '');
   assert.equal(validOptionalPhone(''), '');
-  assert.equal(validOptionalPhone('9876543210'), '9876543210');
-  assert.equal(validOptionalPhone('+91 98765 43210'), '919876543210');
+  assert.equal(validOptionalPhone('712345678'), '712345678');
+  assert.equal(validOptionalPhone('+255 712 345 678'), '712345678');
+  assert.equal(validOptionalPhone('0712345678'), '712345678');
   assert.throws(() => validOptionalPhone('12345'), { status: 400 });
   assert.throws(() => validOptionalPhone('0123456789'), { status: 400 });
   assert.throws(() => validOptionalPhone(12345), { status: 400 });
@@ -30,4 +31,31 @@ test('offerMessage includes branch, text and optional validity', () => {
   assert.match(msg, /Saket/); assert.match(msg, /20% off today/); assert.match(msg, /31 Oct/);
   const noExpiry = offerMessage({ offerText: 'Free dessert', validUntil: '', branchName: 'B3' });
   assert.doesNotMatch(noExpiry, /Valid tak/);
+});
+
+test('taskReminderMessage includes doer name, title, branch and defaults a blank name', () => {
+  const { taskReminderMessage } = load();
+  const due = new Date('2026-10-30T03:30:00.000Z'); // 09:00 IST
+  const msg = taskReminderMessage({ doerName: 'Priya', title: 'Closing checklist', branchName: 'B1', dueAt: due });
+  assert.match(msg, /Priya/); assert.match(msg, /Closing checklist/); assert.match(msg, /B1/); assert.match(msg, /09:00/);
+  const blank = taskReminderMessage({ doerName: '  ', title: 'T', branchName: 'B2', dueAt: due });
+  assert.match(blank, /Team/);
+});
+
+test('taskEscalationMessage flags overdue, names the doer and branch, defaults an unknown doer', () => {
+  const { taskEscalationMessage } = load();
+  const due = new Date('2026-10-30T03:30:00.000Z');
+  const msg = taskEscalationMessage({ title: 'Opening checklist', doerName: 'Amit', branchName: 'B4', dueAt: due });
+  assert.match(msg, /OVERDUE/); assert.match(msg, /Amit/); assert.match(msg, /B4/); assert.match(msg, /Opening checklist/);
+  const blank = taskEscalationMessage({ title: 'T', doerName: '', branchName: 'B5', dueAt: due });
+  assert.match(blank, /the assigned staff member/);
+});
+
+test('dailySummaryMessage reports sales/overdue/handover, and handles unavailable sales data', () => {
+  const { dailySummaryMessage } = load();
+  const msg = dailySummaryMessage({ branchName: 'B6', completedSales: 12, overdueTasks: 2, pendingHandover: true });
+  assert.match(msg, /B6/); assert.match(msg, /12 completed sale/); assert.match(msg, /2 overdue task/); assert.match(msg, /handover pending/);
+  const noSales = dailySummaryMessage({ branchName: 'B7', completedSales: null, overdueTasks: 0, pendingHandover: false });
+  assert.match(noSales, /sales data not available/);
+  assert.doesNotMatch(noSales, /handover pending/);
 });

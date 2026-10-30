@@ -159,7 +159,7 @@ test('purchase dialog translations describe persisted approval-bound purchases i
 
 test('general purchase omits indent and never sends raw-material lines', async () => {
   const h = await pageHarness(); h.general(true);
-  h.change('Branch', 'a'); h.change('Vendor', 'v'); h.change('Item description', 'Chair repair'); h.change('Amount (₹)', '500');
+  h.change('Branch', 'a'); h.change('Vendor', 'v'); h.change('Item description', 'Chair repair'); h.change('Amount (TSh)', '500');
   assert.equal(!!h.submit().props.disabled, false);
   await h.submit().props.onClick();
   assert.deepEqual(h.posts, [{ branchId: 'a', vendorId: 'v', isGeneralPurchase: true, lines: [{ itemDescription: 'Chair repair', qty: '1', rate: '500' }] }]);

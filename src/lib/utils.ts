@@ -5,12 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatInr(value: number | string): string {
+// Tanzanian Shilling (TZS). Intl's "en-TZ"/"sw-TZ" currency formatting is not
+// reliably supported across Node/browser ICU builds, so this formats the
+// number with grouping and prefixes the common local "TSh" notation
+// (e.g. "TSh 12,500") rather than relying on style:"currency".
+export function formatCurrency(value: number | string): string {
   const n = typeof value === "string" ? Number(value) : value;
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
-    n || 0
-  );
+  return `TSh ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n || 0)}`;
 }
+// Back-compat alias — same formatter, old name. Prefer formatCurrency in new code.
+export const formatInr = formatCurrency;
 
 export function formatPercent(value: number | string, digits = 1): string {
   const n = typeof value === "string" ? Number(value) : value;

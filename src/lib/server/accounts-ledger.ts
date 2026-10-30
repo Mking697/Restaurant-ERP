@@ -67,6 +67,152 @@ export async function ensureLedgerBranch(tx: Executor, branchId: string | null) 
 }
 
 // ---------------------------------------------------------------------------
+// FINANCE-1: real double-entry journal postings for petty cash, posted
+// expenses, finalized payroll and aggregator settlements, against the
+// 12-account user-approved chart of accounts seeded by seedLedgerAccounts
+// (Cash, Bank, Sales Revenue, Purchases/COGS, VAT Payable (18%), Accounts
+// Payable, Rent/Utilities/Marketing/Other/Salary Expense, Owner's Equity).
+//
+// Idempotency/replay-safety: every posting goes through postJournalLeg,
+// which is keyed by (referenceType, referenceId, leg) — the same triple is
+// enforced UNIQUE at the DB level (journal_entries_posting_key_unique).
+// Posting the same source event twice (client retry, webhook replay) is a
+// silent, safe no-op: the existing row is returned, nothing is re-inserted
+// and no duplicate ever reaches the Balance Sheet. All postings run inside
+// the caller's own transaction (always the single global advisory-lock
+// `mutate()`/`locked()` transaction already used throughout this codebase),
+// so a rolled-back source event (e.g. a failed insert) always rolls its
+// journal rows back with it — never an orphan journal.
+//
+// Rounding: every amount here is already a persisted 2-decimal-place value
+// (numeric(_, 2) columns) by the time it reaches these functions, and no
+// division ever occurs in this file, so no fractional residue can arise;
+// if a future posting rule did need to split an amount, any residual cent
+// must be accumulated into Other Expense (5400)/Sales Revenue, per the
+// documented convention, rather than silently dropped.
+// ---------------------------------------------------------------------------
+
+const EXPENSE_ACCOUNT_CODE: Record<string, string> = { RENT: "5100", UTILITIES: "5200", MARKETING: "5300", OTHER: "5400" };
+
+async function accountsByCode(tx: Executor): Promise<Map<string, string>> {
+  const rows = await tx.select({ id: ledgerAccounts.id, code: ledgerAccounts.code }).from(ledgerAccounts).where(isNull(ledgerAccounts.branchId));
+  return new Map(rows.map(r => [r.code, r.id]));
+}
+function requireAccount(byCode: Map<string, string>, code: string): string {
+  const id = byCode.get(code);
+  if (!id) throw new HttpError(409, `Chart of accounts not seeded: account ${code} missing. POST /api/accounts/balance-sheet as Owner first.`);
+  return id;
+}
+/** Posts one balanced debit/credit journal row for a single "leg" of a
+ * source event, or silently returns the existing row if this exact
+ * (referenceType, referenceId, leg) was already posted — the real replay
+ * guard. Skips (returns null) for a zero amount leg rather than posting a
+ * meaningless 0.00 double-entry row. */
+export async function postJournalLeg(tx: Executor, params: {
+  branchId: string; description: string; debitAccountId: string; creditAccountId: string;
+  amount: string; referenceType: string; referenceId: string; leg?: number; createdById: string | null;
+}) {
+  const { branchId, description, debitAccountId, creditAccountId, amount, referenceType, referenceId, createdById } = params;
+  const leg = params.leg ?? 0;
+  if (paise(amount) === 0n) return null;
+  const [existing] = await tx.select().from(journalEntries)
+    .where(and(eq(journalEntries.referenceType, referenceType), eq(journalEntries.referenceId, referenceId), eq(journalEntries.leg, leg))).limit(1);
+  if (existing) return existing;
+  const [row] = await tx.insert(journalEntries).values({
+    id: randomUUID(), branchId, description, debitAccountId, creditAccountId, amount,
+    referenceType, referenceId, leg, createdById,
+  }).returning();
+  return row;
+}
+/** Petty cash IN (HQ top-up/refund credit): Debit Cash, Credit Owner's
+ * Equity. Petty cash entries have no "source" field beyond IN/OUT, and the
+ * schema's own comment documents IN as "top-up from HQ" — Owner's Equity is
+ * the one reasonable existing account for that without fabricating a new
+ * concept. Petty cash OUT (branch expense): Debit Other Expense, Credit
+ * Cash. Petty cash entries also carry no category field (only free-text
+ * description), so the 1:1 RENT/UTILITIES/MARKETING/OTHER category mapping
+ * used for /api/accounts/expenses cannot be applied here without guessing a
+ * category from text — posting every petty cash OUT to Other Expense is the
+ * one documented, consistent rule instead. Both directions use the approved
+ * chart's "Cash" account (1000), never the separate legacy "Petty Cash"
+ * (1010) sub-asset row. */
+export async function postPettyCashJournal(tx: Executor, actor: Identity, entry: { id: string; branchId: string; entryType: "IN" | "OUT"; amount: string }) {
+  const byCode = await accountsByCode(tx);
+  const cash = requireAccount(byCode, "1000");
+  if (entry.entryType === "IN") {
+    const equity = requireAccount(byCode, "3000");
+    return postJournalLeg(tx, { branchId: entry.branchId, description: "Petty cash top-up", debitAccountId: cash, creditAccountId: equity, amount: entry.amount, referenceType: "PETTY_CASH_IN", referenceId: entry.id, createdById: actor.id });
+  }
+  const otherExpense = requireAccount(byCode, "5400");
+  return postJournalLeg(tx, { branchId: entry.branchId, description: "Petty cash expense", debitAccountId: otherExpense, creditAccountId: cash, amount: entry.amount, referenceType: "PETTY_CASH_OUT", referenceId: entry.id, createdById: actor.id });
+}
+/** Accounts expense posting (/api/accounts/expenses POST): Debit the
+ * category's mapped Expense account, Credit Accounts Payable — NOT Cash.
+ * Rule (documented, single and consistent): this endpoint records a vendor/
+ * branch expense being recognized, not a cash disbursement event on its own
+ * — petty cash OUT (postPettyCashJournal above) is the dedicated cash-
+ * settlement path for branch expenses actually paid from the till. Keeping
+ * the two event types financially distinct (branchExpenses always credits
+ * Accounts Payable; pettyCashEntries OUT always credits Cash) avoids
+ * guessing a payment method from free text and avoids double-crediting Cash
+ * for the same real-world expense if a branch later also logs a petty cash
+ * OUT for it. */
+export async function postExpenseJournal(tx: Executor, actor: Identity, expense: { id: string; branchId: string; category: string; amount: string }) {
+  const byCode = await accountsByCode(tx);
+  const expenseCode = EXPENSE_ACCOUNT_CODE[expense.category];
+  if (!expenseCode) throw new HttpError(409, `No chart-of-accounts mapping for expense category ${expense.category}`);
+  const debit = requireAccount(byCode, expenseCode), payable = requireAccount(byCode, "2000");
+  return postJournalLeg(tx, { branchId: expense.branchId, description: "Branch expense posted", debitAccountId: debit, creditAccountId: payable, amount: expense.amount, referenceType: "EXPENSE", referenceId: expense.id, createdById: actor.id });
+}
+/** Voided expense: an EXACT reversing entry (debit/credit swapped vs the
+ * original posting), keyed as a separate reference type ("EXPENSE_VOID")
+ * against the same expense id — the original EXPENSE journal row is never
+ * mutated or deleted (immutable audit trail, same principle as GRN/payroll
+ * elsewhere in this codebase). */
+export async function postExpenseVoidJournal(tx: Executor, actor: Identity, expense: { id: string; branchId: string; category: string; amount: string }) {
+  const [original] = await tx.select().from(journalEntries)
+    .where(and(eq(journalEntries.referenceType, "EXPENSE"), eq(journalEntries.referenceId, expense.id), eq(journalEntries.leg, 0))).limit(1);
+  // Legacy expenses predate journal posting: void the source without inventing
+  // a reversal of a debit/credit that never existed.
+  if (!original) return null;
+  return postJournalLeg(tx, { branchId: original.branchId, description: "Reversal of voided branch expense", debitAccountId: original.creditAccountId, creditAccountId: original.debitAccountId, amount: original.amount, referenceType: "EXPENSE_VOID", referenceId: expense.id, leg: original.leg, createdById: actor.id });
+}
+/** Finalized (FINAL, immutable) payroll run: Debit Salary Expense, Credit
+ * Accounts Payable for the exact finalized total — payroll not yet
+ * disbursed is a real liability, not cash paid out yet. Posted once per
+ * payroll run id (payrollRuns has its own (branchId, month) uniqueness, so
+ * this can only ever be reached once per branch/month in the first place —
+ * see workforce.ts `payroll()`'s `if (run) return ...` early-exit on
+ * replay — the journal-level idempotency key is defense in depth on top of
+ * that). */
+export async function postPayrollFinalizeJournal(tx: Executor, actor: Identity, run: { id: string; branchId: string }, totalAmount: string) {
+  const byCode = await accountsByCode(tx);
+  const salary = requireAccount(byCode, "5500"), payable = requireAccount(byCode, "2000");
+  return postJournalLeg(tx, { branchId: run.branchId, description: "Payroll finalized", debitAccountId: salary, creditAccountId: payable, amount: totalAmount, referenceType: "PAYROLL_RUN", referenceId: run.id, createdById: actor.id });
+}
+/** Aggregator settlement (manual, server-computed netPayout): Debit Bank for
+ * the netPayout actually due to be received (not Accounts Receivable — the
+ * aggregator order record here IS the settlement itself, server-computed
+ * from gross/commission/ads/refund, not a pending invoice awaiting
+ * collection, so Bank is the more correct real-world account), Credit Sales
+ * Revenue for the gross orderValue. The schema already separates
+ * commissionAmount/adsAmount/refundPenalty from netPayout, so their combined
+ * total (the gap between gross revenue and net cash) is debited to Other
+ * Expense in a second leg — two legs because this table is single-debit/
+ * single-credit per row; both legs credit Sales Revenue so the two rows
+ * together still net to Debit Bank + Debit Other Expense = Credit Sales
+ * Revenue = orderValue, i.e. debit totals always equal credit totals for
+ * the event as a whole. */
+export async function postAggregatorJournal(tx: Executor, actor: Identity, order: { id: string; branchId: string; commissionAmount: string; adsAmount: string; refundPenalty: string; netPayout: string }) {
+  const byCode = await accountsByCode(tx);
+  const bank = requireAccount(byCode, "1020"), revenue = requireAccount(byCode, "4000"), otherExpense = requireAccount(byCode, "5400");
+  const deductions = decimal(paise(order.commissionAmount) + paise(order.adsAmount) + paise(order.refundPenalty));
+  const net = await postJournalLeg(tx, { branchId: order.branchId, description: "Aggregator settlement net payout", debitAccountId: bank, creditAccountId: revenue, amount: order.netPayout, referenceType: "AGGREGATOR_ORDER", referenceId: order.id, leg: 0, createdById: actor.id });
+  const fees = await postJournalLeg(tx, { branchId: order.branchId, description: "Aggregator commission/ads/refund penalty", debitAccountId: otherExpense, creditAccountId: revenue, amount: deductions, referenceType: "AGGREGATOR_ORDER", referenceId: order.id, leg: 1, createdById: actor.id });
+  return { net, fees };
+}
+
+// ---------------------------------------------------------------------------
 // Petty Cash Book
 // ---------------------------------------------------------------------------
 
@@ -108,6 +254,7 @@ export async function postPettyCashEntry(tx: Executor, actor: Identity, rawInput
     amount: input.amount, description: input.description, photoUrl: input.photoUrl,
     balanceAfterInr: decimal(newBalance),
   }).returning(pettyCashColumns);
+  await postPettyCashJournal(tx, actor, { id: row.id, branchId, entryType: input.entryType, amount: input.amount });
   return row;
 }
 export function pettyCashWindow(branchId: string | null, range: { start: Date; end: Date }) {
@@ -151,6 +298,7 @@ export async function postAggregatorOrder(tx: Executor, actor: Identity, rawInpu
     commissionAmount: input.commissionAmount, adsAmount: input.adsAmount, refundPenalty: input.refundPenalty,
     netPayout, orderDate: input.orderDate,
   }).returning(aggregatorColumns);
+  await postAggregatorJournal(tx, actor, { id: row.id, branchId, commissionAmount: input.commissionAmount, adsAmount: input.adsAmount, refundPenalty: input.refundPenalty, netPayout });
   return row;
 }
 export function aggregatorWindow(branchId: string | null, range: { start: Date; end: Date }) {
@@ -171,16 +319,28 @@ export function aggregatorTotals(rows: { orderValue: string; commissionAmount: s
 
 export const SEED_LEDGER_ACCOUNTS = [
   { code: "1000", name: "Cash", type: "ASSET" as const },
-  { code: "1010", name: "Petty Cash", type: "ASSET" as const },
+  { code: "1010", name: "Petty Cash", type: "ASSET" as const }, // legacy sub-asset row, kept but unused by journal postings below (see FINANCE-1 notes)
+  { code: "1020", name: "Bank", type: "ASSET" as const },
   { code: "2000", name: "Accounts Payable", type: "LIABILITY" as const },
+  { code: "2100", name: "VAT Payable", type: "LIABILITY" as const }, // 18% Tanzania VAT, not GST/GSTR
   { code: "3000", name: "Owner's Equity", type: "EQUITY" as const },
   { code: "4000", name: "Sales Revenue", type: "INCOME" as const },
-  { code: "5000", name: "COGS", type: "EXPENSE" as const },
+  { code: "5000", name: "Purchases/COGS", type: "EXPENSE" as const },
+  { code: "5100", name: "Rent Expense", type: "EXPENSE" as const },
+  { code: "5200", name: "Utilities Expense", type: "EXPENSE" as const },
+  { code: "5300", name: "Marketing Expense", type: "EXPENSE" as const },
+  { code: "5400", name: "Other Expense", type: "EXPENSE" as const },
+  { code: "5500", name: "Salary Expense", type: "EXPENSE" as const },
 ];
-/** Idempotent: inserts the 6 standard HQ-level accounts only if their code
+/** Idempotent: inserts the 13 standard HQ-level accounts only if their code
  * doesn't already exist (onConflictDoNothing on the unique `code` column).
- * Creates ONLY chart-of-accounts rows, never fabricates journal entries —
- * real transaction postings are explicitly out of scope for this pass. */
+ * 12 of these are the user-approved FINANCE-1 chart of accounts (Cash, Bank,
+ * Sales Revenue, Purchases/COGS, VAT Payable, Accounts Payable, Rent/
+ * Utilities/Marketing/Other/Salary Expense, Owner's Equity); "1010 Petty
+ * Cash" is an earlier, separate sub-asset row kept for backward compatibility
+ * but deliberately NOT used by any of the real journal postings added in
+ * FINANCE-1 — those always debit/credit "1000 Cash" for petty cash events,
+ * matching the approved chart (see postPettyCashJournal). */
 export async function seedLedgerAccounts(tx: Executor) {
   const inserted = await tx.insert(ledgerAccounts)
     .values(SEED_LEDGER_ACCOUNTS.map(a => ({ id: randomUUID(), code: a.code, name: a.name, type: a.type, branchId: null })))
@@ -191,7 +351,7 @@ export async function seedLedgerAccounts(tx: Executor) {
 const BALANCE_SHEET_NOTES = [
   "Real aggregation from ledger_accounts + journal_entries only — no hardcoded or estimated figures.",
   "The chart of accounts is HQ-level and shared across branches; journal entries are always branch-scoped.",
-  "INCOME/EXPENSE accounts exist in the chart for future use but are not part of this Assets = Liabilities + Equity view.",
+  "INCOME and EXPENSE account balances are rolled up into a single synthetic \"Retained Earnings (Net Income)\" Equity line (net income = total INCOME minus total EXPENSE) so Assets = Liabilities + Equity holds for real FINANCE-1 postings — this line has no ledger_accounts row of its own and is never a journal entry target; it is the standard trial-balance-to-balance-sheet closing step, computed fresh on every read, never persisted/fabricated.",
 ];
 export async function computeBalanceSheet(tx: Executor, branchId: string) {
   const accounts = await tx.select().from(ledgerAccounts).where(or(eq(ledgerAccounts.branchId, branchId), isNull(ledgerAccounts.branchId)));
@@ -220,7 +380,15 @@ export async function computeBalanceSheet(tx: Executor, branchId: string) {
   }).sort((a, b) => a.code.localeCompare(b.code));
   const section = (type: string) => rows.filter(r => r.type === type);
   const sumSection = (sectionRows: typeof rows) => decimal(sectionRows.reduce((s, r) => s + paise(r.amountInr), 0n));
-  const assets = section("ASSET"), liabilities = section("LIABILITY"), equity = section("EQUITY");
+  const assets = section("ASSET"), liabilities = section("LIABILITY");
+  // Net income = total INCOME minus total EXPENSE (both already displayed as
+  // positive-normal-balance amounts above) — the real double-entry fact that
+  // closes every INCOME/EXPENSE account into Equity at period end, so a real
+  // posted expense/revenue journal never silently breaks Assets = Liabilities
+  // + Equity just because this chart keeps Income/Expense as separate rows
+  // instead of a persisted retained-earnings account.
+  const netIncome = decimal(paise(sumSection(section("INCOME"))) - paise(sumSection(section("EXPENSE"))));
+  const equity = [...section("EQUITY"), { id: "", code: "3900", name: "Retained Earnings (Net Income)", type: "EQUITY" as const, amountInr: netIncome }].sort((a, b) => a.code.localeCompare(b.code));
   const totals = { asset: sumSection(assets), liability: sumSection(liabilities), equity: sumSection(equity) };
   const balanced = paise(totals.asset) === paise(totals.liability) + paise(totals.equity);
   return { branchId, seeded: true, assets, liabilities, equity, totals, balanced, notes: BALANCE_SHEET_NOTES };

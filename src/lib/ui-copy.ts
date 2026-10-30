@@ -2,7 +2,7 @@
 import { useTranslation } from "@/lib/i18n";
 // Source-owned copy catalog. Never translates DOM nodes, submitted values or identifiers.
 const COPY: Record<string, readonly [string, string]> = {
-  "Enter a valid 10-digit mobile number": ["Enter a valid 10-digit mobile number", "Sahi 10-digit mobile number bharein"],
+  "Enter a valid Tanzanian mobile number": ["Enter a valid Tanzanian mobile number", "Sahi Tanzania mobile number bharein"],
   "Invalid mobile number": ["Invalid mobile number", "Mobile number sahi nahi hai"],
   "Petty cash book, aggregator reconciliation, Profit & Loss, Balance Sheet — ek hi jagah.": [
     "Petty cash, aggregator reconciliation, Profit & Loss and Balance Sheet in one place.",
@@ -312,9 +312,9 @@ const COPY: Record<string, readonly [string, string]> = {
     "Amount",
     "Rakam"
   ],
-  "Amount (₹)": [
-    "Amount (₹)",
-    "Rakam (₹)"
+  "Amount (TSh)": [
+    "Amount (TSh)",
+    "Rakam (TSh)"
   ],
   "Logged By": [
     "Logged By",
@@ -688,9 +688,9 @@ const COPY: Record<string, readonly [string, string]> = {
     "notes",
     "notes"
   ],
-  "Coins (₹)": [
-    "Coins (₹)",
-    "Coins (₹)"
+  "Coins (TSh)": [
+    "Coins (TSh)",
+    "Coins (TSh)"
   ],
   "Result": [
     "Result",

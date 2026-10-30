@@ -144,7 +144,7 @@ function ScopedCashDrop() {
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-3 border-t pt-3">
-                    <label htmlFor="coins-inr" className="text-sm font-medium">{uiText("Coins (₹)")}</label>
+                    <label htmlFor="coins-inr" className="text-sm font-medium">{uiText("Coins (TSh)")}</label>
                     <input id="coins-inr" type="number" min={0} step="0.01" value={coins} onChange={(e) => setCoins(Math.max(0, Number(e.target.value) || 0))} inputMode="decimal" disabled={!canWrite} className="w-28 min-w-0 rounded-md border border-input bg-card px-3 py-1.5 text-right text-base sm:text-sm" />
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-muted p-3">

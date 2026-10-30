@@ -304,7 +304,7 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "short": "Create real users with roles, branch assignment and module grants.",
     "what": "Owner manages all branches and HQ roles. Branch Admin manages only own-branch users and cannot grant more access than they hold, edit themselves or create HQ roles. Server-side permissions govern real records.",
     "how": [
-      "New User: enter name, 10-digit mobile number (without +91), a password of at least 12 characters, role and branch.",
+      "New User: enter name, 9-digit mobile number (without +255), a password of at least 12 characters, role and branch.",
       "Select allowed module grants and save. Branch Admin sees only delegable grants.",
       "Edit a user to change access/status/password. Saved changes revoke the user’s existing sessions; blank password retains the existing password."
     ],
@@ -314,7 +314,7 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
       "short": "Real users banao: role, branch aur module grants ke saath.",
       "what": "Owner sab branches aur HQ roles manage karta hai. Branch Admin sirf apni branch ke users manage karta hai; apne se zyada grants nahi de sakta, khud ko edit ya HQ role create nahi kar sakta. Server permissions real records par lagti hain.",
       "how": [
-        "New User mein naam, 10-digit mobile number (without +91), kam se kam 12-character password, role aur branch bharo.",
+        "New User mein naam, 9-digit mobile number (without +255), kam se kam 12-character password, role aur branch bharo.",
         "Allowed module grants chuno aur save karo. Branch Admin ko sirf delegable grants dikhte hain.",
         "Edit se access/status/password badlo. Save par purane sessions revoke hote hain; blank password par purana password rehta hai."
       ],
