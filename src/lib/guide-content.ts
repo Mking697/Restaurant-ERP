@@ -104,9 +104,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "Practice only in a QA branch: New Recurring / Checklist saves title, a doer selected from the dropdown, frequency, anchor assign date and shift time.",
     "Delegate Task saves a one-time task with a same-branch doer selected by name, priority and due time.",
     "Mark Done requires non-empty evidence for ONE_TIME on both client and server. Recurring instance completion permits no attachment, but this UI manages definitions, not generated recurring instances.",
-    "A scheduled cron (configured in vercel.json, not yet deployed) calls the generation/escalation endpoint every 15 minutes; it is the only thing that ever creates a recurring occurrence row or flips a task to OVERDUE — nothing in this UI does either directly."
+    "A scheduled cron (configured in vercel.json; currently once daily to fit the Hobby plan's cron-frequency limit, not yet deployed) calls the generation/escalation endpoint; it is the only thing that ever creates a recurring occurrence row or flips a task to OVERDUE — nothing in this UI does either directly. On a paid Vercel plan the schedule can be tightened (e.g. every 15 minutes) for closer-to-real-time escalation."
   ],
-  "example": "Example: delegate Clean fridge to an existing QA doer selected by name. Mark Done with a reference: DONE persists after reload; no image is uploaded. A DAILY recurring definition's cron-generated occurrence appears on this page once the cron endpoint runs, and flips to OVERDUE automatically 30 minutes past its due time if still pending.",
+  "example": "Example: delegate Clean fridge to an existing QA doer selected by name. Mark Done with a reference: DONE persists after reload; no image is uploaded. A DAILY recurring definition's cron-generated occurrence appears on this page once the cron endpoint runs, and flips to OVERDUE once the daily cron catches it 30+ minutes past due time if still pending.",
   "hinglish": {
     "title": "Tasks & Checklists",
     "short": "Recurring definitions, one-time delegation aur completion persist hote hain.",
@@ -115,9 +115,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
       "Sirf QA branch mein New Recurring / Checklist se title, dropdown se doer, frequency, anchor assign date aur shift time save karo.",
       "Delegate Task mein dropdown se same-branch doer, priority aur due time se one-time task save karo.",
       "Mark Done mein ONE_TIME ko non-empty evidence client aur server dono maangte hain. Recurring instance completion par optional hai, par UI definitions manage karta hai, generated recurring instances nahi.",
-      "Ek scheduled cron (vercel.json mein configured, abhi deploy nahi hua) har 15 minute mein generation/escalation endpoint call karta hai; yahi sirf ek hai jo recurring occurrence row banata hai ya task ko OVERDUE karta hai — yeh UI khud kabhi nahi karti."
+      "Ek scheduled cron (vercel.json mein configured; abhi daily hai Hobby plan ki cron-frequency limit ke andar fit karne ke liye, deploy nahi hua) generation/escalation endpoint call karta hai; yahi sirf ek hai jo recurring occurrence row banata hai ya task ko OVERDUE karta hai — yeh UI khud kabhi nahi karti. Paid Vercel plan par schedule tight (jaise har 15 minute) kiya ja sakta hai."
     ],
-    "example": "Example: dropdown se existing QA doer chun kar Clean fridge do. Reference ke saath Mark Done: DONE reload ke baad rehta hai; image upload nahi hoti. Ek DAILY recurring definition ka cron-generated occurrence is page par cron endpoint chalne ke baad dikhta hai, aur pending rehte hue due time se 30 minute baad khud OVERDUE ho jata hai."
+    "example": "Example: dropdown se existing QA doer chun kar Clean fridge do. Reference ke saath Mark Done: DONE reload ke baad rehta hai; image upload nahi hoti. Ek DAILY recurring definition ka cron-generated occurrence is page par cron endpoint chalne ke baad dikhta hai, aur daily cron usse 30+ minute overdue pakadte hi OVERDUE ho jata hai."
   }
 },
   {

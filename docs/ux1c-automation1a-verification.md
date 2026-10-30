@@ -47,9 +47,9 @@ catch-up) plus two thin DB wrappers relying on the existing unique indexes
 update for escalation — no new SELECT-then-insert race. New `POST
 /api/cron/tasks`, bearer-secret-only auth (`CRON_SECRET`, SHA-256 digest +
 `timingSafeEqual`, fails closed if unset, never reads cookies/session).
-`vercel.json` gained a `crons` entry (config only, not deployed). No
-WhatsApp/message-sending code anywhere in this diff — confirmed by the
-independent reviewer explicitly checking for it.
+`vercel.json` gained a `crons` entry (daily — see deploy note below — not
+deployed until this push). No WhatsApp/message-sending code anywhere in
+this diff — confirmed by the independent reviewer explicitly checking for it.
 
 Parent gates: 41/41 focused, 398/398 full unit, clean typecheck, clean
 isolated build, 7/7 real HTTP/Postgres checks on dev AND compiled app
@@ -95,7 +95,22 @@ across this session) stopped; all `.next-*` QA/build dist dirs removed.
 AUTOMATION-1a is generation/escalation only — WhatsApp sends (8AM summary,
 escalation notification, expiry alerts) and indent spike/rolling-average
 data remain explicitly out of scope, flagged as AUTOMATION-1b/1c follow-ups
-needing their own separate approval/business rule. The Vercel Cron config
-is NOT deployed — production still has no scheduled trigger until deploy is
-separately approved. UX-1c closes one specific UX-1 follow-up (Clone Branch
-Wizard); broader UX-1 desktop/laptop/tablet/mobile/pixel QA remains open.
+needing their own separate approval/business rule. UX-1c closes one
+specific UX-1 follow-up (Clone Branch Wizard); broader UX-1 desktop/laptop/
+tablet/mobile/pixel QA remains open.
+
+## Deploy note (added after first production push attempt)
+
+The first push of this release (`vercel.json` crons schedule `*/15 * * * *`)
+was REJECTED by Vercel before any build step ran (zero build-log events,
+GitHub commit status `failure`) — this project's Vercel plan only permits
+daily-or-coarser cron schedules; a sub-daily schedule fails deployment
+validation outright. Fixed by changing the schedule to `0 3 * * *` (once
+daily, 03:00 UTC / ~08:30 IST) and re-pushing. This means production
+escalation granularity is effectively "once a day catches anything 30+
+minutes overdue," not true 15-minute near-real-time escalation, until the
+Vercel plan is upgraded to allow a tighter schedule. `generateRecurring
+Occurrences`/`escalateOverdueInstances`'s bounded catch-up logic already
+handles this correctly (no missed cycles, no double-generation) — this is
+a cadence/latency change, not a correctness regression. Guide copy (both
+languages) updated to state this honestly.
