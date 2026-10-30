@@ -14,15 +14,16 @@ assert.ok(['localhost', '127.0.0.1'].includes(target.hostname) && target.protoco
 const pool = new Pool({ host: '127.0.0.1', port: 5436, database: process.env.PGDATABASE, user: process.env.PGUSER, password: process.env.PGPASSWORD, ssl: false });
 
 const id = () => randomUUID();
-const branchA = id(), branchB = id();
-const owner = id(), managerA = id(), kitchenA = id(), cashierB = id();
+const branchA = id(), branchB = id(), branchEmpty = id();
+const owner = id(), managerA = id(), kitchenA = id(), cashierB = id(), recurringA = id(), checklistA = id(), inactiveA = id();
+const identities = { owner, managerA, kitchenA, cashierB, recurringA, checklistA, inactiveA };
 const run = randomUUID().slice(0, 8);
 const cookies = {};
 let checks = 0;
 const pass = (name) => { checks++; console.log('PASS ' + name); };
 
 async function identity(label, { branchId, role, grants }) {
-  const uid = label === 'owner' ? owner : label === 'managerA' ? managerA : label === 'kitchenA' ? kitchenA : cashierB;
+  const uid = identities[label];
   const token = randomBytes(32).toString('hex');
   const phone = '+919' + String(BigInt('0x' + randomBytes(6).toString('hex')) % 1000000000n).padStart(9, '0');
   await pool.query('insert into users(id,name,phone_e164,role,branch_id,module_access) values($1,$2,$3,$4,$5,$6)', [uid, 'Tasks QA ' + label + ' ' + run, phone, role, branchId, grants]);
@@ -51,9 +52,9 @@ async function ok(path, actor, method, body, status = 200) {
 async function cleanup() {
   await pool.query('delete from task_instances where branch_id = any($1::text[])', [[branchA, branchB]]);
   await pool.query('delete from recurring_task_definitions where branch_id = any($1::text[])', [[branchA, branchB]]);
-  await pool.query('delete from sessions where user_id = any($1::text[])', [[owner, managerA, kitchenA, cashierB]]);
-  await pool.query('delete from users where id = any($1::text[])', [[owner, managerA, kitchenA, cashierB]]);
-  await pool.query('delete from branches where id = any($1::text[])', [[branchA, branchB]]);
+  await pool.query('delete from sessions where user_id = any($1::text[])', [Object.values(identities)]);
+  await pool.query('delete from users where id = any($1::text[])', [Object.values(identities)]);
+  await pool.query('delete from branches where id = any($1::text[])', [[branchA, branchB, branchEmpty]]);
 }
 
 async function main() {
@@ -61,10 +62,15 @@ async function main() {
   await cleanup(); // in case a previous run was interrupted
 
   await pool.query("insert into branches(id,name,code,lat,lng) values($1,$2,$1,0,0),($3,$4,$3,0,0)", [branchA, 'Tasks QA Branch A ' + run, branchB, 'Tasks QA Branch B ' + run]);
+  await pool.query('insert into branches(id,name,code,lat,lng) values($1,$2,$1,0,0)', [branchEmpty, 'Tasks QA Empty ' + run]);
   await identity('owner', { branchId: null, role: 'SUPER_ADMIN', grants: [] });
   await identity('managerA', { branchId: branchA, role: 'BRANCH_MANAGER', grants: ['TASKS_RECURRING', 'TASKS_DELEGATION'] });
   await identity('kitchenA', { branchId: branchA, role: 'KITCHEN_STAFF', grants: [] });
   await identity('cashierB', { branchId: branchB, role: 'CASHIER', grants: ['TASKS_DELEGATION'] });
+  await identity('recurringA', { branchId: branchA, role: 'CASHIER', grants: ['TASKS_RECURRING'] });
+  await identity('checklistA', { branchId: branchA, role: 'CASHIER', grants: ['CHECKLISTS'] });
+  await identity('inactiveA', { branchId: branchA, role: 'KITCHEN_STAFF', grants: [] });
+  await pool.query("update users set status='Inactive' where id=$1", [inactiveA]);
 
   // --- auth/CSRF sanity -----------------------------------------------
   assert.equal((await request('/api/tasks/recurring')).status, 401);
@@ -73,9 +79,47 @@ async function main() {
   assert.equal(noOrigin.status, 403);
   pass('cross-origin / missing-origin write is rejected 403 before auth');
 
+  // --- minimal task-assignee directory; no user-admin grant widening ---
+  await ok('/api/tasks/assignees?branchId=' + branchA, undefined, 'GET', undefined, 401);
+  pass('assignee lookup rejects anonymous access');
+  for (const actor of ['kitchenA', 'checklistA']) await ok('/api/tasks/assignees?branchId=' + branchA, actor, 'GET', undefined, 403);
+  pass('no-grant and CHECKLISTS-only actors cannot read the assignee directory');
+  for (const actor of ['owner', 'recurringA']) {
+    for (const suffix of ['', '?branchId=', '?branchId=' + branchA + '&branchId=' + branchB, '?branchId=' + branchA + '&limit=1']) await ok('/api/tasks/assignees' + suffix, actor, 'GET', undefined, 400);
+  }
+  pass('assignee lookup requires one explicit branch even for Owner and rejects unknown queries');
+  await ok('/api/tasks/assignees?branchId=' + branchB, 'recurringA', 'GET', undefined, 403);
+  await ok('/api/tasks/assignees?branchId=' + branchA, 'cashierB', 'GET', undefined, 403);
+  pass('assignee lookup cannot cross branch membership in either direction');
+  await ok('/api/tasks/assignees?branchId=' + id(), 'owner', 'GET', undefined, 404);
+  const emptyLookup = await ok('/api/tasks/assignees?branchId=' + branchEmpty, 'owner');
+  assert.deepEqual(emptyLookup, { branchId: branchEmpty, assignees: [] });
+  pass('assignee lookup distinguishes missing branch from existing empty branch');
+  const assigneesA = await ok('/api/tasks/assignees?branchId=' + branchA, 'recurringA');
+  assert.deepEqual(assigneesA, { branchId: branchA, assignees: (await pool.query('select id,name from users where branch_id=$1 order by name,id', [branchA])).rows });
+  for (const row of assigneesA.assignees) assert.deepEqual(Object.keys(row).sort(), ['id','name']);
+  assert.ok(assigneesA.assignees.some(row => row.id === inactiveA), 'Same eligibility as create: no invented active-only filter');
+  assert.ok(!assigneesA.assignees.some(row => row.id === cashierB || row.id === owner));
+  pass('recurring-only actor gets exact sorted same-branch id/name DTO including existing create eligibility');
+  const assigneesB = await ok('/api/tasks/assignees?branchId=' + branchB, 'cashierB');
+  assert.deepEqual(assigneesB.assignees.map(row => row.id), [cashierB]);
+  assert.deepEqual(await ok('/api/tasks/assignees?branchId=' + branchA, 'owner'), assigneesA);
+  pass('delegation-only and Owner use the same explicit branch-bound lookup');
+  for (const actor of ['recurringA', 'cashierB']) await ok('/api/users', actor, 'GET', undefined, 403);
+  pass('task creation grants do not grant user administration');
+  const lookedUpKitchen = assigneesA.assignees.find(row => row.id === kitchenA).id;
+  const narrowRecurring = await ok('/api/tasks/recurring', 'recurringA', 'POST', { branchId: branchA, title: 'Lookup recurring grant', assignedToId: lookedUpKitchen, frequency: 'DAILY', assignDate: new Date().toISOString() }, 201);
+  assert.equal(narrowRecurring.recurring.assignedToId, lookedUpKitchen);
+  assert.equal((await pool.query('select assigned_to_id from recurring_task_definitions where id=$1', [narrowRecurring.recurring.id])).rows[0].assigned_to_id, lookedUpKitchen);
+  pass('recurring-only actor creates a persisted recurring task using looked-up ID');
+  const narrowDelegated = await ok('/api/tasks/delegate', 'cashierB', 'POST', { branchId: branchB, title: 'Lookup delegation grant', assignedToId: assigneesB.assignees[0].id, priority: 'LOW', dueAt: new Date().toISOString() }, 201);
+  assert.equal(narrowDelegated.instance.assignedToId, cashierB);
+  assert.equal((await pool.query('select assigned_to_id from task_instances where id=$1', [narrowDelegated.instance.id])).rows[0].assigned_to_id, cashierB);
+  pass('delegation-only actor creates a persisted delegation using looked-up ID');
+
   // --- recurring: create / list / branch scoping / pause-resume -------
   const recur = await ok('/api/tasks/recurring', 'managerA', 'POST', {
-    branchId: branchA, title: 'Walk-in fridge temp log', assignedToId: kitchenA, frequency: 'DAILY', assignDate: new Date().toISOString(), shiftTime: '09:30',
+    branchId: branchA, title: 'Walk-in fridge temp log', assignedToId: lookedUpKitchen, frequency: 'DAILY', assignDate: new Date().toISOString(), shiftTime: '09:30',
   }, 201);
   assert.equal(recur.recurring.status, 'Active'); assert.equal(recur.recurring.assignedToName.includes('Tasks QA kitchenA'), true);
   pass('recurring definition created with Active default status and joined doer name');

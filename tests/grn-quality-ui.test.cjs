@@ -11,7 +11,8 @@ const fixture = (id = 'grn-a', general = false) => ({ id, poNumber: 'PO-A', bran
 ] });
 class RequestJsonError extends Error { constructor(message, outcome, status) { super(message); this.outcome = outcome; this.status = status; } }
 async function harness(options = {}) {
-  const stores = new Map(), effects = [], posts = [], notices = [];
+  const stores = new Map(), effects = [], posts = [], notices = [], reads = [];
+  let exact = options.exact;
   let active, cursor, rows = options.rows || [fixture()], user = { id: 'owner', ready: true, authenticated: true, role: 'SUPER_ADMIN', branchId: null, moduleAccess: [] }, post = options.post;
   const hooks = { ...React,
     useState(initial) { const i = cursor++; if (!(i in active)) active[i] = typeof initial === 'function' ? initial() : initial; const store = active; return [store[i], v => { store[i] = typeof v === 'function' ? v(store[i]) : v; }]; },
@@ -25,6 +26,8 @@ async function harness(options = {}) {
     '@/lib/current-branch': { useBranches: () => ({ branches: [] }) },
     '@/lib/current-user': { RequestJsonError, useCurrentUser: () => user, requestJson: async (url, init) => {
       if (init?.method === 'POST') { const body = JSON.parse(init.body); posts.push({ url, body }); if (post) return post(url, body); const row = rows.find(r => url.includes(r.id)); const saved = { ...row, qualityResult: body.result, qualityNote: body.note || '', qualityPhotoUrl: body.photoUrl || '', qualityRecorded: true, inventoryPosted: !row.isGeneralPurchase && body.result !== 'FAIL', qualityRecordedAt: '2026-10-29', status: body.result === 'FAIL' ? 'QUALITY_HOLD' : 'APPROVED', lines: row.lines.map(l => ({ ...l, qtyFailed: body.lines.find(x => x.id === l.id).qtyFailed, qtyAccepted: String(Number(l.qtyReceived) - Number(body.lines.find(x => x.id === l.id).qtyFailed)) })) }; rows = rows.map(r => r.id === saved.id ? saved : r); return { grn: saved, replayed: false }; }
+      reads.push(url);
+      if (url.startsWith('/api/purchase/grns/')) return options.exactRequest ? options.exactRequest(url) : { grn: exact ?? rows.find(r => url.includes('/'+r.id+'?')) };
       if (url === '/api/purchase/grns') return { grns: rows };
       if (url === '/api/purchase/orders') return { purchaseOrders: [] };
       if (url === '/api/raw-materials') return { rawMaterials: [] };
@@ -35,11 +38,11 @@ async function harness(options = {}) {
   };
   for (const [path, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/badge': ['Badge'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogFooter','DialogHeader','DialogTitle','DialogTrigger'] })) deps[path] = Object.fromEntries(names.map(k => [k,k]));
   const module = { exports: {} };
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/purchase/page-content.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, require: name => { assert.ok(name in deps, name); return deps[name]; } });
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/purchase/page-content.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, URLSearchParams, require: name => { assert.ok(name in deps, name); return deps[name]; } });
   let visited;
   function execute(fn, props, key) { visited.add(key); active = stores.get(key) || []; stores.set(key, active); cursor = 0; return fn(props); }
   function expand(node, path = 'root') { if (Array.isArray(node)) return node.map((v,i) => expand(v, path + i)); if (!node || typeof node !== 'object') return node; if (typeof node.type === 'function' && node.type.name.startsWith('GrnQuality')) return expand(execute(node.type, node.props, path + node.type.name + node.key), path); return { ...node, props: { ...node.props, children: expand(node.props?.children, path + '.') } }; }
-  const render = () => { visited = new Set(); const tree = expand(execute(module.exports.default, {}, 'page')); for (const [key, store] of stores) if (!visited.has(key)) { store.forEach(value => value?.cleanup?.()); stores.delete(key); } return tree; };
+  const render = () => { visited = new Set(); const tree = expand(execute(module.exports.default, {}, 'page')); for (const [key, store] of stores) if (!visited.has(key)) { if (!options.deferCleanup) store.forEach(value => value?.cleanup?.()); stores.delete(key); } return tree; };
   const nodes = (node, predicate) => Array.isArray(node) ? node.flatMap(n => nodes(n,predicate)) : !node || typeof node !== 'object' ? [] : [...(predicate(node) ? [node] : []), ...nodes(node.props?.children,predicate)];
   const find = predicate => nodes(render(),predicate);
   const text = node => Array.isArray(node) ? node.map(text).join(' ') : node && typeof node === 'object' ? text(node.props?.children) : String(node ?? '');
@@ -47,7 +50,7 @@ async function harness(options = {}) {
   const change = (label,value) => { const n = find(n => n.props?.['aria-label'] === label)[0]; assert.ok(n, 'Missing input: '+label); n.props.onChange({ target: { value } }); };
   const flush = async () => { render(); while (effects.length) effects.shift()(); await tick(); render(); };
   await flush(); await flush();
-  return { render, find, text, button, change, posts, notices, flush, open: () => button('Quality Check').props.onClick(), setPost: fn => { post = fn; }, setRows: value => { rows = value; }, setUser: value => { user = { ...user, ...value }; } };
+  return { render, find, text, button, change, posts, notices, reads, setExact: value => { exact = value; }, flush, open: () => button('Quality Check').props.onClick(), setPost: fn => { post = fn; }, setRows: value => { rows = value; }, setUser: value => { user = { ...user, ...value }; } };
 }
 
 test('PASS submits every line only to quality endpoint and replaces row from durable response', async () => {
@@ -104,6 +107,32 @@ test('explicit read recovery confirms matching durable result without another PO
   h.setRows([{ ...fixture(), qualityResult: 'PASS', qualityRecorded: true, inventoryPosted: true, status: 'APPROVED', qualityRecordedAt: '2026-10-29' }]);
   await h.button('Check saved quality').props.onClick(); assert.equal(h.posts.length, 1); assert.match(h.text(h.render()), /Posted ✓/);
   assert.equal(h.find(n => n.type === 'Dialog' && n.props.open === true).length, 0);
+});
+
+test('captured exact quality recovery cannot read after live identity changes before cleanup', async () => {
+  const h = await harness({ deferCleanup: true, post: async () => { throw new RequestJsonError('lost', 'unknown'); } }); h.open(); await h.button('Save quality').props.onClick();
+  const captured = h.button('Check saved quality'); h.setUser({ id: 'other', moduleAccess: [], role: 'CASHIER', branchId: 'b' }); h.render();
+  const count = h.reads.length; await captured.props.onClick(); assert.equal(h.reads.length, count);
+});
+
+test('unknown quality recovery reads the exact historical GRN and original branch outside the latest list', async () => {
+  const h = await harness({ post: async () => { throw new RequestJsonError('lost', 'unknown'); } }); h.open(); await h.button('Save quality').props.onClick();
+  h.setRows([]); h.setExact({ ...fixture(), qualityResult: 'PASS', qualityRecorded: true, inventoryPosted: true, status: 'APPROVED', qualityRecordedAt: '2026-10-29' });
+  await h.button('Check saved quality').props.onClick();
+  assert.equal(h.reads.at(-1), '/api/purchase/grns/grn-a?branchId=a'); assert.equal(h.posts.length, 1);
+  assert.equal(h.find(n => n.type === 'Dialog' && n.props.open === true).length, 0);
+});
+
+for (const kind of ['wrong-id','wrong-branch','missing-line','duplicate-line','wrong-failed','wrong-accepted','missing-receipt','wrong-inventory','wrong-note']) test(`exact quality recovery rejects ${kind} and retains original intent`, async () => {
+  const h = await harness({ post: async () => { throw new RequestJsonError('lost', 'unknown'); } }); h.open(); await h.button('Save quality').props.onClick();
+  const row = { ...fixture(), qualityResult: 'PASS', qualityRecorded: true, inventoryPosted: true, status: 'APPROVED', qualityRecordedAt: '2026-10-29' };
+  if (kind === 'wrong-id') row.id = 'other'; if (kind === 'wrong-branch') row.branchId = 'b'; if (kind === 'missing-line') row.lines.pop(); if (kind === 'duplicate-line') row.lines[1] = row.lines[0]; if (kind === 'wrong-failed') row.lines[0].qtyFailed = '1.000'; if (kind === 'wrong-accepted') row.lines[0].qtyAccepted = '9.000'; if (kind === 'missing-receipt') row.qualityRecorded = false; if (kind === 'wrong-inventory') row.inventoryPosted = false; if (kind === 'wrong-note') row.qualityNote = 'other';
+  h.setExact(row); await h.button('Check saved quality').props.onClick();
+  assert.equal(h.button('Save quality').props.disabled,true); assert.ok(h.button('Replay exact request')); assert.equal(h.posts.length,1);
+});
+test('failed exact quality read leaves original intent locked without an automatic write', async () => {
+  const h = await harness({ post: async () => { throw new RequestJsonError('lost','unknown'); }, exactRequest: async () => { throw new Error('offline'); } }); h.open(); await h.button('Save quality').props.onClick();
+  await h.button('Check saved quality').props.onClick(); assert.equal(h.button('Save quality').props.disabled,true); assert.equal(h.posts.length,1); assert.ok(h.button('Replay exact request'));
 });
 
 test('unconfirmed read recovery cannot unlock editing or accept a conflicting final result', async () => {

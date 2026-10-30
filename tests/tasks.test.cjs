@@ -88,12 +88,14 @@ test('exported task routes reject anonymous reads and CSRF-less writes before an
   const previous = process.env.APP_ORIGIN; process.env.APP_ORIGIN = 'http://localhost:3030';
   try {
     const recurring = require('../src/app/api/tasks/recurring/route.ts');
+    const assignees = require('../src/app/api/tasks/assignees/route.ts');
     const recurringId = require('../src/app/api/tasks/recurring/[id]/route.ts');
     const delegate = require('../src/app/api/tasks/delegate/route.ts');
     const instances = require('../src/app/api/tasks/instances/route.ts');
     const complete = require('../src/app/api/tasks/instances/[id]/complete/route.ts');
     const get = new Request('http://localhost:3030/api/tasks/recurring?branchId=branch-a');
     assert.equal((await recurring.GET(get)).status, 401);
+    assert.equal((await assignees.GET(new Request('http://localhost:3030/api/tasks/assignees?branchId=branch-a'))).status, 401);
     assert.equal((await instances.GET(new Request('http://localhost:3030/api/tasks/instances'))).status, 401);
     const body = { branchId: 'branch-a', title: 'x', assignedToId: 'u1', frequency: 'DAILY', assignDate: new Date().toISOString() };
     const post = (url, payload, origin) => new Request(url, { method: 'POST', headers: { 'content-type': 'application/json', ...(origin ? { origin } : {}) }, body: JSON.stringify(payload) });

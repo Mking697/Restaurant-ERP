@@ -60,6 +60,41 @@ async function harness(options = {}) {
   return { calls, render, text, find, button, choose, flush, setUser: value => { user = { ...user, ...value }; }, setSelected: value => { selected = value; }, setRows: value => { rows = value; }, setRequest: value => { request = value; }, setLanguage: value => { language = value; } };
 }
 
+test('historical GRN lookup error clears selection and explicit retry never registers automatically', async () => {
+  let offline = true;
+  const h = await harness({ request: async url => { if (url.includes('/grns/old?')) { if (offline) throw new Error('offline'); return { grn: grn('old') }; } } });
+  h.choose('grn-a'); h.find(n => n.props?.['aria-label'] === 'Full GRN ID')[0].props.onChange({ target: { value: 'old' } });
+  await h.button('Look up finalized GRN').props.onClick(); assert.equal(h.find(n => n.type === 'select')[0].props.value,''); assert.equal(h.button('Register failed-quantity claim').props.disabled,true);
+  offline = false; await h.button('Look up finalized GRN').props.onClick(); assert.equal(h.find(n => n.type === 'select')[0].props.value,'old'); assert.equal(h.calls.filter(c => c.method === 'POST').length,0);
+});
+
+test('historical GRN lookup reads full exact ID and selects only a trusted failure without a write', async () => {
+  const old = grn('old'); const h = await harness({ request: async url => url === '/api/purchase/grns/old?branchId=a' ? { grn: old } : undefined });
+  h.find(n => n.props?.['aria-label'] === 'Full GRN ID')[0].props.onChange({ target: { value: 'old' } });
+  await h.button('Look up finalized GRN').props.onClick();
+  assert.equal(h.find(n => n.type === 'select')[0].props.value, 'old'); assert.equal(h.calls.filter(c => c.method === 'POST').length, 0);
+  assert.ok(h.find(n => n.type === 'option' && n.props.value === 'old').length);
+});
+for (const kind of ['wrong-id', 'foreign', 'missing', 'pending', 'untrusted', 'reconciliation', 'malformed']) test(`historical GRN lookup rejects ${kind}`, async () => {
+  const old = grn('old'); if (kind === 'wrong-id') old.id = 'other'; if (kind === 'foreign') old.branchId = 'b'; if (kind === 'pending') old.qualityResult = 'PENDING'; if (kind === 'untrusted') old.qualityRecorded = false; if (kind === 'reconciliation') old.reconciliationRequired = true; if (kind === 'malformed') old.lines = [null];
+  const h = await harness({ request: async url => url.includes('/grns/old?') ? { grn: kind === 'missing' ? null : old } : undefined });
+  h.choose('grn-a'); h.find(n => n.props?.['aria-label'] === 'Full GRN ID')[0].props.onChange({ target: { value: 'old' } });
+  await h.button('Look up finalized GRN').props.onClick(); assert.equal(h.find(n => n.type === 'select')[0].props.value, ''); assert.equal(h.button('Register failed-quantity claim').props.disabled, true);
+});
+test('late historical GRN lookup cannot publish after live actor or branch changes', async () => {
+  let release; const h = await harness({ request: url => url.includes('/grns/old?') ? new Promise(resolve => { release = resolve; }) : undefined });
+  h.find(n => n.props?.['aria-label'] === 'Full GRN ID')[0].props.onChange({ target: { value: 'old' } }); const pending = h.button('Look up finalized GRN').props.onClick();
+  h.setUser({ id: 'other', branchId: 'b' }); h.render(); release({ grn: grn('old') }); await pending; await h.flush();
+  assert.equal(h.find(n => n.type === 'option' && n.props.value === 'old').length, 0); assert.equal(h.calls.filter(c => c.method === 'POST').length, 0);
+});
+test('historical lookup cannot replace or erase an uncertain original registration intent', async () => {
+  const h = await harness({ request: async (_url, init) => { if (init?.method === 'POST') throw new RequestJsonError('lost', 'unknown'); } });
+  const input = h.find(n => n.props?.['aria-label'] === 'Full GRN ID')[0]; const lookup = h.button('Look up finalized GRN');
+  h.choose('grn-a'); await h.button('Register failed-quantity claim').props.onClick();
+  const count = h.calls.length; input.props.onChange({ target: { value: 'other' } }); await lookup.props.onClick(); assert.equal(h.calls.length, count);
+  assert.match(h.text(h.render()), /Outcome unconfirmed.*grn-a/); h.setRows(claims()); await h.button('Check saved claims').props.onClick(); assert.match(h.text(h.render()), /Claim confirmed/);
+});
+
 test('Accounts page exposes a grant-only read tab without expense or PO authority', async () => {
   const h = await harness({ page: 'accounts', mode: 'accounts', rows: claims() });
   assert.ok(h.find(n => n.type === 'TabsTrigger' && h.text(n) === 'Vendor refunds').length);
@@ -225,7 +260,8 @@ test('general descriptive/zero-rate claims and half-up paise readback stay exact
   h.choose(source.id); await h.button('Register failed-quantity claim').props.onClick();
   assert.match(h.text(h.render()), /Claim confirmed and records reloaded/);
   assert.equal(h.calls.find(c => c.method === 'POST').body, '{}');
-  assert.equal(h.find(n => n.type === 'input').length, 0);
+  assert.equal(h.find(n => n.type === 'input' && n.props['aria-label'] !== 'Full GRN ID').length, 0); // Only the read-only document lookup input; still no quantity/rate/money entry.
+  assert.equal(h.find(n => n.type === 'input' && n.props['aria-label'] === 'Full GRN ID').length, 1);
 });
 
 test('a rejected replay of an earlier unknown write remains locked until explicit successful read recovery', async () => {

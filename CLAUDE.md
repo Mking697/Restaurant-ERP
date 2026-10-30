@@ -20,12 +20,13 @@ dependency upgrades, paid providers and production business writes still need
 separate approval. Pending follow-up changes are not automatically part of the
 current authorized release snapshot.
 
-Latest user instruction (October 29, 2026): commit, push and deploy ALL completed,
-accepted work including GRN-2, and retain the eight pending items below in this
-tracker. This release authorization does NOT authorize implementing those pending
-items, new schema changes, breaking dependency upgrades, paid providers, customer
-messages or production business-data writes. GRN-2 release verification is in
-progress; do not infer deployment from local acceptance or a successful push.
+Latest user instruction (October 30, 2026): commit, push and deploy ALL
+completed, locally-accepted work from this session — TASKS-1, UX-1a, UX-1b,
+UX-1c, AUTOMATION-1a, and the drizzle-orm half of SECURITY-1 (all listed
+below with COMPLETE status and real evidence). FINANCE-1/2, EVIDENCE-1,
+PURCHASE-3, the Next.js half of SECURITY-1, AUTOMATION-1b/1c and the rest of
+UX-1 remain pending/deferred per the user's own explicit answers and are NOT
+part of this release.
 
 - [COMPLETE] RELEASE-1: Phase 2/3 deployed as `5686996` after the store-PO approval fix
   in the real POST and UI; parent ran 213/213 unit tests, clean
@@ -86,30 +87,58 @@ progress; do not infer deployment from local acceptance or a successful push.
   lookup remains a UX improvement. No schema/dependency/production change;
   local uncommitted/undeployed only. Actual money receipt, vendor acceptance,
   physical-return evidence and settlement remain separate work.
-- [PENDING] TASKS-1: Add minimal branch-scoped assignee lookup/dropdown without
-  granting user administration or exposing salary/phone/credential fields.
+- [COMPLETE] TASKS-1: `GET /api/tasks/assignees`, branch-scoped id/name-only
+  lookup, requires Owner or TASKS_RECURRING/TASKS_DELEGATION (not CHECKLISTS
+  alone), explicit branch even for Owner, never widens `/api/users`. Parent:
+  299/299 unit (315 after UX-1a added), 24/24 focused, clean typecheck/build,
+  31/31 real HTTP/PG dev+compiled. Browser create/reload/branch-reset/exact
+  PG readback passed; independent review `deleg_0ad9997b` passed, no blockers.
+  Evidence: `docs/task-assignee-verification.md`.
 - [PENDING] FINANCE-1: Real, idempotent journal posting for agreed source events;
   agree posting/reversal rules first. Current petty-cash/aggregator records do
-  not automatically create journal entries.
+  not automatically create journal entries. Awaiting user-supplied rules.
 - [PENDING] FINANCE-2: Connect actual revenue/COGS and labor allocation to P&L
   and prime cost. Current recipe/rate food-cost report is an estimate, not a
   historical posted COGS source; never silently treat it as an actual ledger.
-- [PENDING] AUTOMATION-1: Recurring occurrence generation, overdue escalation,
-  scheduled summaries/expiry alerts and real indent rolling-average/spike data.
-  Require authenticated, bounded/idempotent cron; no test messages to customers.
+- [COMPLETE — LOCAL] AUTOMATION-1a: real authenticated (bearer `CRON_SECRET`
+  only, never session/cookie, timing-safe) `POST /api/cron/tasks` generates
+  recurring occurrences (idempotent via existing unique indexes, bounded
+  missed-day catch-up, one instance per active branch for a global definition)
+  and escalates anything 30+ minutes overdue (single-shot WHERE-guarded
+  update). `vercel.json` gained a `crons` entry, config only, not deployed.
+  Parent: 398/398 unit, 41/41 focused, clean typecheck/build, 7/7 real HTTP/PG
+  dev+compiled; browser cron-POST->visible-on-/tasks confirmed; independent
+  review passed, no blockers. AUTOMATION-1b/1c (WhatsApp sends, indent
+  spike/rolling-average data) remain separate, not done.
+  Evidence: `docs/ux1c-automation1a-verification.md`.
 - [PENDING — INFRA/APPROVAL] EVIDENCE-1: Real attachment storage, signed access,
   camera/GPS capture and geofence checks. Current text/URL references are not
-  uploaded evidence; provider/retention/consent decisions precede deployment.
-- [PENDING] PURCHASE-3: Vendor invoices, three-way matching, physical-return/
-  vendor-acceptance evidence and actual refund/credit settlement/reconciliation
-  end-to-end acceptance. GRN-2 expected claims are not a completed money workflow.
-- [PENDING — APPROVAL] SECURITY-1: Separate tested breaking Drizzle/Next upgrade
-  passes for the recorded dependency advisories, then fresh dependency audit.
-- [PENDING] UX-1: Linked-data precheck/warning for branch deletion; real Clone
-  Branch Wizard remains deferred. Complete hardened desktop, laptop, tablet and
-  mobile functional/pixel-level UI QA; current DOM/geometry evidence is not a
-  claim of exhaustive visual acceptance. Purchase/GRN historical selectors also
-  need pagination/authorized lookup beyond the existing latest-200 discovery cap.
+  uploaded evidence. User approved Vercel Blob Storage; awaiting a created
+  Blob store + `BLOB_READ_WRITE_TOKEN` before implementation starts.
+- [PENDING — USER DEFERRED] PURCHASE-3: Vendor invoices, three-way matching,
+  physical-return/vendor-acceptance evidence and actual refund/credit
+  settlement/reconciliation end-to-end acceptance. GRN-2 expected claims are
+  not a completed money workflow. User explicitly said skip for now.
+- [COMPLETE — LOCAL, drizzle half only] SECURITY-1: drizzle-orm 0.36.4->0.45.4,
+  drizzle-kit 0.28.1->0.31.11 (closes the HIGH SQL-injection advisory H1); no
+  app-code change needed, `drizzle-kit generate` reports "No schema changes".
+  Parent: 398/398 unit, clean typecheck/build, 34/34 real HTTP/PG through the
+  actual app under the new version. Evidence:
+  `docs/security-1-drizzle-upgrade-verification.md`. Next.js 15->16 (closes
+  H3's transitive postcss advisory) deliberately deferred to its own pass —
+  too large to bundle safely with this session's feature surface; still open.
+- [COMPLETE — LOCAL] UX-1 (partial): branch-deletion linked-data precheck/
+  warning (UX-1a), historical exact-ID lookup for approved indents and
+  finalized FAIL/PARTIAL GRNs beyond the latest-200 cap (UX-1b), and the real
+  Clone Branch Wizard copying menu items/BOM recipes (HQ-lock preserved,
+  components rewired)/branch-owned checklist templates (UX-1c) are all
+  implemented, parent-verified (real HTTP/PG + browser + independent review,
+  no blockers on any of the three) and local-accepted. Evidence:
+  `docs/branch-deletion-verification.md`,
+  `docs/historical-purchase-lookup-verification.md`,
+  `docs/ux1c-automation1a-verification.md`. Still open: hardened desktop,
+  laptop, tablet and mobile functional/pixel-level UI QA across the rest of
+  the app remains exhaustive-acceptance-unclaimed (DOM/geometry checks only).
 
 ## GPT TAKEOVER — PHASE 3 LOCAL INTEGRATION (October 28, 2026)
 

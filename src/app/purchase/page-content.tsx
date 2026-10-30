@@ -206,16 +206,60 @@ export default function PurchasePage() {
     }
   }
 
-  const selectedIndent = approvedIndents.find((i) => i.id === poForm.indentId && i.branchId === poForm.branchId);
+  const actor = useCurrentUser();
+  const purchaseAllowed = actor.ready && actor.authenticated && !actor.error && (actor.role === "SUPER_ADMIN" || actor.moduleAccess.includes("PURCHASE_ORDER"));
+  const rawLookupScope = JSON.stringify([actor.id, actor.ready, actor.authenticated, actor.error, actor.role, actor.branchId, [...actor.moduleAccess].sort(), poOpen, poForm.branchId, poForm.isGeneral]);
+  const lookupContext = React.useRef({ raw: rawLookupScope, epoch: 0 });
+  if (lookupContext.current.raw !== rawLookupScope) lookupContext.current = { raw: rawLookupScope, epoch: lookupContext.current.epoch + 1 };
+  const lookupScope = JSON.stringify([rawLookupScope, lookupContext.current.epoch]);
+  const lookupLive = React.useRef(lookupScope);
+  const lookupVersion = React.useRef(0);
+  const lookupAlive = React.useRef(true);
+  const lookupPending = React.useRef(false);
+  if (lookupLive.current !== lookupScope) { lookupVersion.current++; lookupPending.current = false; lookupLive.current = lookupScope; }
+  const lookupFeedbackScope = React.useRef(lookupScope);
+  const [indentLookupId, setIndentLookupId] = React.useState("");
+  const [indentLookup, setIndentLookup] = React.useState<{ scope: string; indent: ApprovedIndentOption } | null>(null);
+  const [indentLookupBusy, setIndentLookupBusy] = React.useState(false);
+  const [indentLookupError, setIndentLookupError] = React.useState("");
+  React.useEffect(() => { lookupAlive.current = true; return () => { lookupAlive.current = false; lookupVersion.current++; }; }, []);
+  function clearIndentLookup() {
+    lookupFeedbackScope.current = lookupScope; lookupVersion.current++; lookupPending.current = false;
+    setIndentLookup(null); setIndentLookupBusy(false); setIndentLookupError("");
+  }
+  const historicalIndent = indentLookup?.scope === lookupScope ? indentLookup.indent : null;
+  const indentChoices = historicalIndent ? [historicalIndent, ...approvedIndents.filter(i => i.id !== historicalIndent.id)] : approvedIndents;
+  const lookupRenderVersion = lookupVersion.current;
+  const lookupBusy = indentLookupBusy && lookupPending.current && lookupFeedbackScope.current === lookupScope;
+  async function lookupApprovedIndent() {
+    if (!purchaseAllowed || !poOpen || poBusy || poForm.isGeneral || !poForm.branchId || lookupLive.current !== lookupScope || lookupPending.current || lookupRenderVersion !== lookupVersion.current) return;
+    clearIndentLookup();
+    setPoForm(prev => ({ ...prev, indentId: "", rates: {} }));
+    const id = indentLookupId;
+    if (!id.length || id.length > 200 || id.trim() !== id || /[\u0000-\u001f\u007f]/.test(id)) { setIndentLookupError(uiText("Enter the full indent ID.", "Poora indent ID bharo.")); return; }
+    const token = ++lookupVersion.current;
+    lookupPending.current = true; setIndentLookupBusy(true);
+    const current = () => lookupAlive.current && lookupLive.current === lookupScope && token === lookupVersion.current;
+    try {
+      const data = await requestJson<{ indent: ApprovedIndentOption }>(`/api/purchase/orders/approved-indents/${encodeURIComponent(id)}?${new URLSearchParams({ branchId: poForm.branchId })}`);
+      if (!current()) return;
+      const row = data?.indent;
+      if (!row || row.id !== id || row.branchId !== poForm.branchId || !Array.isArray(row.lines) || !row.lines.length || row.lines.length > 50 || row.lines.some(line => !line || typeof line.rawMaterialId !== "string" || !line.rawMaterialId || typeof line.qty !== "string" || !/^\d{1,9}(?:\.\d{1,3})?$/.test(line.qty) || Number(line.qty) <= 0 || typeof line.name !== "string" || typeof line.unit !== "string")) throw new Error("Invalid approved indent");
+      setIndentLookup({ scope: lookupScope, indent: row });
+      setPoForm(prev => ({ ...prev, indentId: row.id, rates: {} }));
+    } catch { if (current()) setIndentLookupError(uiText("Approved indent not found or lookup failed. Check the full ID and selected branch.", "Approved indent nahi mili ya lookup fail hua. Poora ID aur selected branch check karo.")); }
+    finally { if (current()) { lookupPending.current = false; setIndentLookupBusy(false); } }
+  }
+  const selectedIndent = indentChoices.find((i) => i.id === poForm.indentId && i.branchId === poForm.branchId && (!indentLookup || indentLookup.scope === lookupScope));
   const validRate = (value: string | undefined) => value !== undefined && /^\d{1,8}(\.\d{1,2})?$/.test(value);
   const poFormValid = !!(
-    poForm.branchId.trim() && poForm.vendorId.trim() &&
+    purchaseAllowed && !lookupBusy && poForm.branchId.trim() && poForm.vendorId.trim() &&
     (poForm.isGeneral ? poForm.itemDescription.trim() && validRate(poForm.rate) :
       selectedIndent && selectedIndent.lines.length > 0 && selectedIndent.lines.every((_, index) => validRate(poForm.rates[index])))
   );
 
   async function addPurchase() {
-    if (!poFormValid) return;
+    if (!poFormValid || lookupLive.current !== lookupScope || lookupPending.current || lookupRenderVersion !== lookupVersion.current) return;
     setPoBusy(true);
     try {
       const lines = poForm.isGeneral
@@ -272,7 +316,7 @@ export default function PurchasePage() {
         title={uiText("Purchase & GRN")}
         description={uiText("Indent → Manager Approval → Purchase (Buy → Bill Upload (optional) → Material Receive) → Quality Check → Inventory.")}
       >
-        <Dialog open={poOpen} onOpenChange={(open) => { if (!poBusy) { setPoOpen(open); if (open) loadApprovedIndents(); } }}>
+        <Dialog open={poOpen} onOpenChange={(open) => { if (!poBusy) { clearIndentLookup(); setPoOpen(open); setPoForm(prev => ({ ...prev, indentId: "", rates: {} })); if (open) loadApprovedIndents(); } }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Plus /> {uiText(" New Purchase ")}</Button>
@@ -289,14 +333,14 @@ export default function PurchasePage() {
                 <input
                   type="checkbox"
                   checked={poForm.isGeneral}
-                  onChange={(e) => setPoForm({ ...poForm, isGeneral: e.target.checked, indentId: "", rates: {} })}
+                  onChange={(e) => { clearIndentLookup(); setPoForm({ ...poForm, isGeneral: e.target.checked, indentId: "", rates: {} }); }}
                 />
                 {uiText(" General purchase (store/raw-material se related nahi — no Indent needed) ")}</label>
               <Field label={uiText("Branch")}>
                 <select
                   className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
                   value={poForm.branchId}
-                  onChange={(e) => setPoForm({ ...poForm, branchId: e.target.value, indentId: "", rates: {} })}
+                  onChange={(e) => { clearIndentLookup(); setPoForm({ ...poForm, branchId: e.target.value, indentId: "", rates: {} }); }}
                 >
                   <option value="">{uiText("Select branch (required)")}</option>
                   {branches.map((b) => (
@@ -327,16 +371,23 @@ export default function PurchasePage() {
                 </Field>
               ) : (
                 <>
+                  <p className="text-xs text-muted-foreground">{uiText("Latest 200 approved indents only. Use the full ID to look up an older approved indent in this branch.", "Sirf latest 200 approved indents. Is branch ki purani approved indent ke liye poora ID lookup karo.")}</p>
+                  <Field label={uiText("Full indent ID", "Poora indent ID")}>
+                    <input aria-label="Full indent ID" maxLength={200} value={indentLookupId} className="w-full min-w-0 rounded border p-2" onChange={e => { clearIndentLookup(); setIndentLookupId(e.target.value); setPoForm(prev => ({ ...prev, indentId: "", rates: {} })); }} />
+                  </Field>
+                  <Button type="button" variant="outline" disabled={!purchaseAllowed || !poOpen || !poForm.branchId || lookupBusy} onClick={lookupApprovedIndent}>{uiText("Look up approved indent", "Approved indent lookup karo")}</Button>
+                  {lookupBusy && <p role="status">{uiText("Looking up indent…", "Indent lookup ho rahi hai…")}</p>}
+                  {lookupFeedbackScope.current === lookupScope && indentLookupError && <p role="alert">{indentLookupError}</p>}
                   <Field label={uiText("Approved indent", "Approved indent")}>
                     <select
                       aria-label={uiText("Approved indent", "Approved indent")}
                       className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm"
                       value={poForm.indentId}
-                      disabled={!poForm.branchId}
-                      onChange={(e) => setPoForm({ ...poForm, indentId: e.target.value, rates: {} })}
+                      disabled={!poForm.branchId || lookupBusy}
+                      onChange={(e) => { if (!lookupPending.current) { setIndentLookupError(""); setPoForm({ ...poForm, indentId: e.target.value, rates: {} }); } }}
                     >
                       <option value="">{uiText("Select an approved indent", "Approved indent chuno")}</option>
-                      {approvedIndents.filter((i) => i.branchId === poForm.branchId).map((i) => (
+                      {indentChoices.filter((i) => i.branchId === poForm.branchId).map((i) => (
                         <option key={i.id} value={i.id}>{i.id.slice(0, 8)} — {i.lines.length} {uiText("lines", "lines")}</option>
                       ))}
                     </select>
@@ -371,7 +422,7 @@ export default function PurchasePage() {
               </Field>}
             </fieldset>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPoOpen(false)} disabled={poBusy}>
+              <Button variant="outline" onClick={() => { clearIndentLookup(); setPoOpen(false); setPoForm(prev => ({ ...prev, indentId: "", rates: {} })); }} disabled={poBusy}>
                 {uiText(" Cancel ")}</Button>
               <Button onClick={addPurchase} disabled={poBusy || !poFormValid}>
                 {poBusy ? uiText(" Creating… ") : uiText(" Create (Step 1: Buy) ")}</Button>
@@ -590,11 +641,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // publish a completion into a newly authorized scope.
 function GrnQualitySection({ refreshToken }: { refreshToken: number }) {
   const user = useCurrentUser();
-  const scope = JSON.stringify([user.id, user.authenticated, user.ready, user.role, user.branchId, [...user.moduleAccess].sort()]);
-  return <GrnQualityWorkspace key={scope} user={user} refreshToken={refreshToken} />;
+  const scope = JSON.stringify([user.id, user.authenticated, user.ready, user.error, user.role, user.branchId, [...user.moduleAccess].sort()]);
+  const live = React.useRef(scope); live.current = scope;
+  return <GrnQualityWorkspace key={scope} user={user} refreshToken={refreshToken} isCurrent={() => live.current === scope} />;
 }
 
-function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refreshToken: number }) {
+function GrnQualityWorkspace({ user, refreshToken, isCurrent }: { user: CurrentUser; refreshToken: number; isCurrent: () => boolean }) {
   const uiText = useUiCopy();
   const [grns, setGrns] = React.useState<GrnRow[]>([]);
   const [selected, setSelected] = React.useState<GrnRow | null>(null);
@@ -607,14 +659,15 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
   const [busy, setBusy] = React.useState(false);
   const [uncertain, setUncertain] = React.useState(false);
   const alive = React.useRef(true);
+  const current = () => alive.current && isCurrent();
   const busyRef = React.useRef(false);
   const generation = React.useRef(0);
   const readVersion = React.useRef(0);
   type Decision = { result: "PASS" | "PARTIAL" | "FAIL"; lines: { id: string; qtyFailed: string }[]; note: string; photoUrl: string };
   const intent = React.useRef<{ grn: GrnRow; body: Decision; serialized: string } | null>(null);
-  const allowed = user.ready && user.authenticated && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("PURCHASE_ORDER"));
+  const allowed = user.ready && user.authenticated && !user.error && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("PURCHASE_ORDER"));
   const inventoryAllowed = allowed && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("INVENTORY"));
-  const canCheck = (grn: GrnRow) => allowed && (grn.isGeneralPurchase || inventoryAllowed) && grn.qualityReady && !grn.reconciliationRequired && !grn.qualityRecorded && grn.qualityResult === "PENDING";
+  const canCheck = (grn: GrnRow) => current() && allowed && (grn.isGeneralPurchase || inventoryAllowed) && grn.qualityReady && !grn.reconciliationRequired && !grn.qualityRecorded && grn.qualityResult === "PENDING";
   const quantity = (value: string) => /^\d{1,12}(?:\.\d{1,3})?$/.test(value) ? BigInt(value.split(".")[0]) * BigInt(1000) + BigInt((value.split(".")[1] ?? "").padEnd(3, "0")) : null;
   const decisionLines = selected?.lines.map(line => ({ id: line.id, qtyFailed: result === "PASS" ? "0" : result === "FAIL" ? line.qtyReceived : failures[line.id] ?? "0" })) ?? [];
   const quantitiesValid = !!selected && selected.lines.length > 0 && selected.lines.length <= 50 && new Set(selected.lines.map(line => line.id)).size === selected.lines.length && decisionLines.every((line, i) => {
@@ -623,7 +676,7 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
   });
   const partialValid = result !== "PARTIAL" || (decisionLines.some(line => (quantity(line.qtyFailed) ?? BigInt(0)) > BigInt(0)) && decisionLines.some((line, i) => quantity(line.qtyFailed) !== quantity(selected!.lines[i].qtyReceived)));
   const formValid = quantitiesValid && partialValid && note.trim().length <= 1000 && (result === "PASS" || note.trim().length >= 3) && photoUrl.trim().length <= 2000;
-  const editable = () => !busyRef.current && !intent.current;
+  const editable = () => current() && !busyRef.current && !intent.current;
   React.useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; generation.current++; readVersion.current++; };
@@ -632,8 +685,8 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
     let active = true;
     const version = ++readVersion.current;
     if (allowed) void requestJson<{ grns: GrnRow[] }>("/api/purchase/grns").then(data => {
-      if (active && alive.current && version === readVersion.current && !intent.current) { setGrns(data.grns); setLoadError(""); }
-    }).catch(err => { if (active && alive.current && version === readVersion.current) setLoadError(errMsg(err, "Could not load GRNs.")); });
+      if (active && current() && version === readVersion.current && !intent.current) { setGrns(data.grns); setLoadError(""); }
+    }).catch(err => { if (active && current() && version === readVersion.current) setLoadError(errMsg(err, "Could not load GRNs.")); });
     return () => { active = false; };
   }, [allowed, refreshToken]);
 
@@ -673,15 +726,15 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
     intent.current = attempt; busyRef.current = true; setBusy(true); setError(""); readVersion.current++;
     try {
       const data = await requestJson<{ grn: GrnRow; replayed: boolean }>(`/api/purchase/grns/${attempt.grn.id}/quality`, { method: "POST", body: attempt.serialized });
-      if (!alive.current || token !== generation.current) return;
+      if (!current() || token !== generation.current) return;
       if (!matchesSaved(data.grn, attempt)) throw new Error("The response did not confirm the original quality decision.");
       acceptSaved(data.grn);
     } catch (err) {
-      if (!alive.current || token !== generation.current) return;
+      if (!current() || token !== generation.current) return;
       if (!replay && err instanceof RequestJsonError && err.outcome === "rejected") { intent.current = null; setUncertain(false); setError(err.message); }
       else { setUncertain(true); setError("Outcome unconfirmed. Keep the original decision: check saved quality or explicitly replay the exact request. " + errMsg(err, "Unknown response.")); }
     } finally {
-      if (alive.current && token === generation.current) { busyRef.current = false; setBusy(false); }
+      if (current() && token === generation.current) { busyRef.current = false; setBusy(false); }
     }
   }
   async function checkSaved() {
@@ -690,13 +743,13 @@ function GrnQualityWorkspace({ user, refreshToken }: { user: CurrentUser; refres
     const token = generation.current;
     busyRef.current = true; setBusy(true); readVersion.current++;
     try {
-      const data = await requestJson<{ grns: GrnRow[] }>("/api/purchase/grns");
-      if (!alive.current || token !== generation.current) return;
-      const row = data.grns.find(value => value.id === attempt.grn.id);
+      const data = await requestJson<{ grn: GrnRow }>(`/api/purchase/grns/${encodeURIComponent(attempt.grn.id)}?${new URLSearchParams({ branchId: attempt.grn.branchId })}`);
+      if (!current() || token !== generation.current) return;
+      const row = data?.grn;
       if (row && matchesSaved(row, attempt)) acceptSaved(row);
       else setError("Original decision is still unconfirmed or needs reconciliation. Editing remains locked; check again or replay the exact request.");
-    } catch (err) { if (alive.current && token === generation.current) setError(errMsg(err, "Could not check saved quality. Original decision remains locked.")); }
-    finally { if (alive.current && token === generation.current) { busyRef.current = false; setBusy(false); } }
+    } catch (err) { if (current() && token === generation.current) setError(errMsg(err, "Could not check saved quality. Original decision remains locked.")); }
+    finally { if (current() && token === generation.current) { busyRef.current = false; setBusy(false); } }
   }
   return <>
     {loadError && <p role="alert" className="text-sm text-destructive">{uiText(loadError)}</p>}

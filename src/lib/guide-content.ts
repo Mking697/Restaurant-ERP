@@ -99,23 +99,25 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   "status": "live",
   "title": "Tasks & Checklists",
   "short": "Persisted recurring definitions, one-time delegation and completion.",
-  "what": "Definitions and delegated completion save to PostgreSQL. Enter an existing same-branch assignee user ID manually; no dropdown. Pause/Resume changes definitions, not generated occurrences. No cron recurrence/escalation, reminders, camera capture, geofence verification or file-upload storage exists. Evidence saves a reference link/filename, not file bytes.",
+  "what": "Definitions and delegated completion save to PostgreSQL. Select an existing same-branch doer from the branch-scoped dropdown; task grants do not grant user administration or reveal private user fields. Pause/Resume changes definitions, not generated occurrences. A real authenticated cron endpoint (POST /api/cron/tasks, bearer-secret only, never session/cookie) generates each recurring definition's due occurrence and escalates anything over 30 minutes overdue to OVERDUE; it is bounded/idempotent and never sends any message. Reminders/summary WhatsApp sends, live camera capture, geofence verification and real file-upload storage still do not exist. Evidence saves a reference link/filename, not file bytes.",
   "how": [
-    "Practice only in a QA branch: New Recurring / Checklist saves title, doer user ID, frequency, anchor assign date and shift time.",
-    "Delegate Task saves a one-time task with same-branch user ID, priority and due time.",
-    "Mark Done requires non-empty evidence for ONE_TIME on both client and server. Recurring instance completion permits no attachment, but this UI manages definitions, not generated recurring instances."
+    "Practice only in a QA branch: New Recurring / Checklist saves title, a doer selected from the dropdown, frequency, anchor assign date and shift time.",
+    "Delegate Task saves a one-time task with a same-branch doer selected by name, priority and due time.",
+    "Mark Done requires non-empty evidence for ONE_TIME on both client and server. Recurring instance completion permits no attachment, but this UI manages definitions, not generated recurring instances.",
+    "A scheduled cron (configured in vercel.json, not yet deployed) calls the generation/escalation endpoint every 15 minutes; it is the only thing that ever creates a recurring occurrence row or flips a task to OVERDUE — nothing in this UI does either directly."
   ],
-  "example": "Example: delegate Clean fridge to an existing QA user ID. Mark Done with a reference: DONE persists after reload; no image is uploaded and no cron job is scheduled.",
+  "example": "Example: delegate Clean fridge to an existing QA doer selected by name. Mark Done with a reference: DONE persists after reload; no image is uploaded. A DAILY recurring definition's cron-generated occurrence appears on this page once the cron endpoint runs, and flips to OVERDUE automatically 30 minutes past its due time if still pending.",
   "hinglish": {
     "title": "Tasks & Checklists",
     "short": "Recurring definitions, one-time delegation aur completion persist hote hain.",
-    "what": "Definitions aur delegated completion PostgreSQL mein save hain. Existing same-branch assignee user ID manually daalo; dropdown nahi. Pause/Resume definitions badalta hai, generated occurrences nahi. Cron recurrence/escalation, reminders, camera, geofence verification aur file-upload storage nahi hain. Evidence sirf reference link/filename save karta hai, file bytes nahi.",
+    "what": "Definitions aur delegated completion PostgreSQL mein save hain. Branch-scoped dropdown se existing same-branch doer chuno; task grants se user administration ya private user fields nahi milte. Pause/Resume definitions badalta hai, generated occurrences nahi. Ek real authenticated cron endpoint (POST /api/cron/tasks, sirf bearer-secret, session/cookie nahi) har recurring definition ka due occurrence banata hai aur 30 minute se zyada overdue ko OVERDUE kar deta hai; yeh bounded/idempotent hai aur koi message nahi bhejta. Reminder/summary WhatsApp sends, live camera capture, geofence verification aur real file-upload storage abhi bhi nahi hain. Evidence sirf reference link/filename save karta hai, file bytes nahi.",
     "how": [
-      "Sirf QA branch mein New Recurring / Checklist se title, doer user ID, frequency, anchor assign date aur shift time save karo.",
-      "Delegate Task mein same-branch user ID, priority aur due time se one-time task save karo.",
-      "Mark Done mein ONE_TIME ko non-empty evidence client aur server dono maangte hain. Recurring instance completion par optional hai, par UI definitions manage karta hai, generated recurring instances nahi."
+      "Sirf QA branch mein New Recurring / Checklist se title, dropdown se doer, frequency, anchor assign date aur shift time save karo.",
+      "Delegate Task mein dropdown se same-branch doer, priority aur due time se one-time task save karo.",
+      "Mark Done mein ONE_TIME ko non-empty evidence client aur server dono maangte hain. Recurring instance completion par optional hai, par UI definitions manage karta hai, generated recurring instances nahi.",
+      "Ek scheduled cron (vercel.json mein configured, abhi deploy nahi hua) har 15 minute mein generation/escalation endpoint call karta hai; yahi sirf ek hai jo recurring occurrence row banata hai ya task ko OVERDUE karta hai — yeh UI khud kabhi nahi karti."
     ],
-    "example": "Example: existing QA user ID ko Clean fridge do. Reference ke saath Mark Done: DONE reload ke baad rehta hai; image upload aur cron scheduling nahi hoti."
+    "example": "Example: dropdown se existing QA doer chun kar Clean fridge do. Reference ke saath Mark Done: DONE reload ke baad rehta hai; image upload nahi hoti. Ek DAILY recurring definition ka cron-generated occurrence is page par cron endpoint chalne ke baad dikhta hai, aur pending rehte hue due time se 30 minute baad khud OVERDUE ho jata hai."
   }
 },
   {
@@ -158,9 +160,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   "what": "Indent approvals, PO, bill-step metadata and every GRN line persist. Quality and accepted stock commit atomically once. New FAIL/PARTIAL decisions also create failed-quantity vendor return/refund claims at saved PO rates, rounded per line. These are expected refund/credit claims, NOT proof of physical return, vendor acceptance or money received; no cash, journal or second stock deduction is created. Store quality needs PURCHASE_ORDER and INVENTORY; descriptive general claims do not post stock. Vendor returns lists saved claims; trusted earlier failures can be registered explicitly once. Ambiguous legacy quality/claims require reconciliation. Invoice tax adjustments, settlement, real uploads and spike automation are separate work.",
   "how": [
     "Use only a QA branch: raise/submit an indent, then approve/reject with the relevant permission.",
-    "New Purchase selects an existing vendor and an Approved indent for the same branch. All approved materials/quantities are locked; enter each line rate. General purchase uses description/amount without an indent. Upload Bill (optional) only marks the step; Mark Material Received creates a real GRN.",
+    "New Purchase selects an existing vendor and an Approved indent for the same branch, shown from the latest 200; an older approved indent is found by its full ID with an explicit read-only lookup. All approved materials/quantities are locked; enter each line rate. General purchase uses description/amount without an indent. Upload Bill (optional) only marks the step; Mark Material Received creates a real GRN.",
     "Open Quality Check on a ready GRN. Inspect all received lines; choose PASS, FAIL or PARTIAL. For PARTIAL enter each failed quantity in its own unit; add a failure note for FAIL/PARTIAL and Save quality. Reload to inspect persisted failed/accepted quantities and posting state. New FAIL/PARTIAL also queues expected refund/credit claims; inspect Vendor returns.",
-    "For an unconfirmed outcome use Check saved quality or explicitly Replay exact request; inputs stay locked and no automatic retry occurs. A legacy reconciliation warning must be reviewed by an administrator, not reposted. Vendor returns can register trusted historical failures with the same no-edit request; it cannot record money received."
+    "For an unconfirmed outcome use Check saved quality or explicitly Replay exact request; inputs stay locked and no automatic retry occurs. A legacy reconciliation warning must be reviewed by an administrator, not reposted. Vendor returns picks from the latest 200 finalized GRNs, or finds an older finalized FAIL/PARTIAL GRN by its full ID with an explicit read-only lookup, then can register trusted historical failures with the same no-edit request; it cannot record money received."
   ],
   "example": "Example: rice failed 2.125 kg at saved rate INR 10.25/kg creates a saved INR 21.78 expected claim. Accounts VENDOR_REFUNDS can read it; neither a cash receipt nor a second stock deduction is posted.",
   "hinglish": {
@@ -169,9 +171,9 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "what": "Indent approvals, PO, bill-step metadata aur har GRN line persist hain. Quality aur accepted stock ek atomic transaction mein sirf ek baar post hote hain. Naye FAIL/PARTIAL par failed qty ke saved PO rate se rounded expected vendor return/refund claims bhi bante hain. Yeh expected refund/credit claim hai, physical return, vendor acceptance ya paisa received ka proof NAHI; cash, journal aur dobara stock deduction nahi hota. Store quality ko PURCHASE_ORDER aur INVENTORY chahiye; general descriptive claims stock nahi badhate. Vendor returns mein saved claims aur trusted purane failed GRN ka explicit once-only registration hai. Ambiguous legacy records par reconciliation required. Invoice tax adjustment, settlement, real upload aur spike automation alag kaam hai.",
     "how": [
       "Sirf QA branch mein indent raise/submit karo; relevant permission se approve/reject karo.",
-      "New Purchase mein existing vendor aur same branch ki Approved indent chuno. Saare approved materials/quantities locked hain; har line ka rate bharo. General purchase description/amount se bina indent banti hai. Upload Bill (optional) sirf step mark hai; Mark Material Received real GRN banata hai.",
+      "New Purchase mein existing vendor aur same branch ki Approved indent chuno, jo latest 200 se dikhti hai; purani approved indent full ID se explicit read-only lookup se milti hai. Saare approved materials/quantities locked hain; har line ka rate bharo. General purchase description/amount se bina indent banti hai. Upload Bill (optional) sirf step mark hai; Mark Material Received real GRN banata hai.",
       "Ready GRN ka Quality Check kholo aur har received line dekho. PASS, FAIL ya PARTIAL chuno. PARTIAL par har line ki apni unit mein failed qty bharo; FAIL/PARTIAL ka note likhkar Save quality karo. Reload par saved failed/accepted quantities aur posting state verify karo. Naye FAIL/PARTIAL ka expected refund/credit claim Vendor returns mein dekho.",
-      "Outcome unconfirmed ho to Check saved quality ya explicitly Replay exact request use karo. Inputs locked rehte hain; automatic retry nahi. Purane GRN ki reconciliation warning ko administrator review kare; repost mat karo. Vendor returns se trusted historical failure ka same no-edit request register kar sakte ho; paisa received record nahi hota."
+      "Outcome unconfirmed ho to Check saved quality ya explicitly Replay exact request use karo. Inputs locked rehte hain; automatic retry nahi. Purane GRN ki reconciliation warning ko administrator review kare; repost mat karo. Vendor returns latest 200 finalized GRN se chunta hai, ya purani finalized FAIL/PARTIAL GRN full ID se explicit read-only lookup se milti hai, fir usi no-edit request se trusted historical failure register kar sakte ho; paisa received record nahi hota."
     ],
     "example": "Example: rice 2.125 kg failed, saved rate INR 10.25/kg par INR 21.78 ka expected claim save hota hai. VENDOR_REFUNDS wale Accounts ko dikhega; cash receipt ya dobara stock deduction nahi."
   }
@@ -327,21 +329,23 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "status": "live",
     "title": "Branches",
     "short": "Real branch records; only Owner creates branches.",
-    "what": "Owner can create and edit branches. Branch Admin sees and maintains only their own branch. Creating a branch does not clone menus, recipes, checklists or stock. The clone wizard is not implemented.",
+    "what": "Owner can create and edit branches. Branch Admin sees and maintains only their own branch. Creating a branch does not clone menus, recipes, checklists or stock by itself. Clone Branch copies menu items, BOM recipes (HQ-lock preserved) and that branch's own checklist templates from an existing branch into a brand-new one; stock, vendor rates, users, recurring tasks and historical/transactional data are never copied.",
     "how": [
       "Owner: New Branch, then enter code, name, address, coordinates and geofence radius.",
+      "Owner: Clone Branch, pick an existing source branch, then enter the new branch's own code/name/address/geofence. On success the new branch appears with the copied menu-item/recipe/checklist counts.",
       "Edit a permitted row and save. The screen reads the saved record back from PostgreSQL.",
-      "New branches start empty. Branch deletion is not offered by this screen."
+      "New branches start empty. Owner can Edit a saved branch and use Check deletion readiness for linked-record counts. This is a read-only snapshot: linked data blocks API deletion, the server rechecks every delete, and this screen has no delete button."
     ],
-    "example": "Illustration: Owner creates B7 — Vasant Kunj. It becomes a real branch option in user administration; no menu or stock is copied.",
+    "example": "Illustration: Owner clones B1 into B7 — Vasant Kunj. B7 gets B1's menu items and recipes with HQ-lock state intact; stock, users and past orders start at zero.",
     "hinglish": {
       "title": "Branches",
       "short": "Real branch records; sirf Owner nayi branch banata hai.",
-      "what": "Owner branches create/edit kar sakta hai. Branch Admin sirf apni branch dekhta aur maintain karta hai. Branch banane se menu, recipes, checklist ya stock clone nahi hote. Clone wizard implement nahi hai.",
+      "what": "Owner branches create/edit kar sakta hai. Branch Admin sirf apni branch dekhta aur maintain karta hai. Branch banane se khud se menu, recipes, checklist ya stock clone nahi hote. Clone Branch ek existing branch se menu items, BOM recipes (HQ-lock preserved) aur us branch ke khud ke checklist templates ek nayi branch mein copy karta hai; stock, vendor rates, users, recurring tasks aur historical data kabhi copy nahi hote.",
       "how": [
         "Owner: New Branch mein code, naam, address, coordinates aur geofence radius bharo.",
+        "Owner: Clone Branch mein ek existing source branch chuno, fir nayi branch ka apna code/naam/address/geofence bharo. Success par nayi branch copied menu-item/recipe/checklist counts ke saath dikhti hai.",
         "Permitted row Edit karke save karo. Screen PostgreSQL se saved record dobara padhti hai.",
-        "Nayi branch khali shuru hoti hai. Is screen par branch delete option nahi hai."
+        "Nayi branch khali shuru hoti hai. Owner saved branch Edit karke Deletion readiness check karein se linked-record counts dekh sakta hai. Yeh read-only snapshot hai: linked data par API deletion blocked, har delete par server dobara check karta hai, aur screen par delete button nahi hai."
       ],
       "example": "Example: Owner B7 — Vasant Kunj banata hai. User administration mein real branch option aata hai; menu ya stock copy nahi hota."
     }

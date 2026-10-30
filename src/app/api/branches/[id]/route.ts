@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { branches } from "@/db/schema/platform";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { branchInput } from "@/lib/server/branches";
+import { checkBranchDeletion } from "@/lib/server/branch-deletion";
 import { api, body, json } from "@/lib/server/http";
 import { assertOwner, branchScope, HttpError } from "@/lib/server/permissions";
 type Context = { params: Promise<{ id: string }> };
@@ -17,4 +18,12 @@ export async function PATCH(request: Request, context: Context) { return api(asy
   if (actor.role !== "SUPER_ADMIN" && values.code !== existing.code) throw new HttpError(403, "Only owner may change branch code");
   const [row] = await tx.update(branches).set({ ...values, updatedAt: new Date() }).where(eq(branches.id, id)).returning(); return row;
 }); return json({ branch }); }); }
-export async function DELETE(request: Request, context: Context) { return api(async () => { const { id } = await context.params; await mutate(request, async (tx, actor) => { assertOwner(actor); const rows = await tx.delete(branches).where(eq(branches.id, id)).returning({ id: branches.id }); if (!rows.length) throw new HttpError(404, "Branch not found"); }); return json({ ok: true }); }); }
+export async function DELETE(request: Request, context: Context) { return api(async () => { const { id } = await context.params; await mutate(request, async (tx, actor) => {
+  assertOwner(actor);
+  const check = await checkBranchDeletion(tx, actor, id);
+  if (!check.canDelete) throw new HttpError(409, "Linked records prevent deletion of this branch. No records were removed or reassigned. Check deletion readiness for dependency counts.");
+  // Readiness is never a client authorization token. Recheck in this mutation;
+  // the unchanged foreign keys remain final protection against concurrent links.
+  const rows = await tx.delete(branches).where(eq(branches.id, id)).returning({ id: branches.id });
+  if (!rows.length) throw new HttpError(404, "Branch not found");
+}); return json({ ok: true }); }); }

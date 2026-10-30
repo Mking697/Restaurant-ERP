@@ -76,7 +76,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
     "scenario": "Delegate Clean fridge in a QA branch only: creation and completion write real database records.",
     "steps": [
       "With TASKS_DELEGATION, click Delegate Task; enter Clean fridge and select the QA branch if offered.",
-      "Ask an authorized administrator for an existing same-branch user ID; type it in Assign to — user ID, choose HIGH and a future due time, then Create.",
+      "Choose the intended same-branch doer by name from the dropdown, select HIGH and a future due time, then click Delegate. If the list is empty or fails to load, resolve that before submitting.",
       "Find the task and open Mark Done; submission is blocked without a non-empty Evidence attachment reference.",
       "Enter a non-sensitive evidence reference such as fridge-check.jpg and Mark Done; reload to verify saved DONE. This is text, not an uploaded file."
     ],
@@ -86,7 +86,7 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
     "scenario": "Clean fridge sirf QA branch mein delegate karo: create aur completion real DB writes hain.",
     "steps": [
       "TASKS_DELEGATION se Delegate Task dabao; Clean fridge aur offered ho to QA branch chuno.",
-      "Authorized admin se existing same-branch user ID lo; Assign to — user ID mein manually daalo, HIGH aur future due time chuno, phir Create.",
+      "Dropdown se intended same-branch doer naam se chuno, HIGH aur future due time set karke Delegate dabao. List empty ho ya load fail ho to pehle woh resolve karo.",
       "Task ka Mark Done kholo; non-empty Evidence attachment reference ke bina submission blocked hai.",
       "fridge-check.jpg jaisa non-sensitive reference daal kar Mark Done karo; reload par saved DONE dekho. Yeh text hai, uploaded file nahi."
     ],
@@ -210,13 +210,13 @@ export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideE
   "/admin/branches": {
     en: {
       scenario: "Owner adds a new practice branch without copying another branch's data.",
-      steps: ["As Owner, open Branches and click New Branch.", "Code: PRACTICE7; Name: Practice Vasant Kunj; Address: Test address. Use a unique code.", "Enter the branch's actual latitude/longitude and a geofence radius of 50 metres, then Save. Use a test branch rather than altering a real one.", "Reload and find the new branch. Check the branch dropdown in Users & Access."],
-      result: "A real empty branch is saved and becomes selectable. Menus, recipes, users and stock are not cloned. Branch Admin can edit only their own branch and cannot create this new branch."
+      steps: ["As Owner, open Branches and click New Branch.", "Code: PRACTICE7; Name: Practice Vasant Kunj; Address: Test address. Use a unique code.", "Enter the branch's actual latitude/longitude and a geofence radius of 50 metres, then Save. Use a test branch rather than altering a real one.", "Reload and find the new branch. As Owner, Edit it and click Check deletion readiness. This reads linked-record counts only; no deletion or automatic cleanup occurs."],
+      result: "A real empty branch is saved and becomes selectable. Menus, recipes, users and stock are not cloned. Owner can inspect deletion readiness; linked records prevent API deletion and readiness is only a snapshot. Branch Admin can edit only their own branch, cannot create this new branch or read readiness counts. This screen offers no delete button."
     },
     hinglish: {
       scenario: "Owner doosri branch ka data copy kiye bina nayi practice branch banaye.",
-      steps: ["Owner se Branches kholo aur New Branch dabao.", "Code: PRACTICE7; Name: Practice Vasant Kunj; Address: Test address. Unique code lo.", "Branch ke actual latitude/longitude aur 50 metre geofence radius bharo, phir Save karo. Real branch badalne ke bajaye test branch use karo.", "Reload par nayi branch dekho aur Users & Access ke branch dropdown mein check karo."],
-      result: "Real, khali branch save hogi aur selectable banegi. Menu, recipes, users ya stock clone nahi hote. Branch Admin sirf apni branch edit kar sakta hai; yeh nayi branch create nahi kar sakta."
+      steps: ["Owner se Branches kholo aur New Branch dabao.", "Code: PRACTICE7; Name: Practice Vasant Kunj; Address: Test address. Unique code lo.", "Branch ke actual latitude/longitude aur 50 metre geofence radius bharo, phir Save karo. Real branch badalne ke bajaye test branch use karo.", "Reload par nayi branch dekho. Owner se Edit karke Deletion readiness check karein dabao. Sirf linked-record counts padhe jaate hain; deletion ya automatic cleanup nahi hota."],
+      result: "Real, khali branch save hogi aur selectable banegi. Menu, recipes, users ya stock clone nahi hote. Owner deletion readiness dekh sakta hai; linked records par API deletion blocked aur readiness sirf snapshot hai. Branch Admin sirf apni branch edit kar sakta hai; nayi branch create ya readiness counts read nahi kar sakta. Screen par delete button nahi hai."
     }
   },
   "/admin/settings/shifts": {

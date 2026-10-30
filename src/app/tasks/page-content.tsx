@@ -37,6 +37,28 @@ interface InstanceRow {
   status: "PENDING" | "IN_PROGRESS" | "DONE" | "OVERDUE" | "ESCALATED" | "SKIPPED"; completedAt: string | null; attachmentUrl: string;
 }
 
+interface AssigneeRow { id: string; name: string }
+function useTaskAssignees(open: boolean, canManage: boolean, branchId: string) {
+  const enabled = open && canManage && !!branchId;
+  const resource = useResource<{ branchId: string; assignees: AssigneeRow[] }>(enabled ? `/api/tasks/assignees?${query(branchId)}` : null);
+  const ready = enabled && !resource.loading && !resource.error && resource.data?.branchId === branchId;
+  const options = ready ? resource.data!.assignees : [];
+  return { ...resource, ready, options, valid: (id: string) => ready && options.some(row => row.id === id) };
+}
+function AssigneeField({ label, branchId, lookup, value, onChange }: {
+  label: string; branchId: string; lookup: ReturnType<typeof useTaskAssignees>; value: string; onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  return <div><Field label={label}>
+    <select className={inputClass} required disabled={!lookup.ready || !lookup.options.length} value={lookup.valid(value) ? value : ""} onChange={e => onChange(e.target.value)}>
+      <option value="">{t("Select doer", "Doer chuno")}</option>
+      {lookup.options.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
+    </select>
+  </Field>
+    {!branchId ? <p className="text-xs text-muted-foreground">{t("Select a branch to load doers.", "Doers load karne ke liye branch chuno.")}</p> : <LoadState {...lookup} empty={lookup.ready && !lookup.options.length} />}
+  </div>;
+}
+
 export default function TasksPage() {
   const actor = useCurrentUser(); const selected = useSelectedBranchId();
   const identity = `${actor.id}:${actor.authenticated}:${actor.role}:${actor.branchId}:${actor.moduleAccess.join(",")}:${selected}`;
@@ -72,9 +94,11 @@ function RecurringPanel({ branchId, canManage, branches }: { branchId: string; c
   const [open, setOpen] = React.useState(false);
   const blank = () => ({ branchId, title: "", description: "", assignedToId: "", frequency: "DAILY" as (typeof FREQUENCIES)[number]["code"], assignDate: "", shiftTime: "09:00", attachmentHint: true, requiresGeofence: true });
   const [entry, setEntry] = React.useState(blank);
+  const assignees = useTaskAssignees(open, canManage, entry.branchId);
   if (!canManage) return <Panel><p role="alert">{t("TASKS_RECURRING grant is required to manage recurring checklists. You can still see your own assigned delegated tasks in the other tab.", "Recurring checklist manage karne ke liye TASKS_RECURRING grant chahiye. Doosre tab mein apne assigned delegated tasks dekh sakte ho.")}</p></Panel>;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!assignees.valid(entry.assignedToId)) return;
     if (await action.run(async () => {
       await post("/api/tasks/recurring", { ...entry, description: entry.description || undefined, assignDate: new Date(entry.assignDate).toISOString() });
       await resource.reload();
@@ -90,17 +114,17 @@ function RecurringPanel({ branchId, canManage, branches }: { branchId: string; c
             <DialogDescription>{t("Attachment is optional for the doer. Automatic occurrence generation from this rule is not part of this pass.", "Attachment doer ke liye optional hai. Is rule se automatic occurrence banna is pass mein shamil nahi hai.")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit}><fieldset disabled={action.busy} className="space-y-3">
-            {!branchId && <Field label={t("Branch", "Branch")}><select className={inputClass} required value={entry.branchId} onChange={(e) => setEntry({ ...entry, branchId: e.target.value })}><option value="">{t("Select branch", "Branch chuno")}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field>}
+            {!branchId && <Field label={t("Branch", "Branch")}><select className={inputClass} required value={entry.branchId} onChange={(e) => setEntry({ ...entry, branchId: e.target.value, assignedToId: "" })}><option value="">{t("Select branch", "Branch chuno")}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field>}
             <Field label={t("Task / checklist title", "Task / checklist title")}><input className={inputClass} required maxLength={200} value={entry.title} onChange={(e) => setEntry({ ...entry, title: e.target.value })} placeholder={t("Walk-in fridge temp log", "Walk-in fridge temp log")} /></Field>
             <Field label={t("Description (optional)", "Description (optional)")}><input className={inputClass} maxLength={2000} value={entry.description} onChange={(e) => setEntry({ ...entry, description: e.target.value })} /></Field>
-            <Field label={t("Assigned to (Doer) — user ID", "Assigned to (Doer) — user ID")}><input className={inputClass} required value={entry.assignedToId} onChange={(e) => setEntry({ ...entry, assignedToId: e.target.value })} placeholder={t("Exact user id of a user in this branch", "Is branch ke user ka exact id")} /></Field>
+            <AssigneeField label={t("Assigned to (Doer)", "Assigned to (Doer)")} branchId={entry.branchId} lookup={assignees} value={entry.assignedToId} onChange={assignedToId => setEntry({ ...entry, assignedToId })} />
             <div className="grid grid-cols-2 gap-3">
               <Field label={t("Frequency", "Frequency")}><select className={inputClass} value={entry.frequency} onChange={(e) => setEntry({ ...entry, frequency: e.target.value as typeof entry.frequency })}>{FREQUENCIES.map((f) => <option key={f.code} value={f.code}>{t(f.label)}</option>)}</select></Field>
               <Field label={t("Shift time", "Shift time")}><input type="time" className={inputClass} value={entry.shiftTime} onChange={(e) => setEntry({ ...entry, shiftTime: e.target.value })} /></Field>
             </div>
             <Field label={t("Anchor assign date", "Anchor assign date")}><input type="date" className={inputClass} required value={entry.assignDate} onChange={(e) => setEntry({ ...entry, assignDate: e.target.value })} /></Field>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={entry.attachmentHint} onChange={(e) => setEntry({ ...entry, attachmentHint: e.target.checked })} /> {t("Nudge doer to attach evidence (still optional)", "Doer ko evidence attach karne ka nudge (phir bhi optional)")}</label>
-          </fieldset><DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("Cancel", "Cancel")}</Button><Button type="submit" disabled={action.busy}>{action.busy ? t("Saving…", "Save ho raha hai…") : t("Create", "Create karo")}</Button></DialogFooter></form>
+          </fieldset><DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("Cancel", "Cancel")}</Button><Button type="submit" disabled={action.busy || !assignees.valid(entry.assignedToId)}>{action.busy ? t("Saving…", "Save ho raha hai…") : t("Create", "Create karo")}</Button></DialogFooter></form>
           <ActionState action={action} />
         </DialogContent>
       </Dialog>
@@ -125,10 +149,12 @@ function DelegationPanel({ branchId, canManage, branches }: { branchId: string; 
   const [open, setOpen] = React.useState(false);
   const blank = () => ({ branchId, title: "", description: "", assignedToId: "", priority: "MEDIUM" as (typeof PRIORITIES)[number], dueAt: "" });
   const [entry, setEntry] = React.useState(blank);
+  const assignees = useTaskAssignees(open, canManage, entry.branchId);
   const [doneTask, setDoneTask] = React.useState<InstanceRow | null>(null);
   const [doneAttachment, setDoneAttachment] = React.useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!assignees.valid(entry.assignedToId)) return;
     if (await action.run(async () => {
       await post("/api/tasks/delegate", { ...entry, description: entry.description || undefined, dueAt: new Date(entry.dueAt).toISOString() });
       await resource.reload();
@@ -151,15 +177,15 @@ function DelegationPanel({ branchId, canManage, branches }: { branchId: string; 
             <DialogDescription>{t("The doer will be REQUIRED to attach evidence before marking this Done.", "Doer ko ise Done marking se pehle evidence attach karna ZAROORI hoga.")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit}><fieldset disabled={action.busy} className="space-y-3">
-            {!branchId && <Field label={t("Branch", "Branch")}><select className={inputClass} required value={entry.branchId} onChange={(e) => setEntry({ ...entry, branchId: e.target.value })}><option value="">{t("Select branch", "Branch chuno")}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field>}
+            {!branchId && <Field label={t("Branch", "Branch")}><select className={inputClass} required value={entry.branchId} onChange={(e) => setEntry({ ...entry, branchId: e.target.value, assignedToId: "" })}><option value="">{t("Select branch", "Branch chuno")}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field>}
             <Field label={t("Task title", "Task title")}><input className={inputClass} required maxLength={200} value={entry.title} onChange={(e) => setEntry({ ...entry, title: e.target.value })} placeholder={t("Repair exhaust fan", "Repair exhaust fan")} /></Field>
             <Field label={t("Description (optional)", "Description (optional)")}><input className={inputClass} maxLength={2000} value={entry.description} onChange={(e) => setEntry({ ...entry, description: e.target.value })} /></Field>
-            <Field label={t("Assign to — user ID", "Assign to — user ID")}><input className={inputClass} required value={entry.assignedToId} onChange={(e) => setEntry({ ...entry, assignedToId: e.target.value })} placeholder={t("Exact user id of a user in this branch", "Is branch ke user ka exact id")} /></Field>
+            <AssigneeField label={t("Assign to", "Assign to")} branchId={entry.branchId} lookup={assignees} value={entry.assignedToId} onChange={assignedToId => setEntry({ ...entry, assignedToId })} />
             <div className="grid grid-cols-2 gap-3">
               <Field label={t("Priority", "Priority")}><select className={inputClass} value={entry.priority} onChange={(e) => setEntry({ ...entry, priority: e.target.value as typeof entry.priority })}>{PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}</select></Field>
               <Field label={t("Due", "Due")}><input type="datetime-local" className={inputClass} required value={entry.dueAt} onChange={(e) => setEntry({ ...entry, dueAt: e.target.value })} /></Field>
             </div>
-          </fieldset><DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("Cancel", "Cancel")}</Button><Button type="submit" disabled={action.busy}>{action.busy ? t("Delegating…", "Delegate ho raha hai…") : t("Delegate", "Delegate karo")}</Button></DialogFooter></form>
+          </fieldset><DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("Cancel", "Cancel")}</Button><Button type="submit" disabled={action.busy || !assignees.valid(entry.assignedToId)}>{action.busy ? t("Delegating…", "Delegate ho raha hai…") : t("Delegate", "Delegate karo")}</Button></DialogFooter></form>
           <ActionState action={action} />
         </DialogContent>
       </Dialog>}

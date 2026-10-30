@@ -39,6 +39,9 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
   const { t } = useTranslation();
   const [rows, setRows] = React.useState<ReturnRow[]>([]);
   const [grns, setGrns] = React.useState<Grn[]>([]);
+  const [lookupId, setLookupId] = React.useState("");
+  const [historical, setHistorical] = React.useState<Grn | null>(null);
+  const [lookupError, setLookupError] = React.useState("");
   const [selected, setSelected] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
@@ -54,8 +57,23 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
   const params = new URLSearchParams(); if (branchId !== "all") params.set("branchId", branchId);
   const endpoint = mode === "purchase" ? "/api/purchase/material-returns" : "/api/accounts/vendor-refunds";
   const url = endpoint + (params.size ? `?${params}` : "");
-  const trusted = (g: Grn) => inBranch(g.branchId) && g.qualityRecorded === true && !!g.qualityRecordedAt && !g.reconciliationRequired && ["FAIL", "PARTIAL"].includes(g.qualityResult) && Array.isArray(g.lines) && g.lines.length > 0 && new Set(g.lines.map(l => l.id)).size === g.lines.length && g.lines.every(l => decimal(l.qtyFailed, 3) !== null && decimal(l.rateOrdered, 2) !== null) && g.lines.some(l => decimal(l.qtyFailed, 3)! > BigInt(0));
-  const candidates = grns.filter(trusted);
+  const trusted = (g: Grn) => !!g && typeof g.id === "string" && !!g.id && typeof g.poNumber === "string" && inBranch(g.branchId) && g.qualityRecorded === true && typeof g.qualityRecordedAt === "string" && !!g.qualityRecordedAt && g.reconciliationRequired === false && ["FAIL", "PARTIAL"].includes(g.qualityResult) && (g.qualityNote === null || typeof g.qualityNote === "string") && Array.isArray(g.lines) && g.lines.length > 0 && g.lines.length <= 50 && g.lines.every(l => !!l && typeof l.id === "string" && !!l.id && typeof l.unit === "string" && typeof l.name === "string" && typeof l.itemDescription === "string" && decimal(l.qtyFailed, 3) !== null && decimal(l.rateOrdered, 2) !== null) && new Set(g.lines.map(l => l.id)).size === g.lines.length && g.lines.some(l => decimal(l.qtyFailed, 3)! > BigInt(0));
+  const candidates = (historical ? [historical, ...grns.filter(g => g.id !== historical.id)] : grns).filter(trusted);
+  async function lookupGrn() {
+    if (!allowed || mode !== "purchase" || branchId === "all" || !current() || busyRef.current || loading || intent.current) return;
+    setSelected(""); setHistorical(null); setLookupError("");
+    const id = lookupId;
+    if (!id.length || id.length > 200 || id.trim() !== id || /[\u0000-\u001f\u007f]/.test(id)) { setLookupError(t("Enter the full GRN ID.", "Poora GRN ID bharo.")); return; }
+    const token = ++version.current;
+    busyRef.current = true; setBusy(true);
+    try {
+      const data = await requestJson<{ grn: Grn }>(`/api/purchase/grns/${encodeURIComponent(id)}?${new URLSearchParams({ branchId })}`);
+      if (!current() || token !== version.current) return;
+      if (!data?.grn || data.grn.id !== id || data.grn.branchId !== branchId || !trusted(data.grn)) throw new Error("Untrusted GRN");
+      setHistorical(data.grn); setSelected(data.grn.id);
+    } catch { if (current() && token === version.current) setLookupError(t("No trusted finalized FAIL/PARTIAL GRN found. Check the full ID and branch, then try again.", "Trusted finalized FAIL/PARTIAL GRN nahi mili. Poora ID aur branch check karke dobara try karo.")); }
+    finally { if (current() && token === version.current) { busyRef.current = false; setBusy(false); } }
+  }
   async function readSnapshot() {
     const [claims, quality] = await Promise.all([
       requestJson<{ returns: ReturnRow[] }>(url),
@@ -126,6 +144,10 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
     <Button type="button" variant="outline" disabled={busy} onClick={() => void reload()}>{t("Reload claims", "Claims reload karo")}</Button>
     {mode === "purchase" && <div className="min-w-0 space-y-3">
       <p className="text-sm">{t("New FAIL/PARTIAL quality decisions queue claims automatically. Register a trusted historical failure once; no quantities, rates or money can be entered here.", "Naye FAIL/PARTIAL quality decisions claims apne aap queue karte hain. Trusted purani failure ek baar register karo; yahan quantity, rate ya paisa enter nahi hota.")}</p>
+      <p className="text-xs text-muted-foreground">{t("Latest 200 GRNs in the selector. For older history, select a branch and look up the full GRN ID. Lookup is read-only.", "Selector mein latest 200 GRNs. Purani history ke liye branch chuno aur poora GRN ID lookup karo. Lookup sirf read karta hai.")}</p>
+      <label className="block min-w-0 text-sm">{t("Full GRN ID", "Poora GRN ID")}<input aria-label="Full GRN ID" maxLength={200} className="mt-1 w-full min-w-0 rounded border bg-card p-2" value={lookupId} disabled={busy || loading || uncertain || branchId === "all"} onChange={e => { if (current() && !busyRef.current && !intent.current) { setLookupId(e.target.value); setSelected(""); setHistorical(null); setLookupError(""); } }} /></label>
+      <Button type="button" variant="outline" disabled={busy || loading || uncertain || branchId === "all"} onClick={lookupGrn}>{t("Look up finalized GRN", "Finalized GRN lookup karo")}</Button>
+      {lookupError && <p role="alert">{lookupError}</p>}
       <label className="block min-w-0 text-sm">{t("Finalized failed GRN", "Finalized failed GRN")}
         <select className="mt-1 w-full min-w-0 max-w-full rounded border bg-card p-2" value={selected} disabled={busy || loading || uncertain || !!error} onChange={e => { if (!busyRef.current && !intent.current && !loading && !error && current()) setSelected(e.target.value); }}>
           <option value="">{t("Select a trusted FAIL/PARTIAL GRN", "Trusted FAIL/PARTIAL GRN chuno")}</option>

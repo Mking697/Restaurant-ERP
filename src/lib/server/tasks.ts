@@ -70,6 +70,16 @@ async function assertAssigneeInBranch(tx: Executor, branchId: string, userId: st
   const [row] = await tx.select({ id: users.id, branchId: users.branchId }).from(users).where(eq(users.id, userId)).limit(1);
   if (!row || row.branchId !== branchId) throw new HttpError(400, "assignedToId must be a user in the same branch");
 }
+// Creation grants only: CHECKLISTS-only viewers must not gain a user directory.
+export async function listAssignees(tx: Executor, actor: Identity, branchQuery: unknown) {
+  if (!hasModule(actor, "TASKS_RECURRING") && !hasModule(actor, "TASKS_DELEGATION")) throw new HttpError(403, "Module access required");
+  const branchId = requiredBranchId(actor, branchQuery);
+  await assertBranch(tx, branchId);
+  const assignees = await tx.select({ id: users.id, name: users.name }).from(users)
+    .where(eq(users.branchId, branchId)).orderBy(users.name, users.id);
+  return { branchId, assignees };
+}
+
 export function canManageTasks(actor: Identity) {
   return hasModule(actor, "TASKS_RECURRING") || hasModule(actor, "TASKS_DELEGATION") || hasModule(actor, "CHECKLISTS");
 }
