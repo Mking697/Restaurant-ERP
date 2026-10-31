@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { useSelectedBranchId } from "@/lib/current-branch";
 import { useTranslation } from "@/lib/i18n";
+import { formatInr } from "@/lib/utils";
 
 type Mode = "purchase" | "accounts";
 type ReturnRow = {
@@ -193,13 +194,13 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, canSettle, isCurrent 
     {!loading && !error && <div className="grid min-w-0 gap-3 sm:grid-cols-2">{rows.map(row => <article key={row.id} className="min-w-0 space-y-1 break-words rounded border p-3 text-sm">
       <p className="font-medium">{row.poNumber} · {row.vendor}</p><p>{row.branch} · {row.grnId}</p><p>{row.itemName}</p>
       <p>{t("Claimed failed quantity", "Claim ki gayi failed quantity")}: {row.qtyReturned} {row.unit}</p>
-      {row.status === "REFUND_OR_CREDIT_EXPECTED" ? <p>{t("Expected refund/credit", "Expected refund/credit")}: ₹{row.refundAmountInr}</p> : <p role="alert">{t("Reconciliation required — expected amount is unverified.", "Reconciliation chahiye — expected amount verify nahi hai.")}</p>}
+      {row.status === "REFUND_OR_CREDIT_EXPECTED" ? <p>{t("Expected refund/credit", "Expected refund/credit")}: {formatInr(Number(row.refundAmountInr))}</p> : <p role="alert">{t("Reconciliation required — expected amount is unverified.", "Reconciliation chahiye — expected amount verify nahi hai.")}</p>}
       <p>{row.reasonNote}</p><p>{t("Queued for Accounts (not paid)", "Accounts ke liye queued (paid nahi)")}: {row.submittedToAccountsAt ?? "—"}</p>
       {row.moneyReceived ? (
-        <p role="status">{t("Settled", "Settled")}: ₹{row.settledAmountInr} ({row.settledAt}){row.settledNote ? ` — ${row.settledNote}` : ""}</p>
+        <p role="status">{t("Settled", "Settled")}: {formatInr(Number(row.settledAmountInr))} ({row.settledAt}){row.settledNote ? ` — ${row.settledNote}` : ""}</p>
       ) : canSettle && row.status === "REFUND_OR_CREDIT_EXPECTED" ? (
         <div className="space-y-1 rounded border border-dashed p-2">
-          <label className="block text-xs">{t("Settled amount", "Settled amount")} (₹)<input aria-label={`Settled amount for ${row.id}`} className="mt-1 w-full rounded border bg-card p-1" inputMode="decimal" value={settleAmounts[row.id] ?? ""} disabled={settleBusy === row.id} onChange={e => setSettleAmounts(prev => ({ ...prev, [row.id]: e.target.value }))} /></label>
+          <label className="block text-xs">{t("Settled amount", "Settled amount")} (TSh)<input aria-label={`Settled amount for ${row.id}`} className="mt-1 w-full rounded border bg-card p-1" inputMode="decimal" value={settleAmounts[row.id] ?? ""} disabled={settleBusy === row.id} onChange={e => setSettleAmounts(prev => ({ ...prev, [row.id]: e.target.value }))} /></label>
           <label className="block text-xs">{t("Note (optional)", "Note (optional)")}<input aria-label={`Settlement note for ${row.id}`} className="mt-1 w-full rounded border bg-card p-1" maxLength={500} value={settleNotes[row.id] ?? ""} disabled={settleBusy === row.id} onChange={e => setSettleNotes(prev => ({ ...prev, [row.id]: e.target.value }))} /></label>
           <Button type="button" variant="outline" disabled={settleBusy === row.id} onClick={() => void settle(row)}>{t("Mark as Settled", "Settled mark karo")}</Button>
           {settleError[row.id] && <p role="alert">{settleError[row.id]}</p>}

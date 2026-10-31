@@ -109,11 +109,30 @@ export async function startFirstShift(tx: Executor, actor: Identity, branchId: s
   return run;
 }
 
+// Exact paise-equivalent BigInt money math — same convention as src/lib/
+// server/expenses.ts's paise()/decimal() helpers, duplicated locally since
+// there is no shared money module yet (pre-existing pattern in this
+// codebase). Shift-close is the real audited cash-variance figure, so it
+// must never drift from float summation error across hundreds of orders.
+function toCents(value: string): bigint {
+  if (!/^-?\d+(\.\d{1,2})?$/.test(value)) throw new Error("Invalid persisted money");
+  const negative = value.startsWith("-");
+  const abs = negative ? value.slice(1) : value;
+  const [whole, fraction = ""] = abs.split(".");
+  const cents = BigInt(whole) * BigInt(100) + BigInt(fraction.padEnd(2, "0"));
+  return negative ? -cents : cents;
+}
+function fromCents(value: bigint): string {
+  const negative = value < BigInt(0);
+  const abs = negative ? -value : value;
+  return (negative ? "-" : "") + `${abs / BigInt(100)}.${String(abs % BigInt(100)).padStart(2, "0")}`;
+}
+
 // Ends the given OPEN run: takes the closing blind cash count, computes this
 // run's own POS tender totals (never typed in by a human), creates the
 // PENDING handover, and immediately opens the next shift in the cycle so
 // there is never a gap. Returns the handover + the new run.
-export async function endShiftAndHandover(tx: Executor, actor: Identity, branchId: string, runId: string, denominations: { note500Count: number; note200Count: number; note100Count: number; note50Count: number; note20Count: number; note10Count: number; coinsInr: number }) {
+export async function endShiftAndHandover(tx: Executor, actor: Identity, branchId: string, runId: string, denominations: { note10000Count: number; note5000Count: number; note2000Count: number; note1000Count: number; note500Count: number; coinsInr: number }) {
   await lockShiftState(tx, branchId);
   const [run] = await tx.select().from(shiftRuns).where(and(eq(shiftRuns.id, runId), eq(shiftRuns.branchId, branchId), eq(shiftRuns.status, "OPEN"))).limit(1);
   if (!run) throw new HttpError(404, "Open shift run not found");
@@ -134,24 +153,30 @@ export async function endShiftAndHandover(tx: Executor, actor: Identity, branchI
   // any prior shortage/excess. Electronic tenders are receipts for this run
   // only, not a drawer balance: never add incoming CARD/UPI/OTHER again.
   const [incoming] = await tx.select().from(shiftHandovers).where(and(eq(shiftHandovers.toRunId, run.id), eq(shiftHandovers.branchId, branchId), eq(shiftHandovers.status, "ACCEPTED"))).limit(1);
-  let cashExpected = Number(incoming?.cashAmount ?? 0), cardAmount = 0, upiAmount = 0, otherAmount = 0;
+  let cashExpectedCents = toCents(incoming?.cashAmount ?? "0"), cardCents = BigInt(0), upiCents = BigInt(0), otherCents = BigInt(0);
   for (const row of tenders) {
-    const amount = Number(row.totalAmount);
-    if (row.tenderType === "CASH") cashExpected += amount;
-    else if (row.tenderType === "CARD") cardAmount += amount;
-    else if (row.tenderType === "UPI") upiAmount += amount;
-    else otherAmount += amount;
+    const amountCents = toCents(row.totalAmount);
+    if (row.tenderType === "CASH") cashExpectedCents += amountCents;
+    else if (row.tenderType === "CARD") cardCents += amountCents;
+    else if (row.tenderType === "UPI") upiCents += amountCents;
+    else otherCents += amountCents;
   }
 
-  const countedCashInr = 500 * denominations.note500Count + 200 * denominations.note200Count + 100 * denominations.note100Count + 50 * denominations.note50Count + 20 * denominations.note20Count + 10 * denominations.note10Count + denominations.coinsInr;
+  const countedCashCents = BigInt(10000 * 100) * BigInt(denominations.note10000Count)
+    + BigInt(5000 * 100) * BigInt(denominations.note5000Count)
+    + BigInt(2000 * 100) * BigInt(denominations.note2000Count)
+    + BigInt(1000 * 100) * BigInt(denominations.note1000Count)
+    + BigInt(500 * 100) * BigInt(denominations.note500Count)
+    + toCents(denominations.coinsInr.toFixed(2));
+  const shortageExcessCents = countedCashCents - cashExpectedCents;
   const closingDropId = randomUUID();
   await tx.insert(cashDrops).values({
     id: closingDropId, branchId, cashierId: actor.id, shiftDate: run.startedAt,
-    expectedCashInr: cashExpected.toFixed(2),
-    note500Count: denominations.note500Count, note200Count: denominations.note200Count, note100Count: denominations.note100Count,
-    note50Count: denominations.note50Count, note20Count: denominations.note20Count, note10Count: denominations.note10Count,
-    coinsInr: denominations.coinsInr.toFixed(2), countedCashInr: countedCashInr.toFixed(2),
-    shortageExcessInr: (countedCashInr - cashExpected).toFixed(2), shiftRunId: run.id,
+    expectedCashInr: fromCents(cashExpectedCents),
+    note10000Count: denominations.note10000Count, note5000Count: denominations.note5000Count, note2000Count: denominations.note2000Count,
+    note1000Count: denominations.note1000Count, note500Count: denominations.note500Count,
+    coinsInr: denominations.coinsInr.toFixed(2), countedCashInr: fromCents(countedCashCents),
+    shortageExcessInr: fromCents(shortageExcessCents), shiftRunId: run.id,
   });
 
   const [endedRun] = await tx.update(shiftRuns).set({ status: "ENDED", endedAt: new Date(), endedBy: actor.id }).where(eq(shiftRuns.id, run.id)).returning();
@@ -160,10 +185,10 @@ export async function endShiftAndHandover(tx: Executor, actor: Identity, branchI
 
   const [handover] = await tx.insert(shiftHandovers).values({
     id: randomUUID(), branchId, fromRunId: run.id, toRunId: nextRun.id, closingCashDropId: closingDropId,
-    cashAmount: countedCashInr.toFixed(2), cardAmount: cardAmount.toFixed(2), upiAmount: upiAmount.toFixed(2), otherAmount: otherAmount.toFixed(2),
+    cashAmount: fromCents(countedCashCents), cardAmount: fromCents(cardCents), upiAmount: fromCents(upiCents), otherAmount: fromCents(otherCents),
   }).returning();
 
-  return { handover, fromRun: endedRun, toRun: nextRun, cashExpected: cashExpected.toFixed(2), shortageExcessInr: (countedCashInr - cashExpected).toFixed(2) };
+  return { handover, fromRun: endedRun, toRun: nextRun, cashExpected: fromCents(cashExpectedCents), shortageExcessInr: fromCents(shortageExcessCents) };
 }
 
 export async function acceptHandover(tx: Executor, actor: Identity, branchId: string, handoverId: string) {

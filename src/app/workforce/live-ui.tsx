@@ -3,6 +3,7 @@ import * as React from "react";
 import { requestJson } from "@/lib/current-user";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils";
 
 export const inputClass = "w-full min-w-0 rounded-md border border-input bg-card px-3 py-2 text-sm";
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -12,7 +13,9 @@ export function Panel({ children }: { children: React.ReactNode }) { return <sec
 export function DataTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
   return <div className="max-w-full overflow-x-auto"><table className="w-full text-left text-sm [&_th]:whitespace-nowrap [&_th]:p-3 [&_th]:text-muted-foreground [&_td]:p-3 [&_tr]:border-b"><thead><tr>{headers.map((header, i) => <th key={i}>{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
 }
-export function money(value: string) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(Number(value)); }
+// Back-compat name kept so every existing payroll-panel.tsx/employees-panel.tsx
+// call site needs no change — delegates to the one real TSh formatter.
+export function money(value: string) { return formatCurrency(value); }
 export function today() {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const part = (type: string) => parts.find(value => value.type === type)!.value;

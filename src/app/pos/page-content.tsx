@@ -204,15 +204,15 @@ function ScopedPos() {
         <div className="flex flex-wrap gap-2">
         {isOwner && <Dialog open={ratesOpen} onOpenChange={(v) => { setRatesOpen(v); if (v) setError(""); }}>
           <DialogTrigger asChild><Button size="sm" variant="outline">{uiText("Currency Rates")}</Button></DialogTrigger>
-          <DialogContent><DialogHeader><DialogTitle>{uiText("Exchange Rates")}</DialogTitle><DialogDescription>{uiText("1 unit of the foreign currency = this many INR. Each order locks in the rate at sale time — changing it here never alters past orders.", "1 unit foreign currency = itne INR. Har order apne time ka rate lock kar leta hai — yahan change karne se purane orders nahi badalte.")}</DialogDescription></DialogHeader>
+          <DialogContent><DialogHeader><DialogTitle>{uiText("Exchange Rates")}</DialogTitle><DialogDescription>{uiText("1 unit of the foreign currency = this many TSh. Each order locks in the rate at sale time — changing it here never alters past orders.", "1 unit foreign currency = itne TSh. Har order apne time ka rate lock kar leta hai — yahan change karne se purane orders nahi badalte.")}</DialogDescription></DialogHeader>
             {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
-            <Table><TableHeader><TableRow><TableHead>{uiText("Currency")}</TableHead><TableHead>{uiText("Rate (INR)")}</TableHead><TableHead>{uiText("Updated")}</TableHead></TableRow></TableHeader><TableBody>
-              {currencyRates.map((r) => <TableRow key={r.id}><TableCell>{r.currencyCode}</TableCell><TableCell>₹{r.rateToInr}</TableCell><TableCell className="text-xs text-muted-foreground">{new Date(r.updatedAt).toLocaleDateString("en-IN")}</TableCell></TableRow>)}
+            <Table><TableHeader><TableRow><TableHead>{uiText("Currency")}</TableHead><TableHead>{uiText("Rate (TSh)")}</TableHead><TableHead>{uiText("Updated")}</TableHead></TableRow></TableHeader><TableBody>
+              {currencyRates.map((r) => <TableRow key={r.id}><TableCell>{r.currencyCode}</TableCell><TableCell>TSh {r.rateToInr}</TableCell><TableCell className="text-xs text-muted-foreground">{new Date(r.updatedAt).toLocaleDateString("en-GB")}</TableCell></TableRow>)}
             </TableBody></Table>
             {!currencyRates.length && <p className="text-sm text-muted-foreground">{uiText("No rates configured yet.")}</p>}
             <div className="flex items-end gap-2 pt-2">
               <label className="block space-y-1 text-xs font-medium"><span>{uiText("Code")}</span><input className={inputClass + " w-20 uppercase"} maxLength={3} value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="USD" /></label>
-              <label className="block flex-1 space-y-1 text-xs font-medium"><span>{uiText("Rate to INR")}</span><input type="number" min="0.000001" step="0.000001" className={inputClass} value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="84.50" /></label>
+              <label className="block flex-1 space-y-1 text-xs font-medium"><span>{uiText("Rate to TSh")}</span><input type="number" min="0.000001" step="0.000001" className={inputClass} value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="2500.00" /></label>
               <Button disabled={rateBusy || !newCode || !newRate} onClick={saveRate}>{rateBusy ? uiText("Saving…") : uiText("Save Rate")}</Button>
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setRatesOpen(false)}>{uiText("Close")}</Button></DialogFooter>
@@ -243,15 +243,15 @@ function ScopedPos() {
                 <label className="block space-y-1 text-xs font-medium"><span>{uiText("Counter")}</span><select className={inputClass} value={counterNo} onChange={(e) => setCounterNo(e.target.value)}><option value="COUNTER_1">{uiText("Counter 1")}</option><option value="COUNTER_2">{uiText("Counter 2")}</option></select></label>
                 <label className="block space-y-1 text-xs font-medium"><span>{uiText("Tender")}</span><select className={inputClass} value={tenderType} onChange={(e) => setTenderType(e.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></select></label>
               </div>
-              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Payment currency")}</span><select className={inputClass} value={tenderCurrencyCode} onChange={(e) => setTenderCurrencyCode(e.target.value)}><option value="INR">{uiText("INR (₹)")}</option>{currencyRates.map((r) => <option key={r.id} value={r.currencyCode}>{r.currencyCode} (1 = ₹{r.rateToInr})</option>)}</select></label>
+              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Payment currency")}</span><select className={inputClass} value={tenderCurrencyCode} onChange={(e) => setTenderCurrencyCode(e.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map((r) => <option key={r.id} value={r.currencyCode}>{r.currencyCode} (1 = TSh {r.rateToInr})</option>)}</select></label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer name (optional)")}</span><input className={inputClass} value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder={uiText("Rahul")} /></label>
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer WhatsApp (optional)")}</span><input className={inputClass} value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="98765 43210" /></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer WhatsApp (optional)")}</span><input className={inputClass} value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="712 345 678" /></label>
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-medium">{uiText("Items")}</p>
                 {lines.map((line, i) => <div key={i} className="flex gap-2">
-                  <select className={inputClass} value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} (₹{m.price})</option>)}</select>
+                  <select className={inputClass} value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({formatInr(Number(m.price))})</option>)}</select>
                   <input type="number" min={1} max={500} className={inputClass + " w-20"} value={line.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value) || 1) })} />
                   <Button type="button" variant="outline" size="sm" onClick={() => removeLine(i)}>{uiText("Remove")}</Button>
                 </div>)}
@@ -270,7 +270,7 @@ function ScopedPos() {
                 <p>{uiText("Subtotal:")} {formatInr(Number(result.receipt.subtotal))}</p>
                 <p>{uiText("VAT:")} {formatInr(Number(result.receipt.taxAmount))}{result.receipt.vat.rates.length ? " (" + result.receipt.vat.rates.map((r) => `${r.ratePercent}%: ${formatInr(Number(r.vatAmount))}`).join(", ") + ")" : ""}</p>
                 <p className="font-medium">{uiText("Total:")} {formatInr(Number(result.receipt.totalAmount))}</p>
-                {result.receipt.currency && <p className="text-sm">{uiText("Payable in")} {result.receipt.currency.tenderCurrencyCode}: <strong>{result.receipt.currency.tenderCurrencyAmount}</strong> ({uiText("rate")} ₹{result.receipt.currency.fxRateToInr})</p>}
+                {result.receipt.currency && <p className="text-sm">{uiText("Payable in")} {result.receipt.currency.tenderCurrencyCode}: <strong>{result.receipt.currency.tenderCurrencyAmount}</strong> ({uiText("rate")} TSh {result.receipt.currency.fxRateToInr})</p>}
               </div>
               <p className="text-xs text-muted-foreground">{uiText("Inventory deducted:")} {result.inventoryDeducted.map((d) => `${d.qtyDeducted}`).join(", ") || uiText("none (no BOM configured)")}</p>
               {result.whatsapp.attempted && <p className={result.whatsapp.sent ? "text-sm" : "text-sm text-destructive"}>{result.whatsapp.sent ? uiText("WhatsApp thank-you sent.", "WhatsApp Thank You bhej diya.") : uiText("WhatsApp thank-you was not sent:", "WhatsApp Thank You nahi bheja:") + " " + result.whatsapp.error}</p>}
@@ -318,7 +318,7 @@ function ScopedPos() {
                   <TableCell>{o.tableNo || "-"}</TableCell>
                   <TableCell>{formatInr(Number(o.totalAmount))}{o.tenderCurrencyCode !== "INR" && <span className="ml-1 text-xs text-muted-foreground">({o.tenderCurrencyAmount} {o.tenderCurrencyCode})</span>}</TableCell>
                   <TableCell>{o.tenderType}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</TableCell>
                   <TableCell><Badge variant={o.status === "VOIDED" ? "destructive" : "success"}>{o.status}</Badge></TableCell>
                   {isOwner && <TableCell><div className="flex flex-wrap items-center gap-2"><Badge variant={o.ownerOnly ? "warning" : "outline"}>{uiText(o.ownerOnly ? "Owner-only" : "Staff-visible")}</Badge><Button size="sm" variant="outline" disabled={visibilityBusy || visibilityUnknown || busy} onClick={() => { setVisibilityTarget(o); setVisibilityReason(""); setVisibilityMessage(""); }}>{uiText(o.ownerOnly ? "Restore staff visibility" : "Make Owner-only")}</Button></div></TableCell>}
                 </TableRow>)}

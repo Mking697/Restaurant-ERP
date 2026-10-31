@@ -194,10 +194,10 @@ function AggregatorPanel({ branchId, month, setMonth }: { branchId: string; mont
                 <option value="ZOMATO">ZOMATO</option>
               </select>
             </Field>
-            <Field label={uiText("Order value (₹)", "Order value (₹)")}><input className={inputClass} type="number" min="0.01" step="0.01" required value={entry.orderValue} onChange={e => setEntry({ ...entry, orderValue: e.target.value })} /></Field>
-            <Field label={uiText("Commission (₹)", "Commission (₹)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.commissionAmount} onChange={e => setEntry({ ...entry, commissionAmount: e.target.value })} /></Field>
-            <Field label={uiText("Ads (₹)", "Ads (₹)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.adsAmount} onChange={e => setEntry({ ...entry, adsAmount: e.target.value })} /></Field>
-            <Field label={uiText("Refund / penalty (₹)", "Refund / penalty (₹)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.refundPenalty} onChange={e => setEntry({ ...entry, refundPenalty: e.target.value })} /></Field>
+            <Field label={uiText("Order value (TSh)", "Order value (TSh)")}><input className={inputClass} type="number" min="0.01" step="0.01" required value={entry.orderValue} onChange={e => setEntry({ ...entry, orderValue: e.target.value })} /></Field>
+            <Field label={uiText("Commission (TSh)", "Commission (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.commissionAmount} onChange={e => setEntry({ ...entry, commissionAmount: e.target.value })} /></Field>
+            <Field label={uiText("Ads (TSh)", "Ads (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.adsAmount} onChange={e => setEntry({ ...entry, adsAmount: e.target.value })} /></Field>
+            <Field label={uiText("Refund / penalty (TSh)", "Refund / penalty (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.refundPenalty} onChange={e => setEntry({ ...entry, refundPenalty: e.target.value })} /></Field>
           </fieldset>
           <Button type="submit" disabled={action.busy || !entry.orderValue.trim()}>
             {action.busy ? uiText("Saving…", "Save ho raha hai…") : uiText("Log settlement", "Settlement log karo")}

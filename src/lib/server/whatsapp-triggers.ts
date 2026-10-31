@@ -21,7 +21,7 @@ export function validOptionalPhone(value: unknown): string {
 
 export function thankYouMessage(params: { customerName: string; orderNumber: string; totalAmount: string; branchName: string }): string {
   const name = params.customerName.trim() || "Guest";
-  return `Namaste ${name}! Aapka order #${params.orderNumber} confirm ho gaya hai — Total ₹${params.totalAmount} (${params.branchName}). Dhanyawad, phir se aaiyega! 🙏`;
+  return `Namaste ${name}! Aapka order #${params.orderNumber} confirm ho gaya hai — Total TSh ${params.totalAmount} (${params.branchName}). Dhanyawad, phir se aaiyega! 🙏`;
 }
 
 export function offerMessage(params: { offerText: string; validUntil: string; branchName: string }): string {

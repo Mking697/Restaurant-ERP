@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
+require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
 const React = require('react');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const grn = (id = 'grn-a', extra = {}) => ({ id, branchId: 'a', poNumber: 'PO-A', qualityRecorded: true, qualityRecordedAt: '2026-10-29', reconciliationRequired: false, qualityResult: 'PARTIAL', qualityNote: 'Damaged', lines: [
@@ -35,6 +36,7 @@ async function harness(options = {}) {
       return { returns: id ? rows.filter(r => r.grnId === id) : rows };
     } },
     '@/components/ui/button': { Button: 'Button' },
+    '@/lib/utils': require('../src/lib/utils.ts'),
   };
   function load(path) { const module = { exports: {} }; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, URLSearchParams, require: name => { assert.ok(name in dependencies, name); return dependencies[name]; } }); return module.exports; }
   const panelPath = 'src/components/vendor-returns-panel.tsx';
@@ -118,14 +120,14 @@ test('Purchase registers trusted failed quantities with an empty body and reload
   h.choose('grn-a'); await h.button('Register failed-quantity claim').props.onClick();
   assert.deepEqual(h.calls.filter(c => c.method === 'POST'), [{ url: '/api/purchase/grns/grn-a/returns', method: 'POST', body: '{}' }]);
   assert.match(h.text(h.render()), /Claim confirmed and records reloaded/);
-  assert.match(h.text(h.render()), /62.50/);
+  assert.match(h.text(h.render()), /TSh 63/);
 });
 
 test('Accounts-only grant reads own-branch expected claims without purchase or mutation controls', async () => {
   const h = await harness({ mode: 'accounts', rows: claims() });
   assert.equal(h.calls.length, 1); assert.equal(h.calls[0].url, '/api/accounts/vendor-refunds?branchId=a');
   assert.equal(h.find(n => n.type === 'select').length, 0);
-  assert.match(h.text(h.render()), /62.50/); assert.match(h.text(h.render()), /Latest 200/);
+  assert.match(h.text(h.render()), /TSh 63/); assert.match(h.text(h.render()), /Latest 200/);
   assert.match(h.text(h.render()), /not.*money received/i); assert.doesNotMatch(h.text(h.render()), /Register failed/);
 });
 

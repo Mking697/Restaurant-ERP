@@ -45,14 +45,17 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
       await pool.query("insert into sessions(token_hash,user_id,token_version,expires_at) values($1,$2,0,now()+interval '1 hour')", [createHash('sha256').update(t).digest('hex'), uid]);
     }
     assert.equal((await request('/api/auth/me')).user.id, owner);
-    for (const [mid, price] of [[dishCash, '100.00'], [dishCard, '250.00']]) await pool.query("insert into menu_items(id,branch_id,name,price,is_semi_fg,is_sellable,output_unit) values($1,$2,$1,$3,false,true,'portion')", [mid, a, price]);
+    // VAT-zeroed test items: this test is about shift cash reconciliation
+    // math, not VAT — zero-rating keeps every dollar-exact assertion below
+    // meaningful without VAT inflating totals.
+    for (const [mid, price] of [[dishCash, '100.00'], [dishCard, '250.00']]) await pool.query("insert into menu_items(id,branch_id,name,price,is_semi_fg,is_sellable,output_unit,vat_rate_percent) values($1,$2,$1,$3,false,true,'portion','0.00')", [mid, a, price]);
     await pool.query("insert into raw_materials(id,name,unit) values($1,$2,'kg'),($3,$4,'kg')", [rawCash, 'Shift QA raw ' + rawCash, rawCard, 'Shift QA raw ' + rawCard]);
     await withRecipe(dishCash, a, rawCash);
     await withRecipe(dishCard, a, rawCard);
 
     // Branch b has NO shifts configured at all — legacy/opt-out branch, POS
     // must keep working exactly as before shift management existed.
-    await pool.query("insert into menu_items(id,branch_id,name,price,is_semi_fg,is_sellable,output_unit) values($1,$2,$1,'50.00',false,true,'portion')", [legacyId, b]);
+    await pool.query("insert into menu_items(id,branch_id,name,price,is_semi_fg,is_sellable,output_unit,vat_rate_percent) values($1,$2,$1,'50.00',false,true,'portion','0.00')", [legacyId, b]);
     await pool.query("insert into raw_materials(id,name,unit) values($1,$2,'kg')", [rawLegacy, 'Shift QA raw ' + rawLegacy]);
     await withRecipe(legacyId, b, rawLegacy);
     const legacySale = await request('/api/pos/orders', ot, 'POST', order(legacyId, 'CASH', b), 201);
@@ -101,7 +104,7 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
 
     // Count exactly 100 in notes — matches the single CASH sale (₹100), zero
     // shortage expected.
-    const endResult = await request('/api/shift-runs/' + runA.id + '/end', ct, 'POST', { branchId: a, note100Count: 1, note50Count: 0, note20Count: 0, note10Count: 0, note200Count: 0, note500Count: 0, coinsInr: 0 }, 201);
+    const endResult = await request('/api/shift-runs/' + runA.id + '/end', ct, 'POST', { branchId: a, coinsInr: 100 }, 201);
     assert.equal(endResult.handover.cashAmount, '100.00');
     assert.equal(endResult.handover.cardAmount, '250.00');
     assert.equal(endResult.handover.upiAmount, '100.00');
@@ -119,7 +122,7 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
 
     await request('/api/pos/orders', ct, 'POST', order(dishCash, 'CASH'), 409);
     pass('POS orders are blocked on the new run until its handover is accepted');
-    await request('/api/shift-runs/' + runB.id + '/end', ct, 'POST', { branchId: a, note100Count: 0, note50Count: 0, note20Count: 0, note10Count: 0, note200Count: 0, note500Count: 0, coinsInr: 0 }, 409);
+    await request('/api/shift-runs/' + runB.id + '/end', ct, 'POST', { branchId: a, coinsInr: 0 }, 409);
     pass('cannot end a shift whose own incoming handover is still pending acceptance');
 
     await request('/api/shift-runs/' + runB.id + '/end', ct, 'POST', { branchId: b }, 403);
@@ -144,7 +147,7 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
     pass('POS orders now tag the accepted new run');
 
     await request('/api/pos/orders', ct, 'POST', order(dishCash, 'UPI'), 201);
-    const secondEnd = await request('/api/shift-runs/' + runB.id + '/end', ct, 'POST', { branchId: a, note100Count: 2 }, 201);
+    const secondEnd = await request('/api/shift-runs/' + runB.id + '/end', ct, 'POST', { branchId: a, coinsInr: 200 }, 201);
     assert.equal(secondEnd.cashExpected, '200.00');
     assert.equal(secondEnd.shortageExcessInr, '0.00');
     assert.equal(secondEnd.handover.cashAmount, '200.00');
@@ -182,8 +185,8 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
     const runC = secondEnd.toRun;
     const raced = await Promise.all([
       postResult('/api/pos/orders', order(dishCash, 'CASH')),
-      postResult('/api/shift-runs/' + runC.id + '/end', { branchId: a, note100Count: 2 }),
-      postResult('/api/shift-runs/' + runC.id + '/end', { branchId: a, note100Count: 2 }),
+      postResult('/api/shift-runs/' + runC.id + '/end', { branchId: a, coinsInr: 200 }),
+      postResult('/api/shift-runs/' + runC.id + '/end', { branchId: a, coinsInr: 200 }),
     ]);
     const sale = raced[0], endings = raced.slice(1);
     assert.ok([201, 409].includes(sale.status), JSON.stringify(sale));
@@ -205,7 +208,7 @@ async function withRecipe(menuItemId, branchId, rawMaterialId) {
 
     await request('/api/shift-handovers/' + closed.handover.id + '/accept', ct, 'POST', { branchId: a }, 200);
     await request('/api/shift-runs/' + closed.toRun.id + '/end', ct, 'POST', { branchId: a, coinsInr: 0.001 }, 400);
-    const coinClosing = await request('/api/shift-runs/' + closed.toRun.id + '/end', ct, 'POST', { branchId: a, note100Count: 2, coinsInr: 0.5 }, 201);
+    const coinClosing = await request('/api/shift-runs/' + closed.toRun.id + '/end', ct, 'POST', { branchId: a, coinsInr: 200.5 }, 201);
     assert.equal(coinClosing.cashExpected, '200.00');
     assert.equal(coinClosing.handover.cashAmount, '200.50');
     assert.equal(coinClosing.shortageExcessInr, '0.50');

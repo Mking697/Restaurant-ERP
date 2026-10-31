@@ -120,12 +120,14 @@ export const cashDrops = pgTable(
     shiftDate: timestamp("shift_date", { withTimezone: true }).notNull(),
     // Hidden from cashier UI until submit — API-layer rule, not enforceable in schema.
     expectedCashInr: numeric("expected_cash_inr", { precision: 10, scale: 2 }).notNull(),
+    // Tanzanian Shilling (TZS) banknotes: 10,000 / 5,000 / 2,000 / 1,000 / 500.
+    // Coins (200/100/50 TSh) are not individually counted — coinsInr below is
+    // the single catch-all for every coin denomination, same as before.
+    note10000Count: integer("note_10000_count").notNull().default(0),
+    note5000Count: integer("note_5000_count").notNull().default(0),
+    note2000Count: integer("note_2000_count").notNull().default(0),
+    note1000Count: integer("note_1000_count").notNull().default(0),
     note500Count: integer("note_500_count").notNull().default(0),
-    note200Count: integer("note_200_count").notNull().default(0),
-    note100Count: integer("note_100_count").notNull().default(0),
-    note50Count: integer("note_50_count").notNull().default(0),
-    note20Count: integer("note_20_count").notNull().default(0),
-    note10Count: integer("note_10_count").notNull().default(0),
     coinsInr: numeric("coins_inr", { precision: 10, scale: 2 }).notNull().default("0"),
     countedCashInr: numeric("counted_cash_inr", { precision: 10, scale: 2 }).notNull(), // computed
     shortageExcessInr: numeric("shortage_excess_inr", { precision: 10, scale: 2 }).notNull(),
