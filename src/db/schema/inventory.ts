@@ -1,4 +1,4 @@
-import { boolean, date, index, numeric, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, index, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { branches } from "./platform";
 import { rawMaterials } from "./menu";
 import { users } from "./auth";
@@ -23,7 +23,14 @@ export const inventoryStock = pgTable(
     maxStockLevel: numeric("max_stock_level", { precision: 12, scale: 3 }).notNull().default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("inventory_stock_branch_raw_idx").on(table.branchId, table.rawMaterialId)]
+  // Real uniqueness guard (upgraded from a plain non-unique index) — without
+  // this, two concurrent "upsert stock row" writers (e.g. two GRN postings
+  // landing near-simultaneously for the same branch+material) could both
+  // read-no-row then insert, silently splitting one material's qtyOnHand
+  // across two rows. production.ts's deductStock() already fails closed on
+  // an application-level duplicate (see its own comment there) — this closes
+  // the gap at the database level so a duplicate can no longer be created.
+  (table) => [uniqueIndex("inventory_stock_branch_raw_unique").on(table.branchId, table.rawMaterialId)]
 );
 
 export const stockBatches = pgTable(

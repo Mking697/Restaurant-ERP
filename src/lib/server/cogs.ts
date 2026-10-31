@@ -31,6 +31,27 @@ import { HttpError } from "./permissions";
 export interface OrderCogsLine { menuItemId: string; qty: number }
 export interface OrderCogsResult { cogsAmount: string; complete: boolean }
 
+// Fixed-point paise-BigInt money helpers — same convention as the rest of
+// this project's real money code (expenses.ts/accounts-ledger.ts/vat.ts/
+// reports/_aggregation.ts's toPaise/fromPaise). Each raw material's cost
+// (qty-from-BOM-explode [float, inherent to bom.ts's explosion engine] times
+// vendor rate) is rounded to paise ONCE per raw material, then every
+// subsequent sum is exact BigInt — never a running float accumulator that
+// could drift across many order lines/raw materials.
+function toPaise(value: string): bigint {
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) throw new HttpError(500, "Invalid persisted money value");
+  const negative = value.startsWith("-");
+  const raw = negative ? value.slice(1) : value;
+  const [whole, fraction = ""] = raw.split(".");
+  const amount = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+  return negative ? -amount : amount;
+}
+function fromPaise(value: bigint): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  return `${negative ? "-" : ""}${abs / 100n}.${String(abs % 100n).padStart(2, "0")}`;
+}
+
 export async function computeOrderCogs(tx: Executor, branchId: string, lines: OrderCogsLine[]): Promise<OrderCogsResult> {
   const recipeRows = await tx.select().from(bomRecipes).where(eq(bomRecipes.branchId, branchId));
   const recipeIndex = buildRecipeIndex(recipeRows as BomRow[]);
@@ -62,13 +83,18 @@ export async function computeOrderCogs(tx: Executor, branchId: string, lines: Or
   if (!rawTotals.size) return { cogsAmount: "0.00", complete };
   const rawIds = [...rawTotals.keys()];
   const rateRows = await tx.select().from(vendorRates).where(inArray(vendorRates.rawMaterialId, rawIds)).orderBy(desc(vendorRates.lockedAt), desc(vendorRates.id));
-  const rateByRaw = new Map<string, number>();
-  for (const row of rateRows) if (!rateByRaw.has(row.rawMaterialId)) rateByRaw.set(row.rawMaterialId, Number(row.rate));
-  let total = 0;
+  const rateByRaw = new Map<string, string>();
+  for (const row of rateRows) if (!rateByRaw.has(row.rawMaterialId)) rateByRaw.set(row.rawMaterialId, row.rate);
+  let totalPaise = 0n;
   for (const [rawId, qty] of rawTotals) {
     const rate = rateByRaw.get(rawId);
     if (rate === undefined) { complete = false; continue; }
-    total += qty * rate;
+    // qty is float (inherent to explodeBom); rate is an exact persisted paise
+    // amount. Round the product to paise once, right here, then fold it into
+    // the exact BigInt running total — never let a float total accumulate.
+    const ratePaise = toPaise(rate);
+    const lineCostPaise = BigInt(Math.round(qty * Number(ratePaise)));
+    totalPaise += lineCostPaise;
   }
-  return { cogsAmount: total.toFixed(2), complete };
+  return { cogsAmount: fromPaise(totalPaise), complete };
 }

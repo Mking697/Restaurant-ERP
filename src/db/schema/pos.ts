@@ -77,17 +77,21 @@ export const posOrders = pgTable(
   ]
 );
 
-export const posOrderLines = pgTable("pos_order_lines", {
-  id: text("id").primaryKey(),
-  orderId: text("order_id")
-    .notNull()
-    .references(() => posOrders.id),
-  menuItemId: text("menu_item_id")
-    .notNull()
-    .references(() => menuItems.id),
-  qty: integer("qty").notNull(),
-  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
-});
+export const posOrderLines = pgTable(
+  "pos_order_lines",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => posOrders.id),
+    menuItemId: text("menu_item_id")
+      .notNull()
+      .references(() => menuItems.id),
+    qty: integer("qty").notNull(),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  },
+  (table) => [index("pos_order_lines_order_id_idx").on(table.orderId)]
+);
 
 export const posAlerts = pgTable(
   "pos_alerts",
