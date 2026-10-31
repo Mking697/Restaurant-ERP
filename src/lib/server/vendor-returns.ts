@@ -8,7 +8,7 @@ import type { Executor } from "./auth";
 import { assertModule, branchScope, HttpError, type Identity } from "./permissions";
 import { qualityReceiptId, qualityReceiptState } from "./grn-quality-policy";
 import { returnPlan, returnReceiptId, validReturnReceipt, RETURN_ACTION, type ReturnSource } from "./vendor-return-policy";
-import { allowedFields } from "./purchase";
+import { allowedFields, assertReturnNotSettled, parseSettleInput } from "./purchase";
 
 async function loadSource(tx: Executor, actor: Identity, id: string): Promise<ReturnSource> {
   const [grn] = await tx.select().from(grns).where(eq(grns.id,id)).limit(1);
@@ -79,6 +79,25 @@ export async function readVendorReturns(tx: Executor, actor: Identity, query: {b
   return rows.map(row=>{
     const c=contextMap.get(row.grnId), sameScope=!!c && c.grn.branchId===row.branchId && c.po.branchId===row.branchId;
     const line=lines.find(l=>l.id===row.grnLineId && l.grnId===row.grnId);
-    return {...row,branch:sameScope?c!.branch:"",poNumber:sameScope?c!.po.poNumber:"",vendorId:sameScope?c!.po.vendorId:"",vendor:sameScope?c!.vendor:"",itemName:sameScope?(line?.name??line?.itemDescription??""):"",unit:sameScope?(line?.unit??""):"",status:valid.get(row.grnId)&&sameScope?"REFUND_OR_CREDIT_EXPECTED" as const:"RECONCILIATION_REQUIRED" as const,moneyReceived:null};
+    return {...row,branch:sameScope?c!.branch:"",poNumber:sameScope?c!.po.poNumber:"",vendorId:sameScope?c!.po.vendorId:"",vendor:sameScope?c!.vendor:"",itemName:sameScope?(line?.name??line?.itemDescription??""):"",unit:sameScope?(line?.unit??""):"",status:valid.get(row.grnId)&&sameScope?"REFUND_OR_CREDIT_EXPECTED" as const:"RECONCILIATION_REQUIRED" as const,moneyReceived:row.settledAt?true:false};
   });
+}
+
+// PURCHASE-2 — "Mark as Settled": Owner/Accounts-only (ACCOUNTS_EXPENSES),
+// once-only write of money-received/credit-note settlement onto an existing
+// expected claim row. Never creates a journal entry or transfers money — it
+// only records the fact that settlement happened, with who/when/how much.
+export async function settleVendorReturn(tx: Executor, actor: Identity, id: string, input: Record<string, unknown>) {
+  assertModule(actor, "ACCOUNTS_EXPENSES");
+  const [row] = await tx.select().from(materialReturns).where(eq(materialReturns.id, id)).limit(1);
+  if (!row) throw new HttpError(404, "Vendor claim not found");
+  branchScope(actor, row.branchId);
+  assertReturnNotSettled(row.settledAt);
+  const parsed = parseSettleInput(input);
+  await tx
+    .update(materialReturns)
+    .set({ settledAmountInr: parsed.settledAmountInr, settledAt: new Date(), settledById: actor.id, settledNote: parsed.settledNote })
+    .where(and(eq(materialReturns.id, id), eq(materialReturns.branchId, row.branchId)));
+  const [updated] = await tx.select().from(materialReturns).where(eq(materialReturns.id, id));
+  return { return: updated };
 }

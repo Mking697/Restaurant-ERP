@@ -10,7 +10,8 @@ type ReturnRow = {
   id: string; grnId: string; grnLineId: string; branchId: string; branch: string; poNumber: string;
   vendorId: string; vendor: string; itemName: string; unit: string; qtyReturned: string;
   refundAmountInr: string; reasonNote: string; submittedToAccountsAt: string | null; createdAt: string;
-  status: "REFUND_OR_CREDIT_EXPECTED" | "RECONCILIATION_REQUIRED"; moneyReceived: null;
+  status: "REFUND_OR_CREDIT_EXPECTED" | "RECONCILIATION_REQUIRED"; moneyReceived: boolean;
+  settledAmountInr: string | null; settledAt: string | null; settledById: string | null; settledNote: string;
 };
 
 type Grn = {
@@ -32,10 +33,11 @@ export function VendorReturnsPanel({ mode }: { mode: Mode }) {
   const scope = JSON.stringify([mode, actor.id, actor.ready, actor.authenticated, actor.error, actor.role, actor.branchId, [...actor.moduleAccess].sort(), branchId]);
   const live = React.useRef(scope); live.current = scope;
   const allowed = !actor.error && hasCurrentModule(actor, mode === "purchase" ? "PURCHASE_ORDER" : "VENDOR_REFUNDS") && !!branchId && branchId !== "__no_branch__" && (actor.role === "SUPER_ADMIN" || branchId !== "all");
-  return <VendorReturnsWorkspace key={scope} mode={mode} branchId={branchId} allowed={allowed} isCurrent={() => live.current === scope} />;
+  const canSettle = mode === "accounts" && !actor.error && hasCurrentModule(actor, "ACCOUNTS_EXPENSES");
+  return <VendorReturnsWorkspace key={scope} mode={mode} branchId={branchId} allowed={allowed} canSettle={canSettle} isCurrent={() => live.current === scope} />;
 }
 
-function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: Mode; branchId: string; allowed: boolean; isCurrent: () => boolean }) {
+function VendorReturnsWorkspace({ mode, branchId, allowed, canSettle, isCurrent }: { mode: Mode; branchId: string; allowed: boolean; canSettle: boolean; isCurrent: () => boolean }) {
   const { t } = useTranslation();
   const [rows, setRows] = React.useState<ReturnRow[]>([]);
   const [grns, setGrns] = React.useState<Grn[]>([]);
@@ -48,6 +50,10 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
   const [error, setError] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [uncertain, setUncertain] = React.useState(false);
+  const [settleAmounts, setSettleAmounts] = React.useState<Record<string, string>>({});
+  const [settleNotes, setSettleNotes] = React.useState<Record<string, string>>({});
+  const [settleBusy, setSettleBusy] = React.useState<string | null>(null);
+  const [settleError, setSettleError] = React.useState<Record<string, string>>({});
   const intent = React.useRef<Grn | null>(null);
   const busyRef = React.useRef(false);
   const version = React.useRef(0);
@@ -96,13 +102,36 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
     // The keyed workspace captures an immutable authorization scope.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  async function settle(row: ReturnRow) {
+    if (!canSettle || !current() || settleBusy) return;
+    const amount = (settleAmounts[row.id] ?? "").trim();
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
+      setSettleError(prev => ({ ...prev, [row.id]: t("Enter a valid settled amount.", "Valid settled amount bharo.") }));
+      return;
+    }
+    setSettleBusy(row.id); setSettleError(prev => ({ ...prev, [row.id]: "" }));
+    try {
+      await requestJson(`/api/purchase/material-returns/${encodeURIComponent(row.id)}/settle`, {
+        method: "POST",
+        body: JSON.stringify({ settledAmountInr: amount, settledNote: (settleNotes[row.id] ?? "").trim() }),
+      });
+      if (!current()) return;
+      const snapshot = await readSnapshot();
+      if (!current()) return;
+      setRows(snapshot.rows); setGrns(snapshot.grns);
+      setMessage(t("Marked settled and records reloaded.", "Settled mark kiya aur records reload hue."));
+    } catch (err) {
+      if (!current()) return;
+      setSettleError(prev => ({ ...prev, [row.id]: t("Could not mark settled.", "Settled mark nahi hua.") + (err instanceof Error ? ` ${err.message}` : "") }));
+    } finally { if (current()) setSettleBusy(null); }
+  }
   function matches(rows: ReturnRow[], source: Grn) {
     const failed = source.lines.filter(l => decimal(l.qtyFailed, 3)! > BigInt(0));
     return Array.isArray(rows) && rows.length === failed.length && new Set(rows.map(r => r.id)).size === failed.length && rows.every(row => {
       const line = failed.find(l => l.id === row.grnLineId);
       if (!line) return false;
       const expected = (decimal(line.qtyFailed, 3)! * decimal(line.rateOrdered, 2)! + BigInt(500)) / BigInt(1000);
-      return row.id === `grn-return:${line.id}` && row.grnId === source.id && row.branchId === source.branchId && row.poNumber === source.poNumber && row.unit === line.unit && row.status === "REFUND_OR_CREDIT_EXPECTED" && row.moneyReceived === null && !!row.vendorId && !!row.submittedToAccountsAt && !!row.createdAt && row.reasonNote === (source.qualityNote ?? "") && decimal(row.qtyReturned, 3) === decimal(line.qtyFailed, 3) && decimal(row.refundAmountInr, 2) === expected;
+      return row.id === `grn-return:${line.id}` && row.grnId === source.id && row.branchId === source.branchId && row.poNumber === source.poNumber && row.unit === line.unit && row.status === "REFUND_OR_CREDIT_EXPECTED" && row.moneyReceived === false && !!row.vendorId && !!row.submittedToAccountsAt && !!row.createdAt && row.reasonNote === (source.qualityNote ?? "") && decimal(row.qtyReturned, 3) === decimal(line.qtyFailed, 3) && decimal(row.refundAmountInr, 2) === expected;
     });
   }
   async function register(recovery: "new" | "replay" | "read" = "new") {
@@ -166,6 +195,16 @@ function VendorReturnsWorkspace({ mode, branchId, allowed, isCurrent }: { mode: 
       <p>{t("Claimed failed quantity", "Claim ki gayi failed quantity")}: {row.qtyReturned} {row.unit}</p>
       {row.status === "REFUND_OR_CREDIT_EXPECTED" ? <p>{t("Expected refund/credit", "Expected refund/credit")}: ₹{row.refundAmountInr}</p> : <p role="alert">{t("Reconciliation required — expected amount is unverified.", "Reconciliation chahiye — expected amount verify nahi hai.")}</p>}
       <p>{row.reasonNote}</p><p>{t("Queued for Accounts (not paid)", "Accounts ke liye queued (paid nahi)")}: {row.submittedToAccountsAt ?? "—"}</p>
+      {row.moneyReceived ? (
+        <p role="status">{t("Settled", "Settled")}: ₹{row.settledAmountInr} ({row.settledAt}){row.settledNote ? ` — ${row.settledNote}` : ""}</p>
+      ) : canSettle && row.status === "REFUND_OR_CREDIT_EXPECTED" ? (
+        <div className="space-y-1 rounded border border-dashed p-2">
+          <label className="block text-xs">{t("Settled amount", "Settled amount")} (₹)<input aria-label={`Settled amount for ${row.id}`} className="mt-1 w-full rounded border bg-card p-1" inputMode="decimal" value={settleAmounts[row.id] ?? ""} disabled={settleBusy === row.id} onChange={e => setSettleAmounts(prev => ({ ...prev, [row.id]: e.target.value }))} /></label>
+          <label className="block text-xs">{t("Note (optional)", "Note (optional)")}<input aria-label={`Settlement note for ${row.id}`} className="mt-1 w-full rounded border bg-card p-1" maxLength={500} value={settleNotes[row.id] ?? ""} disabled={settleBusy === row.id} onChange={e => setSettleNotes(prev => ({ ...prev, [row.id]: e.target.value }))} /></label>
+          <Button type="button" variant="outline" disabled={settleBusy === row.id} onClick={() => void settle(row)}>{t("Mark as Settled", "Settled mark karo")}</Button>
+          {settleError[row.id] && <p role="alert">{settleError[row.id]}</p>}
+        </div>
+      ) : null}
     </article>)}</div>}
     {!loading && !error && !rows.length && <p>{t("No claims in this scope.", "Is scope mein koi claim nahi.")}</p>}
   </section>;

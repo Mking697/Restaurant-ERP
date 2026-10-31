@@ -92,6 +92,13 @@
       "when": 1793426176627,
       "tag": "0012_uneven_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793432274233,
+      "tag": "0013_wealthy_mandrill",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { indents, indentLines } from "@/db/schema/purchase";
+import { db } from "@/db/client";
 import { mutate } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope } from "@/lib/server/permissions";
 import { aggregateIndentLinesByMaterial, allowedFields, assertIndentDraft, computeRollingAverages, evaluateIndentSpike } from "@/lib/server/purchase";
+import { sendIndentApprovalPing } from "@/lib/server/purchase-notifications";
 import { loadIndent } from "../../../_shared";
 
 export const runtime = "nodejs";
@@ -64,6 +66,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           : "Real rolling-average data exists and no line exceeded the 25% spike threshold; auto-approved without owner review.";
       return { indent: row, spikeComputed: spike.hasData, note };
     });
+    // Best-effort owner/approver ping, deliberately AFTER the transaction
+    // above has committed (same ordering discipline as
+    // task-notifications.ts) — a slow/unconfigured WhatsApp send must never
+    // hold the advisory lock or block this response.
+    if (result.indent.status === "PENDING_APPROVAL") {
+      await sendIndentApprovalPing(db, { indentId: result.indent.id, branchId: result.indent.branchId, spikePercent: result.indent.spikePercent, hasData: result.spikeComputed });
+    }
     return json(result);
   });
 }

@@ -208,6 +208,7 @@ export default function PurchasePage() {
 
   const actor = useCurrentUser();
   const purchaseAllowed = actor.ready && actor.authenticated && !actor.error && (actor.role === "SUPER_ADMIN" || actor.moduleAccess.includes("PURCHASE_ORDER"));
+  const accountsAllowed = actor.ready && actor.authenticated && !actor.error && (actor.role === "SUPER_ADMIN" || actor.moduleAccess.includes("ACCOUNTS_EXPENSES"));
   const rawLookupScope = JSON.stringify([actor.id, actor.ready, actor.authenticated, actor.error, actor.role, actor.branchId, [...actor.moduleAccess].sort(), poOpen, poForm.branchId, poForm.isGeneral]);
   const lookupContext = React.useRef({ raw: rawLookupScope, epoch: 0 });
   if (lookupContext.current.raw !== rawLookupScope) lookupContext.current = { raw: rawLookupScope, epoch: lookupContext.current.epoch + 1 };
@@ -282,14 +283,18 @@ export default function PurchasePage() {
     }
   }
 
-  async function markBillUploaded(po: PurchaseOrderRow) {
+  async function uploadBillFile(po: PurchaseOrderRow, file: File) {
     setRowBusyId(po.id);
     try {
-      await requestJson(`/api/purchase/orders/${po.id}/bill`, { method: "POST", body: JSON.stringify({}) });
-      notify(uiText(`${po.poNumber} — bill step marked complete (text/URL field only, no file-upload pipeline yet).`, `${po.poNumber} — bill step complete mark hua (abhi text/URL field hi, file upload pipeline nahi hai).`));
+      const form = new FormData();
+      form.append("bill", file);
+      await fetch(`/api/purchase/orders/${po.id}/bill/upload`, { method: "POST", body: form, credentials: "same-origin" }).then(async (res) => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
+      });
+      notify(uiText(`${po.poNumber} — bill uploaded.`, `${po.poNumber} — bill upload ho gaya.`));
       loadOrders();
     } catch (err) {
-      notify(uiText(errMsg(err, "Could not mark bill uploaded.")));
+      notify(uiText(errMsg(err, "Could not upload bill.")));
     } finally {
       setRowBusyId(null);
     }
@@ -597,8 +602,16 @@ export default function PurchasePage() {
                             {p.billUploadedAt ? (
                               <Badge variant="success">{uiText("2. Bill ✓")}</Badge>
                             ) : (
-                              <Button size="sm" variant="outline" disabled={rowBusyId === p.id} onClick={() => markBillUploaded(p)}>
-                                <Upload className="size-3.5" /> {uiText(" Upload Bill (optional) ")}</Button>
+                              <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input bg-card px-2 py-1.5 text-xs">
+                                <Upload className="size-3.5" /> {uiText("Upload Bill (optional)")}
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/png,image/jpeg,image/webp"
+                                  className="hidden"
+                                  disabled={rowBusyId === p.id}
+                                  onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void uploadBillFile(p, file); }}
+                                />
+                              </label>
                             )}
                             {p.materialReceivedAt ? (
                               <Badge variant="success">{uiText("3. Received ✓")}</Badge>
@@ -606,6 +619,7 @@ export default function PurchasePage() {
                               <Button size="sm" disabled={rowBusyId === p.id} onClick={() => markMaterialReceived(p)}>
                                 <PackageCheck className="size-3.5" /> {uiText(" Mark Material Received ")}</Button>
                             )}
+                            {p.materialReceivedAt && <InvoiceStep po={p} accountsAllowed={accountsAllowed} notify={notify} uiText={uiText} />}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -635,6 +649,107 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+interface InvoiceApi {
+  invoiceNumber: string; amount: string; taxAdjustmentInr: string; taxAdjustmentNote: string;
+}
+interface MatchApi {
+  matched: boolean; mismatchReason: string; paymentStatus: "PENDING" | "THREE_WAY_LOCKED" | "APPROVED" | "PAID";
+  poTotalInr: string; grnAcceptedTotalInr: string; invoiceAdjustedTotalInr: string;
+}
+// PURCHASE-3: vendor invoice + real 3-way match, shown once material is
+// received (Step 3). Keyed off the PO so this never shares stale dialog
+// state with a different row.
+function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrderRow; accountsAllowed: boolean; notify: (msg: string) => void; uiText: (en: string, hi?: string) => string }) {
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [data, setData] = React.useState<{ invoice: InvoiceApi | null; match: MatchApi | null }>({ invoice: null, match: null });
+  const [form, setForm] = React.useState({ invoiceNumber: "", amount: "", taxAdjustmentInr: "", taxAdjustmentNote: "" });
+  const [file, setFile] = React.useState<File | null>(null);
+  const [error, setError] = React.useState("");
+
+  function load() {
+    setLoading(true);
+    requestJson<{ invoice: InvoiceApi | null; match: MatchApi | null }>(`/api/purchase/orders/${po.id}/invoice`)
+      .then((d) => setData(d))
+      .catch(() => setError(uiText("Could not load invoice status.", "Invoice status load nahi hua.")))
+      .finally(() => setLoading(false));
+  }
+  React.useEffect(() => { if (open) load(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function submitInvoice() {
+    if (!form.invoiceNumber.trim() || !form.amount.trim()) return;
+    setBusy(true); setError("");
+    try {
+      const body = new FormData();
+      body.append("invoiceNumber", form.invoiceNumber.trim());
+      body.append("amount", form.amount.trim());
+      if (form.taxAdjustmentInr.trim()) { body.append("taxAdjustmentInr", form.taxAdjustmentInr.trim()); body.append("taxAdjustmentNote", form.taxAdjustmentNote.trim()); }
+      if (file) body.append("invoice", file);
+      const res = await fetch(`/api/purchase/orders/${po.id}/invoice`, { method: "POST", body, credentials: "same-origin" });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `HTTP ${res.status}`);
+      notify(uiText(`${po.poNumber} — invoice recorded.`, `${po.poNumber} — invoice record hua.`));
+      setForm({ invoiceNumber: "", amount: "", taxAdjustmentInr: "", taxAdjustmentNote: "" }); setFile(null);
+      load();
+    } catch (err) {
+      setError(errMsg(err, uiText("Could not record invoice.", "Invoice record nahi hua.")));
+    } finally { setBusy(false); }
+  }
+  async function approvePayment() {
+    setBusy(true); setError("");
+    try {
+      await requestJson(`/api/purchase/orders/${po.id}/three-way/approve`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText("Payment approved.", "Payment approve ho gaya."));
+      load();
+    } catch (err) { setError(errMsg(err, uiText("Could not approve payment.", "Payment approve nahi hua."))); }
+    finally { setBusy(false); }
+  }
+  async function markPaid() {
+    setBusy(true); setError("");
+    try {
+      await requestJson(`/api/purchase/orders/${po.id}/three-way/paid`, { method: "POST", body: JSON.stringify({}) });
+      notify(uiText("Marked paid.", "Paid mark ho gaya."));
+      load();
+    } catch (err) { setError(errMsg(err, uiText("Could not mark paid.", "Paid mark nahi hua."))); }
+    finally { setBusy(false); }
+  }
+
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild>
+      <Button size="sm" variant="outline">{uiText("4. Invoice & Payment", "4. Invoice aur Payment")}</Button>
+    </DialogTrigger>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{uiText("Invoice & 3-way Match", "Invoice aur 3-way Match")} — {po.poNumber}</DialogTitle>
+        <DialogDescription>{uiText("Compares PO total, GRN accepted value and the vendor invoice (adjusted). Payment release is Accounts-only.", "PO total, GRN accepted value aur vendor invoice (adjusted) compare hota hai. Payment release sirf Accounts kar sakta hai.")}</DialogDescription>
+      </DialogHeader>
+      {loading && <p role="status">{uiText("Loading…", "Load ho raha hai…")}</p>}
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {!loading && !data.invoice && (
+        <fieldset disabled={busy} className="space-y-3">
+          <Field label={uiText("Invoice number")}><input className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm" value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} /></Field>
+          <Field label={uiText("Invoice amount (TSh)")}><input type="number" min="0" step="0.01" className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
+          <Field label={uiText("Tax adjustment (optional, +/-)", "Tax adjustment (optional, +/-)")}><input type="number" step="0.01" className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm" value={form.taxAdjustmentInr} onChange={(e) => setForm({ ...form, taxAdjustmentInr: e.target.value })} /></Field>
+          {form.taxAdjustmentInr.trim() && <Field label={uiText("Tax adjustment reason (required)", "Tax adjustment reason (required)")}><input className="w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm" value={form.taxAdjustmentNote} onChange={(e) => setForm({ ...form, taxAdjustmentNote: e.target.value })} /></Field>}
+          <Field label={uiText("Invoice document (optional)", "Invoice document (optional)")}><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></Field>
+          <Button onClick={submitInvoice} disabled={busy || !form.invoiceNumber.trim() || !form.amount.trim()}>{uiText("Record invoice", "Invoice record karo")}</Button>
+        </fieldset>
+      )}
+      {!loading && data.invoice && data.match && (
+        <div className="space-y-2 text-sm">
+          <p>{uiText("Invoice", "Invoice")} {data.invoice.invoiceNumber}: ₹{data.invoice.amount}{Number(data.invoice.taxAdjustmentInr) !== 0 && ` (${uiText("adjustment", "adjustment")} ${data.invoice.taxAdjustmentInr}: ${data.invoice.taxAdjustmentNote})`}</p>
+          <p>{uiText("PO total", "PO total")}: ₹{data.match.poTotalInr} · {uiText("GRN accepted", "GRN accepted")}: ₹{data.match.grnAcceptedTotalInr} · {uiText("Invoice (adjusted)", "Invoice (adjusted)")}: ₹{data.match.invoiceAdjustedTotalInr}</p>
+          <Badge variant={data.match.matched ? "success" : "destructive"}>{data.match.matched ? uiText("Matched", "Matched") : uiText("Mismatch", "Mismatch")}</Badge>
+          {!data.match.matched && <p className="text-xs text-destructive">{data.match.mismatchReason}</p>}
+          <Badge variant="outline">{data.match.paymentStatus}</Badge>
+          {accountsAllowed && data.match.matched && data.match.paymentStatus === "PENDING" && <Button disabled={busy} onClick={approvePayment}>{uiText("Approve payment", "Payment approve karo")}</Button>}
+          {accountsAllowed && data.match.paymentStatus === "APPROVED" && <Button disabled={busy} onClick={markPaid}>{uiText("Mark paid", "Paid mark karo")}</Button>}
+        </div>
+      )}
+    </DialogContent>
+  </Dialog>;
 }
 
 // Keep this independently keyed to live identity/grants; an old dialog cannot

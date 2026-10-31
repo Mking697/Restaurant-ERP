@@ -9,7 +9,7 @@ const grn = (id = 'grn-a', extra = {}) => ({ id, branchId: 'a', poNumber: 'PO-A'
   { id: `${id}-rice`, name: 'Rice', itemDescription: '', unit: 'kg', qtyFailed: '1.250', rateOrdered: '50.00' },
   { id: `${id}-oil`, name: 'Oil', itemDescription: '', unit: 'l', qtyFailed: '0.500', rateOrdered: '100.00' },
 ], ...extra });
-const claims = (g = grn()) => g.lines.filter(l => Number(l.qtyFailed) > 0).map(l => ({ id: `grn-return:${l.id}`, grnId: g.id, grnLineId: l.id, branchId: g.branchId, branch: 'Branch A', poNumber: g.poNumber, vendorId: 'v', vendor: 'Vendor A', itemName: l.name, unit: l.unit, qtyReturned: l.qtyFailed, refundAmountInr: l.unit === 'kg' ? '62.50' : '50.00', reasonNote: g.qualityNote, submittedToAccountsAt: '2026-10-29T10:00:00.000Z', createdAt: '2026-10-29T10:00:00.000Z', status: 'REFUND_OR_CREDIT_EXPECTED', moneyReceived: null }));
+const claims = (g = grn()) => g.lines.filter(l => Number(l.qtyFailed) > 0).map(l => ({ id: `grn-return:${l.id}`, grnId: g.id, grnLineId: l.id, branchId: g.branchId, branch: 'Branch A', poNumber: g.poNumber, vendorId: 'v', vendor: 'Vendor A', itemName: l.name, unit: l.unit, qtyReturned: l.qtyFailed, refundAmountInr: l.unit === 'kg' ? '62.50' : '50.00', reasonNote: g.qualityNote, submittedToAccountsAt: '2026-10-29T10:00:00.000Z', createdAt: '2026-10-29T10:00:00.000Z', status: 'REFUND_OR_CREDIT_EXPECTED', moneyReceived: false, settledAmountInr: null, settledAt: null, settledById: null, settledNote: '' }));
 class RequestJsonError extends Error { constructor(message, outcome) { super(message); this.outcome = outcome; } }
 async function harness(options = {}) {
   const stores = new Map(), effects = [], calls = [];

@@ -71,3 +71,17 @@ export function dailySummaryMessage(params: {
   const handoverLine = params.pendingHandover ? ", 1 shift handover pending acceptance" : "";
   return `Good morning! Daily summary for ${params.branchName}: ${salesLine} today so far, ${params.overdueTasks} overdue task(s)${handoverLine}. / Aaj ka branch summary; kripya review karein. 🙏`;
 }
+
+// ---------------------------------------------------------------------------
+// PURCHASE-4 (AUTOMATION-1c, completing the previously-documented gap) — real
+// WhatsApp owner/approver ping when an Indent is routed to PENDING_APPROVAL
+// by the rolling-average spike check (src/lib/server/purchase.ts
+// evaluateIndentSpike). Best-effort, same convention as every trigger above:
+// a failed send never blocks the submit response.
+// ---------------------------------------------------------------------------
+export function indentApprovalMessage(params: { branchName: string; indentId: string; spikePercent: string | null; hasData: boolean }): string {
+  const reason = !params.hasData
+    ? "not enough purchase history yet to compare"
+    : `${params.spikePercent}% over the rolling average`;
+  return `Indent approval needed at ${params.branchName}: ${reason}. Open Purchase & GRN to approve/reject indent #${params.indentId.slice(0, 8)}. / Ek indent approval ke liye ruka hai, kripya review karein. 🙏`;
+}

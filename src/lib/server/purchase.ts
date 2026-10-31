@@ -122,12 +122,112 @@ export function assertPoNotBilled(billUploadedAt: Date | null) {
 export function assertPoNotReceived(materialReceivedAt: Date | null) {
   if (materialReceivedAt) throw new HttpError(409, "Material already received for this purchase order");
 }
-// Bill upload is explicitly text/URL-only in this pass — no real file-upload
-// pipeline (S3 etc.) exists yet in this codebase, matching the contract's
-// "don't invent a fake upload" instruction.
+// Legacy free-text bill URL field — kept for back-compat alongside the real
+// Vercel Blob upload path (billBlobPathname, see purchase-documents.ts and
+// /api/purchase/orders/[id]/bill/upload).
 export function billUrl(value: unknown): string {
   if (value === undefined || value === null || value === "") return "";
   return string(value, "pdfUrl", 2000);
+}
+
+// --- PURCHASE-2: vendor refund/return settlement -----------------------------
+// "Mark as Settled" is a manual, Owner/Accounts-only action (ACCOUNTS_EXPENSES
+// module — VENDOR_REFUNDS itself stays strictly read-only per its own schema
+// comment). Once-only: settledAt null -> set is the one-shot gate, same
+// convention as purchaseOrders.billUploadedAt/assertPoNotBilled above. No
+// bank/payment-gateway integration — this just records that money was
+// received or a credit note was issued, with who/when/how much/note.
+export function assertReturnNotSettled(settledAt: Date | null) {
+  if (settledAt) throw new HttpError(409, "This vendor claim is already marked settled");
+}
+export interface ParsedSettleInput { settledAmountInr: string; settledNote: string; }
+export function parseSettleInput(input: Record<string, unknown>): ParsedSettleInput {
+  allowedFields(input, ["settledAmountInr", "settledNote"]);
+  const settledAmountInr = numeric(input.settledAmountInr, "settledAmountInr");
+  if (Number(settledAmountInr) <= 0) throw new HttpError(400, "settledAmountInr must be greater than zero");
+  const settledNote = input.settledNote === undefined || input.settledNote === null || input.settledNote === ""
+    ? ""
+    : string(input.settledNote, "settledNote", 500);
+  return { settledAmountInr, settledNote };
+}
+
+// --- PURCHASE-3: vendor invoice + real 3-way match ----------------------------
+// Compares PO total (sum of locked PO line qty*rate), GRN accepted value (sum
+// of (qtyReceived-qtyFailed)*rateOrdered — the same "accepted stock" figure
+// GRN quality already persists, never a fabricated recomputation) and the
+// vendor invoice's adjusted amount (invoice.amount + taxAdjustmentInr). A
+// fixed tolerance absorbs genuine paisa-level rounding, same spirit as
+// vendor-return-policy.ts's own paise()/amount() rounding helpers.
+export const THREE_WAY_TOLERANCE_INR = "1.00";
+
+export interface ParsedInvoiceInput { invoiceNumber: string; amount: string; taxAdjustmentInr: string; taxAdjustmentNote: string; }
+function signedMoney(value: unknown, field: string, fallback = "0.00"): string {
+  const result = value === undefined ? fallback : String(value);
+  if (!/^-?\d{1,9}(\.\d{1,2})?$/.test(result)) throw new HttpError(400, `Invalid ${field}`);
+  return result;
+}
+export function parseInvoiceInput(input: Record<string, unknown>): ParsedInvoiceInput {
+  allowedFields(input, ["invoiceNumber", "amount", "taxAdjustmentInr", "taxAdjustmentNote"]);
+  const invoiceNumber = string(input.invoiceNumber, "invoiceNumber", 100);
+  const amount = numeric(input.amount, "amount");
+  if (Number(amount) <= 0) throw new HttpError(400, "amount must be greater than zero");
+  const taxAdjustmentInr = signedMoney(input.taxAdjustmentInr, "taxAdjustmentInr");
+  const taxAdjustmentNote = input.taxAdjustmentNote === undefined || input.taxAdjustmentNote === null || input.taxAdjustmentNote === ""
+    ? ""
+    : string(input.taxAdjustmentNote, "taxAdjustmentNote", 500);
+  if (Number(taxAdjustmentInr) !== 0 && !taxAdjustmentNote) throw new HttpError(400, "taxAdjustmentNote is required when taxAdjustmentInr is non-zero");
+  return { invoiceNumber, amount, taxAdjustmentInr, taxAdjustmentNote };
+}
+
+function money(value: string): bigint {
+  const [whole, fraction = ""] = value.replace("-", "").split(".");
+  const magnitude = BigInt(whole || "0") * 100n + BigInt((fraction.padEnd(2, "0")).slice(0, 2) || "0");
+  return value.trim().startsWith("-") ? -magnitude : magnitude;
+}
+function moneyDecimal(value: bigint): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  return `${negative ? "-" : ""}${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}`;
+}
+
+export interface ThreeWayInputs {
+  poLines: { qty: string; rate: string }[];
+  grnLines: { qtyReceived: string; qtyFailed: string; rateOrdered: string }[];
+  invoiceAmount: string;
+  taxAdjustmentInr: string;
+}
+export interface ThreeWayResult {
+  poTotalInr: string;
+  grnAcceptedTotalInr: string;
+  invoiceAdjustedTotalInr: string;
+  matched: boolean;
+  mismatchReason: string;
+}
+export function computeThreeWayMatch(inputs: ThreeWayInputs): ThreeWayResult {
+  const poTotal = inputs.poLines.reduce((sum, l) => sum + (quantity(l.qty) * money(l.rate)) / 1000n, 0n);
+  const grnTotal = inputs.grnLines.reduce((sum, l) => {
+    const accepted = quantity(l.qtyReceived, true) - quantity(l.qtyFailed, true);
+    return sum + (accepted > 0n ? (accepted * money(l.rateOrdered)) / 1000n : 0n);
+  }, 0n);
+  const invoiceAdjusted = money(inputs.invoiceAmount) + money(inputs.taxAdjustmentInr);
+  const tolerance = money(THREE_WAY_TOLERANCE_INR);
+  // PO total vs GRN accepted value is EXPECTED to differ whenever any
+  // quality-failed quantity exists (the vendor is only owed for what was
+  // actually accepted, see vendor-return-policy.ts's own refund claim for
+  // the failed portion) — a quality failure is a normal, not-locked path,
+  // so only GRN accepted value vs the vendor's (adjusted) invoice gates
+  // payment. poTotalInr/poVsGrn stay informational-only in the result.
+  const absDiff = (v: bigint) => (v < 0n ? -v : v);
+  const grnVsInvoice = grnTotal - invoiceAdjusted;
+  const matched = absDiff(grnVsInvoice) <= tolerance;
+  const mismatchReason = matched ? "" : `GRN accepted value ${moneyDecimal(grnTotal)} vs invoice (adjusted) ${moneyDecimal(invoiceAdjusted)} differ by more than ${THREE_WAY_TOLERANCE_INR}`;
+  return {
+    poTotalInr: moneyDecimal(poTotal),
+    grnAcceptedTotalInr: moneyDecimal(grnTotal),
+    invoiceAdjustedTotalInr: moneyDecimal(invoiceAdjusted),
+    matched,
+    mismatchReason,
+  };
 }
 
 // --- AUTOMATION-1c: real indent spike detection against the rolling average
