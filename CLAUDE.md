@@ -11,6 +11,65 @@ first every time work resumes on this project.
 
 ---
 
+## ACTIVE CHECKPOINT — October 31, 2026, Actual Food Cost + Low-stock summary
+
+This section supersedes the stale session checkpoint below for this workstream.
+User approved BOTH improvements: Reports Actual (Posted) COGS beside the
+current-rate estimate, and low-stock count in the existing daily WhatsApp summary.
+User separately authorized production migration, commit/push and Vercel release.
+No synthetic production business transactions were created.
+
+Implemented: postedFoodCost pure helper sums saved costs and computes percentage
+with BigInt half-up rounding; incomplete/null/empty periods return unavailable
+values plus reason. Existing actor/order visibility filters remain in force.
+Report summary/CSV labels distinguish estimate and actual (TSh).
+Daily summary counts branch rows with positive configured min and qty strictly
+below min; existing recipients, bearer cron auth and one-shot claims unchanged.
+
+Parent verification: 459/459 unit/UI tests, tsc clean, production build clean.
+Compiled-app HTTP + disposable PostgreSQL dashboard/reports integration: 61/61,
+including posted-vs-estimate, hidden-order privacy, incomplete cost withholding,
+independence from current planning rates and a real POS write explicitly saving
+complete actual cost despite the new FALSE default. Low-stock cron HTTP +
+PostgreSQL integration passed threshold equality, unconfigured minimum, branch
+isolation, auth and retry idempotency; no provider token, zero real sends.
+QA server on 4317 stopped; restaurant_erp_dashrpt_qa_20261031 dropped.
+
+User separately approved the COGS default safety fix. Schema now defaults
+cogs_complete FALSE; new migration 0017_groovy_lizard contains ONLY ALTER COLUMN
+SET DEFAULT false, no business-row updates. Regression test reproduced TRUE vs
+FALSE before fix and now passes. Disposable PostgreSQL upgrade test preserved
+all 4 existing rows (including genuine complete zero and partial costs) across
+2 branches, proved missing-capture inserts false, explicit captured zero/nonzero
+still accepted and migration replay a no-op. Separate fresh install also passed.
+Both migration QA databases and scratch prefix removed. Drizzle check clean;
+second generate reports no residual schema changes. No lint script/dependency
+is configured in package.json; no linter was installed for this patch.
+
+Production read-only assessment: 0 POS orders, no ambiguous old cost rows to
+reconcile at assessment time; recheck at release. Local SQL hashes 0000–0016
+match production tracking hashes. Production timestamps for 0014–0016 differ
+from local journal timestamps due to prior manual tracking inserts; did NOT
+rewrite deployed history or production bookkeeping. New 0017 timestamp is
+1793530000001, greater than production's latest watermark 1793530000000 and
+all local entries. Upgrade test explicitly mirrors that production watermark
+and proves 0017 runs rather than being silently skipped.
+
+0017 APPLIED to Neon production through prepare/temp-branch verification/complete,
+with exact canonical SQL hash 81ae90c12670075b664cda327a33a472253052102cf9aab4af9f09062d1ab1bd
+and journal timestamp 1793530000001 recorded in drizzle.__drizzle_migrations.
+Postflight: default FALSE; orders 0, inventory_stock 12 and journal_entries 0
+unchanged; 18 tracked migrations. Local shared DB was not migrated. Temporary
+Neon migration branch was deleted by complete_database_migration.
+
+Independent review initially caught a QA-only missing HTTP-app/database binding.
+Runner now inserts a random ephemeral session only in its guarded disposable DB
+and verifies /api/auth/me before ANY cron request. Three mismatch tests prove no
+cron call occurs on bad identity/status. Parent reran real cron SQL/HTTP acceptance
+and all 459 tests. Independent re-review PASSED with no blockers. No live WhatsApp
+was sent. Commit/deployment state must be verified in Git/Vercel, not inferred
+from this checkpoint; Production builds run db:migrate before next build.
+
 ## SESSION CHECKPOINT — October 31, 2026 (resume from here next session)
 
 This section takes precedence over everything below it. VS Code closed

@@ -106,6 +106,18 @@ async function main() {
   const allFood = await req('/api/reports/food-cost');
   check('food report supports Owner all-branch summaries', allFood.data?.branches?.length === 2, allFood);
   check('branch B missing recipe explicit null and excluded item', allFood.data?.branches?.find((b) => b.branchId === 'qadr-b')?.foodCostPercent === null && allFood.data.branches.find((b) => b.branchId === 'qadr-b').excludedMenuItems.length === 1, allFood);
+  await q("update pos_orders set cogs_complete=false where id='qadr-sale'");
+  const incompletePosted = await req('/api/reports/food-cost?branchId=qadr-a');
+  check('incomplete captured posted COGS is withheld with reason', incompletePosted.data?.actualCogsInr === null && !!incompletePosted.data.actualReason, incompletePosted);
+  await q("update pos_orders set cogs_amount=case id when 'qadr-sale' then 24.00 when 'qadr-private' then 9.00 when 'qadr-yesterday' then 3.00 else 999.00 end, cogs_complete=true");
+  const posted = await req('/api/reports/food-cost?branchId=qadr-a');
+  check('posted COGS uses captured order cost, not current estimate; voided excluded', posted.data?.actualCogsInr === '36.00' && posted.data.actualFoodCostPercent === '20.00' && posted.data.cogsInr === '40.00', posted);
+  const managerPosted = await req('/api/reports/food-cost?branchId=qadr-a', 'manager');
+  check('posted manager COGS excludes private order cost and revenue', managerPosted.data?.actualCogsInr === '27.00' && managerPosted.data.revenueInr === '130.00' && managerPosted.data.actualFoodCostPercent === '20.77', managerPosted);
+  await q("update pos_orders set cogs_complete=false where id='qadr-private'");
+  check('incomplete private order withholds Owner posted cost', (await req('/api/reports/food-cost?branchId=qadr-a')).data?.actualCogsInr === null);
+  check('incomplete private order cannot affect manager posted cost', (await req('/api/reports/food-cost?branchId=qadr-a', 'manager')).data?.actualCogsInr === '27.00');
+  await q("update pos_orders set cogs_complete=true where id='qadr-private'");
   const cash = await req(`/api/reports/cash-reconciliation?from=${today}&to=${today}`, 'manager');
   check('cash filters CLOSED date not shift start date; excludes off-cycle', cash.data?.rows?.length === 1 && cash.data.rows[0].cashDropId === 'qadr-closing', cash);
   check('cash retains actual stored values including private cash', cash.data?.rows?.[0]?.expectedCashInr === '150.00' && cash.data?.summary?.totalShortageExcessInr === '-10.00', cash);
@@ -115,6 +127,7 @@ async function main() {
   await q("update vendor_rates set is_active=false where raw_material_id='qadr-rice'");
   const missing = await req('/api/reports/food-cost?branchId=qadr-a');
   check('missing active vendor rates returns null, not zero COGS', missing.data?.foodCostPercent === null && missing.data?.cogsInr === null && /qadr-rice/.test(missing.data?.excludedMenuItems?.[0]?.reason), missing);
+  check('posted COGS unaffected by missing current planning rates', missing.data?.actualCogsInr === '36.00', missing);
   const missingKpi = await req('/api/dashboard/kpis?branchId=qadr-a');
   check('dashboard incomplete food cost null with reason', missingKpi.data?.branches?.[0]?.foodCostPercent === null && !!missingKpi.data.branches[0].foodCostNote, missingKpi);
   await q("update vendor_rates set is_active=true where raw_material_id='qadr-rice'");
@@ -126,6 +139,12 @@ async function main() {
   check('Dashboard-only user retains own-branch KPIs', limited.status === 200 && limited.data.branches.length === 1 && limited.data.branches[0].branchId === 'qadr-a', limited);
   check('Dashboard-only user cannot inherit MIS grant', limited.data?.branches?.[0]?.misScore === null && /MIS_PERFORMANCE/.test(limited.data.branches[0].misScoreNote), limited);
   check('Dashboard grant does not broaden shared Reports endpoint', (await req('/api/reports/sales-trend', 'manager')).status === 403);
+  // A real POS write must explicitly override the new incomplete default.
+  await q("insert into inventory_stock(id,branch_id,raw_material_id,qty_on_hand) values ('qadr-bstock','qadr-b','qadr-rice',5)");
+  await q("insert into bom_recipes(id,branch_id,menu_item_id,raw_material_id,qty_per_unit) values ('qadr-bbom','qadr-b','qadr-bdish','qadr-rice',1)");
+  const capturedSale = await req('/api/pos/orders', 'owner', 'POST', base.origin, { branchId: 'qadr-b', channel: 'DINE_IN', tableNo: 'QA', tenderType: 'CASH', lines: [{ menuItemId: 'qadr-bdish', qty: 1 }] });
+  const capturedCost = (await q("select cogs_amount,cogs_complete from pos_orders where branch_id='qadr-b' and id<>'qadr-bsale'")).rows;
+  check('normal POS captures complete real cost despite fail-closed default', capturedSale.status === 201 && capturedCost.length === 1 && capturedCost[0].cogs_complete === true && capturedCost[0].cogs_amount === '20.00', { status: capturedSale.status, saved: capturedCost });
   const failures = results.filter((r) => !r.pass);
   console.log(JSON.stringify({ total: results.length, passed: results.length-failures.length, failed: failures.length, failures }, null, 2));
   assert.equal(failures.length, 0);

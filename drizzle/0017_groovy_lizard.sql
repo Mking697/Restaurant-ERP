@@ -1,0 +1,1 @@
+ALTER TABLE "pos_orders" ALTER COLUMN "cogs_complete" SET DEFAULT false;

@@ -66,10 +66,12 @@ export function dailySummaryMessage(params: {
   completedSales: number | null;
   overdueTasks: number;
   pendingHandover: boolean;
+  lowStockCount: number;
 }): string {
   const salesLine = params.completedSales === null ? "sales data not available" : `${params.completedSales} completed sale(s)`;
   const handoverLine = params.pendingHandover ? ", 1 shift handover pending acceptance" : "";
-  return `Good morning! Daily summary for ${params.branchName}: ${salesLine} today so far, ${params.overdueTasks} overdue task(s)${handoverLine}. / Aaj ka branch summary; kripya review karein. 🙏`;
+  const lowStockLine = params.lowStockCount > 0 ? `, ${params.lowStockCount} item(s) below minimum stock level` : "";
+  return `Good morning! Daily summary for ${params.branchName}: ${salesLine} today so far, ${params.overdueTasks} overdue task(s)${handoverLine}${lowStockLine}. / Aaj ka branch summary; kripya review karein. 🙏`;
 }
 
 // ---------------------------------------------------------------------------
