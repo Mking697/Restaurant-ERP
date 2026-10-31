@@ -99,6 +99,13 @@
       "when": 1793432274233,
       "tag": "0013_wealthy_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793435427719,
+      "tag": "0014_fixed_talon",
+      "breakpoints": true
     }
   ]
 }

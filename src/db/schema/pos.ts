@@ -55,6 +55,18 @@ export const posOrders = pgTable(
     // configured for this branch yet" — legacy/back-compat, never blocks a
     // sale on its own.
     shiftRunId: text("shift_run_id").notNull().default(""),
+    // Real cost of goods sold for THIS order, captured ONCE at order-confirm
+    // time via src/lib/server/cogs.ts (recursive BOM explosion down to raw
+    // materials, priced at the latest locked vendor rate at that moment) —
+    // never recomputed retroactively. cogsComplete=false means at least one
+    // sold line's cost couldn't be fully priced (a nested Semi-FG with no
+    // saved recipe, or a raw material with no vendor rate ever locked); in
+    // that case cogsAmount is only the PARTIAL sum of what was priceable and
+    // must not be trusted as the order's real cost — Accounts P&L excludes
+    // the whole period's gross profit rather than understate it when any
+    // completed order in that period has cogsComplete=false.
+    cogsAmount: numeric("cogs_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    cogsComplete: boolean("cogs_complete").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
   },
