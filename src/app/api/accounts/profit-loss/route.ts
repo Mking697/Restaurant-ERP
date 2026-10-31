@@ -34,5 +34,23 @@ export async function GET(request: Request) { return api(async () => {
       eq(posOrders.status, "COMPLETED"),
       operationalOrderVisibility(actor)
     ));
-  return json(expenseProfitLoss(range.month, expenses, payroll, revenueRow.revenue));
+  // COGS — real sum of each completed order's own captured cogsAmount
+  // (src/lib/server/cogs.ts, set once at order-confirm time). cogsComplete
+  // is withheld (treated as false) for the whole period the moment ANY one
+  // completed order in it priced incompletely, so expenseProfitLoss never
+  // understates gross profit from a partial sum.
+  const [cogsRow] = await db
+    .select({
+      cogs: sql<string>`coalesce(sum(${posOrders.cogsAmount}), 0)::numeric(20,2)::text`,
+      cogsComplete: sql<boolean>`coalesce(bool_and(${posOrders.cogsComplete}), true)`,
+    })
+    .from(posOrders)
+    .where(and(
+      scope ? eq(posOrders.branchId, scope) : undefined,
+      gte(posOrders.createdAt, new Date(range.start)),
+      lt(posOrders.createdAt, new Date(range.end)),
+      eq(posOrders.status, "COMPLETED"),
+      operationalOrderVisibility(actor)
+    ));
+  return json(expenseProfitLoss(range.month, expenses, payroll, revenueRow.revenue, cogsRow.cogs, cogsRow.cogsComplete));
 }); }

@@ -68,6 +68,24 @@ test('expense-side P&L sums paise exactly, excludes voids, connects real revenue
  assert.equal(zeroSales.revenue, '0.00'); assert.equal(zeroSales.netProfit, '0.00');
  assert.throws(() => expenseProfitLoss('2024-02', [{ category: 'RENT', amount: 'NaN', status: 'POSTED' }], [], '0.00'));
 });
+test('expense-side P&L connects real COGS only when the caller passes it AND every order priced completely', () => {
+ const { expenseProfitLoss } = load();
+ const rows = [{ category: 'RENT', amount: '100.00', status: 'POSTED' }];
+ // Connected: cogs provided and cogsComplete=true -> grossProfit and netProfit both reflect it.
+ const connected = expenseProfitLoss('2024-02', rows, [], '500.00', '150.00', true);
+ assert.equal(connected.cogs, '150.00'); assert.equal(connected.grossProfit, '350.00');
+ assert.equal(connected.netProfit, '250.00'); // 500 - 150 - 100
+ assert.equal(connected.cogsConnected, true);
+ assert.match(connected.notes.join(' '), /COGS is connected/);
+ // Incomplete: at least one order in the period couldn't be fully priced -> withheld, same pre-COGS fallback net.
+ const incomplete = expenseProfitLoss('2024-02', rows, [], '500.00', '150.00', false);
+ assert.equal(incomplete.cogs, null); assert.equal(incomplete.grossProfit, null);
+ assert.equal(incomplete.netProfit, '400.00'); // 500 - 100, pre-COGS fallback, never the partial 150.00 subtracted
+ assert.equal(incomplete.cogsConnected, false);
+ // Omitted entirely (legacy caller, e.g. the plain expense list) behaves exactly like before COGS existed.
+ const omitted = expenseProfitLoss('2024-02', rows, [], '500.00');
+ assert.equal(omitted.cogs, null); assert.equal(omitted.grossProfit, null); assert.equal(omitted.netProfit, '400.00');
+});
 test('expense schema enforces scoped replay uniqueness, positive money and complete void audit', () => {
  const { getTableConfig } = require('drizzle-orm/pg-core');
  const { branchExpenses } = require('../src/db/schema/expenses.ts');

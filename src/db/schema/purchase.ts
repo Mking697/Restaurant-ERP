@@ -76,7 +76,9 @@ export const purchaseOrders = pgTable(
     boughtAt: timestamp("bought_at", { withTimezone: true }),
     // Step 2: Bill Upload — explicitly OPTIONAL per the brief (purchaser may
     // skip straight to Step 3 if there's genuinely no bill yet).
-    pdfUrl: text("pdf_url").notNull().default(""), // optional PO/bill document
+    pdfUrl: text("pdf_url").notNull().default(""), // legacy free-text URL field, kept for back-compat
+    billBlobPathname: text("bill_blob_pathname").notNull().default(""), // real uploaded file (private Vercel Blob store)
+    billContentType: text("bill_content_type").notNull().default(""),
     billUploadedAt: timestamp("bill_uploaded_at", { withTimezone: true }),
     // Step 3: Material Receive — set when the linked GRN is created (see grns
     // below); kept here too so the 3-step UI can read one row, not a join.
@@ -171,23 +173,49 @@ export const materialReturns = pgTable(
     reasonNote: text("reason_note").notNull().default(""),
     submittedToAccountsAt: timestamp("submitted_to_accounts_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Money-received/credit-note settlement — written ONLY via the
+    // ACCOUNTS_EXPENSES-gated "Mark as Settled" action (VENDOR_REFUNDS stays
+    // read-only, see moduleAccess.ts). Once-only: settledAt null -> set is
+    // the one-shot gate, same convention as purchaseOrders.billUploadedAt.
+    settledAmountInr: numeric("settled_amount_inr", { precision: 12, scale: 2 }),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    settledById: text("settled_by_id").references(() => users.id),
+    settledNote: text("settled_note").notNull().default(""),
   },
   (table) => [index("material_returns_branch_id_idx").on(table.branchId)]
 );
 
-export const vendorInvoices = pgTable("vendor_invoices", {
-  id: text("id").primaryKey(),
-  poId: text("po_id")
-    .notNull()
-    .references(() => purchaseOrders.id),
-  vendorId: text("vendor_id")
-    .notNull()
-    .references(() => vendors.id),
-  invoiceNumber: text("invoice_number").notNull(),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  photoUrl: text("photo_url").notNull(),
-  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const vendorInvoices = pgTable(
+  "vendor_invoices",
+  {
+    id: text("id").primaryKey(),
+    poId: text("po_id")
+      .notNull()
+      .references(() => purchaseOrders.id),
+    branchId: text("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    vendorId: text("vendor_id")
+      .notNull()
+      .references(() => vendors.id),
+    invoiceNumber: text("invoice_number").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(), // vendor's stated invoice amount, before adjustment
+    // Store-side correction applied to the vendor's stated amount (e.g. a
+    // tax/VAT miscalculation on the vendor's bill) — signed, can be
+    // negative. adjustedAmount = amount + taxAdjustmentInr is what the
+    // 3-way match compares against the PO/GRN accepted value.
+    taxAdjustmentInr: numeric("tax_adjustment_inr", { precision: 12, scale: 2 }).notNull().default("0"),
+    taxAdjustmentNote: text("tax_adjustment_note").notNull().default(""),
+    photoUrl: text("photo_url").notNull().default(""), // legacy free-text URL field, kept for back-compat
+    blobPathname: text("blob_pathname").notNull().default(""), // real uploaded file (private Vercel Blob store)
+    contentType: text("content_type").notNull().default(""),
+    submittedById: text("submitted_by_id")
+      .notNull()
+      .references(() => users.id),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("vendor_invoices_branch_id_idx").on(table.branchId), index("vendor_invoices_po_id_idx").on(table.poId)]
+);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
   "PENDING",
@@ -196,19 +224,35 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "PAID",
 ]);
 
-export const threeWayMatch = pgTable("three_way_match", {
-  id: text("id").primaryKey(),
-  poId: text("po_id")
-    .notNull()
-    .unique()
-    .references(() => purchaseOrders.id),
-  grnId: text("grn_id")
-    .notNull()
-    .unique()
-    .references(() => grns.id),
-  matched: boolean("matched").notNull().default(false), // PO rate == GRN qty == Invoice
-  mismatchReason: text("mismatch_reason").notNull().default(""),
-  paymentStatus: paymentStatusEnum("payment_status").notNull().default("PENDING"),
-  lockedAt: timestamp("locked_at", { withTimezone: true }),
-  approvedAt: timestamp("approved_at", { withTimezone: true }),
-});
+export const threeWayMatch = pgTable(
+  "three_way_match",
+  {
+    id: text("id").primaryKey(),
+    branchId: text("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    poId: text("po_id")
+      .notNull()
+      .unique()
+      .references(() => purchaseOrders.id),
+    grnId: text("grn_id")
+      .notNull()
+      .unique()
+      .references(() => grns.id),
+    invoiceId: text("invoice_id")
+      .notNull()
+      .references(() => vendorInvoices.id),
+    poTotalInr: numeric("po_total_inr", { precision: 12, scale: 2 }).notNull(),
+    grnAcceptedTotalInr: numeric("grn_accepted_total_inr", { precision: 12, scale: 2 }).notNull(),
+    invoiceAdjustedTotalInr: numeric("invoice_adjusted_total_inr", { precision: 12, scale: 2 }).notNull(),
+    matched: boolean("matched").notNull().default(false), // PO rate == GRN accepted value == Invoice (adjusted), within tolerance
+    mismatchReason: text("mismatch_reason").notNull().default(""),
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("PENDING"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    approvedById: text("approved_by_id").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    paidById: text("paid_by_id").references(() => users.id),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (table) => [index("three_way_match_branch_id_idx").on(table.branchId)]
+);

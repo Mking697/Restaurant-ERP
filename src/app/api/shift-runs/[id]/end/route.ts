@@ -37,12 +37,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);
       if (!branchId) throw new HttpError(400, "Select a branch");
       const denominations = {
+        note10000Count: count(input.note10000Count, "note10000Count"),
+        note5000Count: count(input.note5000Count, "note5000Count"),
+        note2000Count: count(input.note2000Count, "note2000Count"),
+        note1000Count: count(input.note1000Count, "note1000Count"),
         note500Count: count(input.note500Count, "note500Count"),
-        note200Count: count(input.note200Count, "note200Count"),
-        note100Count: count(input.note100Count, "note100Count"),
-        note50Count: count(input.note50Count, "note50Count"),
-        note20Count: count(input.note20Count, "note20Count"),
-        note10Count: count(input.note10Count, "note10Count"),
         coinsInr: coinAmount(input.coinsInr),
       };
       return endShiftAndHandover(tx, actor, branchId, id, denominations);

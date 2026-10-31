@@ -46,7 +46,7 @@ function environment(storage = memoryStorage()) {
   }
   return {mount,storage,sends,actor,setSend:fn=>send=fn,setRows:value=>rows=value};
 }
-function fill(panel) {panel.fill('Amount (INR)','120.00');panel.fill('Description','Synthetic fixture rent');panel.fill('Reference','QA-RENT-ONLY');}
+function fill(panel) {panel.fill('Amount (TSh)','120.00');panel.fill('Description','Synthetic fixture rent');panel.fill('Reference','QA-RENT-ONLY');}
 test('uncertain POST survives expense tab unmount/remount with exact payload and key',async()=>{
   const env=environment();let panel=env.mount();fill(panel);await panel.submit();assert.equal(env.sends.length,1);
   panel.unmount();panel=env.mount();await panel.submit();assert.equal(env.sends.length,2);
@@ -94,7 +94,7 @@ test('trimmed saved text and equivalent currency spelling reconcile without chan
   for (const amount of ['120','120.0','120.00']) {
     const env=environment();let panel=env.mount();fill(panel);
     panel.fill('Description','  Synthetic fixture rent  ');panel.fill('Reference','  QA-RENT-ONLY  ');
-    panel.fill('Subcategory','  Fixture office  ');panel.fill('Amount (INR)',amount);
+    panel.fill('Subcategory','  Fixture office  ');panel.fill('Amount (TSh)',amount);
     await panel.submit();const original=env.sends[0];panel.unmount();panel=env.mount();
     env.setSend(async(url,body)=>({expense:{...body,id:'saved-normalized-expense',createdById:'test-actor',status:'POSTED',
       description:body.description.trim(),reference:body.reference.trim(),subcategory:body.subcategory.trim(),amount:'120.00'}}));

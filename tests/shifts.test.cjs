@@ -60,7 +60,7 @@ function memoryTx(seed = {}) {
 }
 const definition = (id, startTime = '00:00', endTime = '00:00') => ({ id, branchId: 'branch', label: id, startTime, endTime, isActive: true });
 const run = { id: 'run', branchId: 'branch', shiftDefinitionId: 'day', label: 'day', status: 'OPEN', startedAt: new Date('2026-10-27T00:00:00Z') };
-const count = (note100Count = 0) => ({ note500Count: 0, note200Count: 0, note100Count, note50Count: 0, note20Count: 0, note10Count: 0, coinsInr: 0 });
+const count = (multiple = 0) => ({ note10000Count: 0, note5000Count: 0, note2000Count: 0, note1000Count: 0, note500Count: 0, coinsInr: 100 * multiple });
 const actor = { id: 'cashier' };
 
 test('POS eligibility holds the branch shift lock before even checking opt-out configuration', async () => {

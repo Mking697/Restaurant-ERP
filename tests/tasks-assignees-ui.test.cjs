@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
+require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
 const React = require('react');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function harness() {
@@ -27,6 +28,7 @@ function harness() {
       return url.startsWith('/api/tasks/recurring') ? { recurring: [] } : { instances: [] };
     } },
     'lucide-react': Object.fromEntries(['Plus','Repeat','UserCheck','Paperclip','CheckCircle2'].map(name => [name,name])),
+    '@/lib/utils': require('../src/lib/utils.ts'),
   };
   for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogFooter','DialogHeader','DialogTitle','DialogTrigger'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
   function load(file) {

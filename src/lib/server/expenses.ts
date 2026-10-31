@@ -49,7 +49,13 @@ function decimal(value: bigint) { return `${value / BigInt(100)}.${String(value 
 // already filtered through the Owner-only operational privacy rule by the
 // caller (see src/app/api/accounts/profit-loss/route.ts) — never null here,
 // coalesced to "0.00" at the SQL layer so a zero-sales month never crashes.
-export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayroll: { amount: string }[], revenue: string) {
+// cogs/cogsComplete are the same period's real sum of each completed
+// order's own pos_orders.cogsAmount (captured once at sale time by
+// src/lib/server/cogs.ts) and whether every one of those orders priced
+// completely — callers that don't care about COGS (e.g. the plain expense
+// list in src/app/api/accounts/expenses/route.ts) simply omit them, which
+// behaves exactly as before COGS was connected (cogs/grossProfit null).
+export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayroll: { amount: string }[], revenue: string, cogs: string | null = null, cogsComplete = false) {
   expenseMonth(month);
   const sums: Record<ExpenseCategory, bigint> = { RENT: BigInt(0), UTILITIES: BigInt(0), MARKETING: BigInt(0), OTHER: BigInt(0) };
   for (const row of rows) if (row.status === "POSTED") {
@@ -59,19 +65,27 @@ export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayro
   const labor = finalizedPayroll.reduce((sum, row) => sum + paise(row.amount), BigInt(0));
   const totalOperatingExpensesPaise = Object.values(sums).reduce((sum, amount) => sum + amount, labor);
   const expenses = { RENT: decimal(sums.RENT), UTILITIES: decimal(sums.UTILITIES), MARKETING: decimal(sums.MARKETING), OTHER: decimal(sums.OTHER) };
-  // netProfit here is deliberately "revenue minus operating expenses (rent/
-  // utilities/marketing/other + finalized payroll labor)" ONLY — it is NOT a
-  // gross/net profit after COGS, because COGS stays unavailable below (this
-  // project's standing convention: current-recipe/rate food cost is an
-  // estimate, never presented as historical posted COGS).
-  const netPaise = paise(revenue) - totalOperatingExpensesPaise;
-  const netProfit = (netPaise < BigInt(0) ? "-" : "") + decimal(netPaise < BigInt(0) ? -netPaise : netPaise);
+  const revenuePaise = paise(revenue);
+  // COGS is only trusted when the caller explicitly connected it AND every
+  // completed order in the period priced completely (cogsComplete) — a
+  // partial/incomplete sum would understate cost, so it is withheld (null)
+  // rather than presented as if it were real, same discipline as Reports >
+  // Food Cost. netProfit falls back to its pre-COGS meaning (revenue minus
+  // operating expenses and labor only) whenever COGS is withheld.
+  const cogsConnected = cogs !== null && cogsComplete;
+  const cogsPaise = cogsConnected ? paise(cogs) : BigInt(0);
+  const signed = (p: bigint) => (p < BigInt(0) ? "-" : "") + decimal(p < BigInt(0) ? -p : p);
+  const grossProfitPaise = revenuePaise - cogsPaise;
+  const netPaise = cogsConnected ? grossProfitPaise - totalOperatingExpensesPaise : revenuePaise - totalOperatingExpensesPaise;
+  const netProfit = signed(netPaise);
   return { month, expenses, laborCost: decimal(labor), totalOperatingExpenses: decimal(totalOperatingExpensesPaise),
-    revenue, cogs: null, grossProfit: null, netProfit, salesConnected: true as const,
+    revenue, cogs: cogsConnected ? cogs : null, grossProfit: cogsConnected ? signed(grossProfitPaise) : null, netProfit, salesConnected: true as const, cogsConnected,
     notes: [
       "Revenue is connected: a real sum of completed POS sales for this branch/month, filtered through the same Owner-only operational privacy rule as the POS order list (/api/pos/orders) — a non-Owner viewer's revenue excludes any order marked owner-only/private.",
-      "COGS and gross profit remain unavailable: food cost uses current recipes/rates — an estimate, not a historical posted COGS source — and is never substituted here as if it were real.",
-      "netProfit means revenue minus posted operating expenses and finalized payroll labor only; it is NOT a gross/net profit after COGS (COGS is not connected above).",
+      cogsConnected
+        ? "COGS is connected: the real sum of each completed order's own ingredient cost, captured once at order-confirm time using the vendor rate in force at that moment (src/lib/server/cogs.ts) — never recomputed retroactively. grossProfit and netProfit below are after this real COGS."
+        : "COGS and gross profit are unavailable for this period: either COGS isn't being requested here, or at least one completed order sold a dish whose recipe needed a raw material with no vendor rate ever locked at the time of sale — rather than understate cost, the figure is withheld (never Food Cost's current-rate estimate substituted as if it were real). netProfit below is revenue minus operating expenses and labor only (pre-COGS).",
+      "netProfit is revenue minus real COGS (when connected), posted operating expenses and finalized payroll labor; when COGS is withheld it is revenue minus operating expenses and labor only — never a fabricated figure either way.",
       "Posted branch expenses are summed by expense date; voided expenses are excluded. No mock figures are used.",
       "Labor includes immutable finalized monthly payroll snapshots only, never draft previews; no money transfer is implied.",
       "Either Accounts Expenses or Payroll grant permits same-scope category and labor aggregates. Individual expense records require Accounts Expenses access.",

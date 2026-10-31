@@ -12,7 +12,7 @@ import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from 
 import { useSelectedBranchId } from "@/lib/current-branch";
 import { useShiftStatus, ShiftHandoverGate, useShiftWriteGuard } from "@/lib/shift-gate";
 
-const DENOMS = [500, 200, 100, 50, 20, 10] as const;
+const DENOMS = [10000, 5000, 2000, 1000, 500] as const;
 
 interface EndShiftResult { handover: { id: string; cashAmount: string; cardAmount: string; upiAmount: string; otherAmount: string }; toRun: { label: string }; cashExpected: string; shortageExcessInr: string }
 
@@ -29,7 +29,7 @@ function ScopedCashDrop() {
   const branchId = actor.role === "SUPER_ADMIN" ? (selected !== "all" ? selected : "") : actor.branchId ?? "";
   const shiftStatus = useShiftStatus(branchId, allowed);
 
-  const [counts, setCounts] = React.useState<Record<number, number>>({ 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0 });
+  const [counts, setCounts] = React.useState<Record<number, number>>({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 });
   const [coins, setCoins] = React.useState(0);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -40,7 +40,7 @@ function ScopedCashDrop() {
   React.useEffect(() => {
     if (shiftStatus.run && countRun.current !== shiftStatus.run.id) {
       countRun.current = shiftStatus.run.id;
-      setCounts({ 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0 }); setCoins(0);
+      setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0);
     }
   }, [shiftStatus.run]);
   const canWrite = allowed && !!branchId && !busy && !shiftStatus.loading && !shiftStatus.error && !shiftStatus.pendingHandover && writeGuard.ready && !writeGuard.blocked;
@@ -66,7 +66,7 @@ function ScopedCashDrop() {
     if (!canWrite || !shiftStatus.run || countRun.current !== shiftStatus.run.id) return;
     if (!DENOMS.every((d) => Number.isSafeInteger(counts[d]) && counts[d] >= 0) || !Number.isFinite(coins) || coins < 0) { setError("Enter whole non-negative note counts and a valid coin amount."); return; }
     const url = `/api/shift-runs/${encodeURIComponent(shiftStatus.run.id)}/end`;
-    const payload = { branchId, note500Count: counts[500], note200Count: counts[200], note100Count: counts[100], note50Count: counts[50], note20Count: counts[20], note10Count: counts[10], coinsInr: coins };
+    const payload = { branchId, note10000Count: counts[10000], note5000Count: counts[5000], note2000Count: counts[2000], note1000Count: counts[1000], note500Count: counts[500], coinsInr: coins };
     if (!writeGuard.begin(url, payload)) return;
     setBusy(true); setError(""); setSubmitted(null);
     try {
@@ -75,7 +75,7 @@ function ScopedCashDrop() {
       if (!data.handover?.id || !data.toRun?.label || typeof data.cashExpected !== "string" || typeof data.shortageExcessInr !== "string") throw new Error("Could not confirm shift closure. Verify saved records before continuing.");
       setSubmitted(data);
       writeGuard.finish();
-      setCounts({ 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0 }); setCoins(0);
+      setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0);
       await shiftStatus.reload();
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
@@ -139,7 +139,7 @@ function ScopedCashDrop() {
                 <CardContent className="space-y-3">
                   {DENOMS.map((d) => (
                     <div key={d} className="flex items-center justify-between gap-3">
-                      <label htmlFor={`note-${d}`} className="text-sm font-medium">₹{d} {uiText(" notes")}</label>
+                      <label htmlFor={`note-${d}`} className="text-sm font-medium">TSh {d}{uiText(" notes")}</label>
                       <input id={`note-${d}`} type="number" min={0} step={1} value={counts[d]} onChange={(e) => setCounts((c) => ({ ...c, [d]: Math.max(0, Number(e.target.value) || 0) }))} inputMode="decimal" disabled={!canWrite} className="w-28 min-w-0 rounded-md border border-input bg-card px-3 py-1.5 text-right text-base sm:text-sm" />
                     </div>
                   ))}

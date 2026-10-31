@@ -10,6 +10,7 @@ import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { deductStock, lockRecipeStock, readStockRecipe } from "@/lib/server/production";
 import { directRequirements } from "@/lib/server/production-quantity";
+import { computeOrderCogs } from "@/lib/server/cogs";
 import { vatInvoiceSummary } from "@/lib/server/vat";
 import { requireOperableShift } from "@/lib/server/shifts";
 import { thankYouMessage, validOptionalPhone } from "@/lib/server/whatsapp-triggers";
@@ -148,6 +149,7 @@ export async function POST(request: Request) {
 
       const orderId = randomUUID();
       const orderNumber = `ORD-${Date.now()}-${orderId.slice(0, 4)}`;
+      const cogs = await computeOrderCogs(tx, branchId, lines);
       await tx.insert(posOrders).values({
         id: orderId,
         branchId,
@@ -166,6 +168,8 @@ export async function POST(request: Request) {
         tenderType: input.tenderType as string,
         cashierId: actor.id,
         shiftRunId,
+        cogsAmount: cogs.cogsAmount,
+        cogsComplete: cogs.complete,
       });
       await tx.insert(posOrderLines).values(
         lines.map((line) => ({ id: randomUUID(), orderId, menuItemId: line.menuItemId, qty: line.qty, price: itemById.get(line.menuItemId)!.price }))

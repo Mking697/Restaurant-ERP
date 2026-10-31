@@ -55,6 +55,18 @@ export const posOrders = pgTable(
     // configured for this branch yet" — legacy/back-compat, never blocks a
     // sale on its own.
     shiftRunId: text("shift_run_id").notNull().default(""),
+    // Real cost of goods sold for THIS order, captured ONCE at order-confirm
+    // time via src/lib/server/cogs.ts (recursive BOM explosion down to raw
+    // materials, priced at the latest locked vendor rate at that moment) —
+    // never recomputed retroactively. cogsComplete=false means at least one
+    // sold line's cost couldn't be fully priced (a nested Semi-FG with no
+    // saved recipe, or a raw material with no vendor rate ever locked); in
+    // that case cogsAmount is only the PARTIAL sum of what was priceable and
+    // must not be trusted as the order's real cost — Accounts P&L excludes
+    // the whole period's gross profit rather than understate it when any
+    // completed order in that period has cogsComplete=false.
+    cogsAmount: numeric("cogs_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    cogsComplete: boolean("cogs_complete").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
   },
@@ -108,12 +120,14 @@ export const cashDrops = pgTable(
     shiftDate: timestamp("shift_date", { withTimezone: true }).notNull(),
     // Hidden from cashier UI until submit — API-layer rule, not enforceable in schema.
     expectedCashInr: numeric("expected_cash_inr", { precision: 10, scale: 2 }).notNull(),
+    // Tanzanian Shilling (TZS) banknotes: 10,000 / 5,000 / 2,000 / 1,000 / 500.
+    // Coins (200/100/50 TSh) are not individually counted — coinsInr below is
+    // the single catch-all for every coin denomination, same as before.
+    note10000Count: integer("note_10000_count").notNull().default(0),
+    note5000Count: integer("note_5000_count").notNull().default(0),
+    note2000Count: integer("note_2000_count").notNull().default(0),
+    note1000Count: integer("note_1000_count").notNull().default(0),
     note500Count: integer("note_500_count").notNull().default(0),
-    note200Count: integer("note_200_count").notNull().default(0),
-    note100Count: integer("note_100_count").notNull().default(0),
-    note50Count: integer("note_50_count").notNull().default(0),
-    note20Count: integer("note_20_count").notNull().default(0),
-    note10Count: integer("note_10_count").notNull().default(0),
     coinsInr: numeric("coins_inr", { precision: 10, scale: 2 }).notNull().default("0"),
     countedCashInr: numeric("counted_cash_inr", { precision: 10, scale: 2 }).notNull(), // computed
     shortageExcessInr: numeric("shortage_excess_inr", { precision: 10, scale: 2 }).notNull(),

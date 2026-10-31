@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 const vm = require('node:vm');
+require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText, filename);
 function harness(requestJson, DateImpl = Date) {
   const slots = []; let cursor=0; const pending=[];
   const same = (a,b) => a && b && a.length === b.length && a.every((x,i)=>Object.is(x,b[i]));
@@ -17,7 +18,7 @@ function harness(requestJson, DateImpl = Date) {
   const filename = path.join(__dirname,'../src/app/workforce/live-ui.tsx');
   const source = ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const module = {exports:{}};
-  vm.runInNewContext(source,{module,exports:module.exports,Intl,Date:DateImpl,Error,URLSearchParams,require:name=>name==='react'?react:name==='@/lib/current-user'?{requestJson}:name==='@/lib/i18n'?{}:name==='@/components/ui/button'?{}:require(name)},{filename});
+  vm.runInNewContext(source,{module,exports:module.exports,Intl,Date:DateImpl,Error,URLSearchParams,require:name=>name==='react'?react:name==='@/lib/current-user'?{requestJson}:name==='@/lib/i18n'?{}:name==='@/components/ui/button'?{}:name==='@/lib/utils'?require('../src/lib/utils.ts'):require(name)},{filename});
   return {hooks:module.exports,render(fn,flush=true){cursor=0;const result=fn();if(flush)while(pending.length)pending.shift()();return result;},flush(){while(pending.length)pending.shift()();},unmount(){for (const slot of slots) slot?.cleanup?.();}};
 }
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
