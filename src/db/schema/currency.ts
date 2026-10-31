@@ -8,7 +8,7 @@ import { users } from "./auth";
 // conversion shown on the receipt for NRI/export customers. One row per
 // currency = the LATEST rate; Owner-only edits, each POS order SNAPSHOTS
 // the rate it used at sale time onto pos_orders.fx_rate_to_inr — never
-// recomputed later, same convention as src/lib/server/gst.ts locking in
+// recomputed later, same convention as src/lib/server/vat.ts locking in
 // the rate/amount at the moment of the transaction.
 export const currencyRates = pgTable(
   "currency_rates",

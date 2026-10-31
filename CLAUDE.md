@@ -11,6 +11,112 @@ first every time work resumes on this project.
 
 ---
 
+## SESSION CHECKPOINT — October 31, 2026 (resume from here next session)
+
+This section takes precedence over everything below it. VS Code closed
+mid-session by accident; work was resumed and partially continued from a
+fresh Hermes CLI session. Not committed/pushed except item 1.
+
+### Done and pushed this session
+1. UX-1 remainder device QA (390/1440, 13 pages not covered by the original
+   `ux1-device-qa-report.md`): all clean except one flagged non-blocking item
+   (`warehouse-390` showed a stuck "Loading transfers..." capture — likely a
+   capture-timing artifact, needs a live retake to confirm). Dead translation
+   string removed from `ui-copy.ts` (stale "Cloning is not implemented"
+   branches-page copy, superseded by the Clone Branch Wizard). Committed as
+   `50082de` on `work/phase-01-safety` and pushed (new upstream branch set).
+   Evidence: `docs/ux1-remainder-device-qa-report.md`.
+   NOTE: a separate, more thorough UX-1 pass (full 5-viewport + dialog-level
+   checks, new disposable branch fixture) later overwrote this same report
+   file on disk — unclear which agent/session produced it or whether it was
+   ever reviewed/committed. Re-check `docs/ux1-remainder-device-qa-report.md`
+   content and `git log` on it before trusting either version blindly.
+
+### In progress, UNCOMMITTED — blocked, needs a clean retry
+2. **npm audit HIGH severity fix**: added `"zod": "^4.6.6"` to `package.json`
+   `overrides` (the vulnerable `zod@4.1.11` comes transitively via
+   `@vercel/blob@2.8.2 -> @vercel/oidc -> @vercel/cli-config`; this override
+   avoids downgrading `@vercel/blob` itself, which `npm audit fix --force`
+   would otherwise do as a breaking change). This edit is sitting uncommitted
+   in `package.json` and has NOT been verified yet — `npm install` keeps
+   failing.
+   **Root cause found**: every `rm -rf node_modules` / `npm install` attempt
+   this session failed with `ENOTEMPTY: directory not empty, rmdir
+   'node_modules\next\dist\...'` — something (most likely VS Code's
+   TypeScript/ESLint language server or a file watcher, which runs
+   independently of any Hermes/Claude session the moment the folder is open
+   in VS Code) holds file handles open inside `node_modules` on Windows,
+   so npm's own internal cleanup/rename steps fail mid-install, repeatedly,
+   even across multiple from-scratch retries.
+   **Next session must**: close VS Code completely (not just a terminal
+   tab — the whole app process) BEFORE touching `node_modules`, then
+   `rm -rf node_modules && npm install`, confirm `npm audit --omit=dev`
+   shows 0 vulnerabilities, then run the full verify (`npx tsc --noEmit`,
+   `npm test`, `npx next build`) before committing this change.
+
+### Not started — fully scoped, ready to execute next session
+3. **GST → VAT (Tanzania) conversion** — user confirmed scope: flat 18%
+   standard rate (TRA, Mainland Tanzania), no state-based CGST/SGST/IGST
+   split (that whole same-state/inter-state branch has no Tanzania
+   equivalent and must be deleted, not renamed), TIN instead of GSTIN, no
+   GSTR-1/HSN statutory filing format to replicate — just a VAT summary
+   (taxable value + VAT amount, by rate, date/branch range) as the local
+   replacement for the current "GSTR Export" tab. Do NOT implement the
+   pending 16% B2C bank-payment discount rate from Finance Act 2025 — it's
+   still awaiting TRA's final implementation notice; flat 18% only, with a
+   one-line comment flagging the 16% rate as a future follow-up once TRA
+   activates it.
+   This is LIVE code, not scaffolding — wired into real POS order creation
+   (`src/app/api/pos/orders/route.ts`) and a real compliance-reporting tab in
+   Accounts (`src/app/accounts/page-content.tsx`, `GSTR Export` tab, gated by
+   `OFFICIAL_SALES_REPORTS`).
+   Full scope (files to touch, schema renames, test files to fix) is written
+   out in this session's delegate_task call — re-derive it by grepping the
+   whole repo for: `gstin`, `hsnSacCode`, `hsn_sac_code`, `gstStateCode`,
+   `gst_state_code`, `gstRatePercent`, `gst_rate_percent`,
+   `GST_HOME_STATE_CODE`, `gstBreakdown`, `gstInvoiceSummary`, `hsnSummary`,
+   `GSTR`, `CGST`, `SGST`, `IGST`. Key renames: `vendors.gstin` -> `tin`;
+   `menuItems.hsnSacCode` -> `productCode`; `menuItems.gstRatePercent` ->
+   `vatRatePercent` (default `'18.00'`, was `'5.00'`); DROP
+   `branches.gstStateCode` and the `GST_HOME_STATE_CODE` platform setting
+   entirely (no Tanzania equivalent). `src/lib/server/gst.ts` -> `vat.ts`
+   (single-rate calc, no CGST/SGST/IGST). `src/lib/server/gstr.ts` ->
+   `vat-summary.ts`. Update both English AND Hinglish text in
+   `guide-content.ts`/`guide-examples.ts`, `ui-copy.ts`, and the embedded
+   JSON copy in `docs/restaurant-erp-archify.html`.
+   A subagent attempt at this got interrupted after ~5.7 hours with ZERO
+   actual file changes made (only read/grepped) — do not trust any partial
+   state from that attempt; start clean. Generate the Drizzle migration
+   locally but do NOT apply it to Neon production or even to the real local
+   `restaurant_erp_local` DB without a separate explicit go-ahead, per this
+   project's standing schema-change approval rule — same as every other
+   schema change in this file.
+4. **"Phase 4 remaining features"** — user referenced "5 features" from an
+   earlier context not available in this file; when asked to write them out,
+   user did not supply a list. In the absence of one, these 5 were proposed
+   and not yet explicitly confirmed by the user — confirm before building:
+   (a) wire the Reports page's Excel export button (currently a non-functional
+   placeholder), (b) make the topbar branch selector actually filter page
+   data (currently local UI state only, doesn't touch any query), (c) a dark
+   mode toggle UI (CSS variables already exist, no switch control built),
+   (d) add the missing auth guard on `/api/admin/settings/whatsapp` (flagged
+   as a TODO in that route since Phase 3 — do not expose this
+   internet-reachable without it), (e) sync the remaining `₹`-amount prose in
+   `guide-examples.ts`'s walkthrough text to TSh (deferred since the original
+   Tanzania currency pass).
+
+### Resume order for next session
+1. Confirm VS Code is fully closed, then fix `node_modules`/npm audit (item 2).
+2. GST → VAT conversion (item 3) — biggest, most sensitive piece; local dev +
+   tests only, hold commit/migration for explicit approval.
+3. Re-confirm the Phase 4 list (item 4) with the user, then build whichever
+   they approve.
+4. Full verify (`tsc`, `npm test`, `next build`) and review before any
+   commit/push; production migration/deploy for item 3 needs its own
+   separate explicit approval exactly like every prior schema change here.
+
+---
+
 ## CURRENT RELEASE CHECKPOINT — October 30, 2026
 
 User explicitly authorized commit + push + deploy of the approved Tanzania

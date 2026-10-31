@@ -122,9 +122,9 @@ test('successful clone copies menuItems/bomRecipes/checklistTemplates with corre
     tables: {
       branches: [{ id: 'src', code: 'SRC' }],
       menuItems: [
-        { id: 'dish', branchId: 'src', name: 'Butter Chicken', category: '', outputUnit: 'portion', price: '250.00', isActive: true, isSemiFg: false, isSellable: true, hsnSacCode: '', gstRatePercent: '5.00' },
-        { id: 'gravy', branchId: 'src', name: 'Gravy', category: '', outputUnit: 'kg', price: '0.00', isActive: true, isSemiFg: true, isSellable: false, hsnSacCode: '', gstRatePercent: '5.00' },
-        { id: 'other-branch-dish', branchId: 'other', name: 'Not copied', category: '', outputUnit: 'portion', price: '0.00', isActive: true, isSemiFg: false, isSellable: true, hsnSacCode: '', gstRatePercent: '5.00' },
+        { id: 'dish', branchId: 'src', name: 'Butter Chicken', category: '', outputUnit: 'portion', price: '250.00', isActive: true, isSemiFg: false, isSellable: true, productCode: '', vatRatePercent: '18.00' },
+        { id: 'gravy', branchId: 'src', name: 'Gravy', category: '', outputUnit: 'kg', price: '0.00', isActive: true, isSemiFg: true, isSellable: false, productCode: '', vatRatePercent: '18.00' },
+        { id: 'other-branch-dish', branchId: 'other', name: 'Not copied', category: '', outputUnit: 'portion', price: '0.00', isActive: true, isSemiFg: false, isSellable: true, productCode: '', vatRatePercent: '18.00' },
       ],
       bomRecipes: [
         { id: 'r1', branchId: 'src', menuItemId: 'dish', componentType: 'SEMI_FG', rawMaterialId: null, componentMenuItemId: 'gravy', qtyPerUnit: '1.000', lockedByHq: true },

@@ -32,7 +32,7 @@ export const posOrders = pgTable(
     taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }).notNull().default("0"),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
     // Multi-currency (confirmed scope: NRI/export billing). totalAmount
-    // above is ALWAYS the GST invoice-of-record in INR — these three
+    // above is ALWAYS the VAT invoice-of-record in INR — these three
     // columns are an optional "what the customer actually paid in their
     // currency" snapshot, locked in at sale time from currency_rates, never
     // recomputed later even if the rate changes afterwards.

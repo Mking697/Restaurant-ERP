@@ -17,7 +17,7 @@ import { Plus, MessageCircle } from "lucide-react";
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
 interface OrderRow { ownerOnly?: boolean; id: string; branchId: string; orderNumber: string; channel: string; tableNo: string; counterNo: string; totalAmount: string; tenderType: string; tenderCurrencyCode: string; tenderCurrencyAmount: string; status: string; createdAt: string; }
 interface MenuItemRow { id: string; branchId: string; name: string; price: string; isActive: boolean; isSellable: boolean; }
-interface OrderResult { order: { orderNumber: string }; kot: { name: string; qty: number }[]; receipt: { lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; gst: { configured: boolean; note?: string; rates?: { ratePercent: string; cgst: string; sgst: string; igst: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null }; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
+interface OrderResult { order: { orderNumber: string }; kot: { name: string; qty: number }[]; receipt: { lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null }; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
 interface CurrencyRateRow { id: string; currencyCode: string; rateToInr: string; updatedAt: string; }
 
 const CHANNEL_VARIANT: Record<string, "default" | "secondary" | "warning" | "destructive"> = { DINE_IN: "default", TAKEAWAY: "secondary", SWIGGY: "warning", ZOMATO: "destructive" };
@@ -266,11 +266,10 @@ function ScopedPos() {
             {result && <div className="mt-3 space-y-3 rounded-md border p-3 text-sm">
               <p className="font-medium">{uiText("Order")} {result.order.orderNumber} {uiText("confirmed.")}</p>
               <div><p className="font-medium">{uiText("KOT (kitchen copy, no price)")}</p><ul className="list-disc pl-5">{result.kot.map((k, i) => <li key={i}>{k.name} × {k.qty}</li>)}</ul></div>
-              <div><p className="font-medium">{uiText("Receipt")}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = ₹{l.lineTotal}</li>)}</ul>
-                <p>{uiText("Subtotal:")} ₹{result.receipt.subtotal}</p>
-                <p>{uiText("GST:")} ₹{result.receipt.taxAmount}{result.receipt.gst.configured && result.receipt.gst.rates ? " (" + result.receipt.gst.rates.map((r) => `${r.ratePercent}%: CGST ₹${r.cgst} + SGST ₹${r.sgst}${Number(r.igst) > 0 ? ` / IGST ₹${r.igst}` : ""}`).join(", ") + ")" : ""}</p>
-                <p className="font-medium">{uiText("Total:")} ₹{result.receipt.totalAmount}</p>
-                {!result.receipt.gst.configured && <p className="text-xs text-muted-foreground">{result.receipt.gst.note}</p>}
+              <div><p className="font-medium">{uiText("Receipt")}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>
+                <p>{uiText("Subtotal:")} {formatInr(Number(result.receipt.subtotal))}</p>
+                <p>{uiText("VAT:")} {formatInr(Number(result.receipt.taxAmount))}{result.receipt.vat.rates.length ? " (" + result.receipt.vat.rates.map((r) => `${r.ratePercent}%: ${formatInr(Number(r.vatAmount))}`).join(", ") + ")" : ""}</p>
+                <p className="font-medium">{uiText("Total:")} {formatInr(Number(result.receipt.totalAmount))}</p>
                 {result.receipt.currency && <p className="text-sm">{uiText("Payable in")} {result.receipt.currency.tenderCurrencyCode}: <strong>{result.receipt.currency.tenderCurrencyAmount}</strong> ({uiText("rate")} ₹{result.receipt.currency.fxRateToInr})</p>}
               </div>
               <p className="text-xs text-muted-foreground">{uiText("Inventory deducted:")} {result.inventoryDeducted.map((d) => `${d.qtyDeducted}`).join(", ") || uiText("none (no BOM configured)")}</p>

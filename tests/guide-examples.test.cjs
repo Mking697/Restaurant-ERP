@@ -55,7 +55,7 @@ test('examples distinguish persisted writes from deferred quality/upload behavio
   assert.match(GUIDE_EXAMPLES['/tasks'].en.result, /persist|database|Postgres/i);
   assert.match(GUIDE_EXAMPLES['/purchase'].en.result, /persist|database|Postgres/i);
   assert.match(GUIDE_EXAMPLES['/purchase'].en.result, /quality|refund|return/i);
-  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce', '/pos', '/cash-drop', '/admin/settings/shifts', '/menu', '/warehouse', '/accounts-gstr']) {
+  for (const route of ['/inventory', '/admin/users', '/admin/branches', '/admin/settings/whatsapp', '/accounts', '/workforce', '/pos', '/cash-drop', '/admin/settings/shifts', '/menu', '/warehouse', '/accounts-vat']) {
     assert.match(GUIDE_EXAMPLES[route].en.result, /real|persist|database|Postgres/i, route);
   }
   const cash = GUIDE_EXAMPLES['/cash-drop'].en;
@@ -109,9 +109,9 @@ test('shift and cash guidance describe local persisted operations and acceptance
 
 test('visibility guidance separates operational confidentiality from actual records in both languages', () => {
   const pos = GUIDE_MODULES.find(module => module.route === '/pos');
-  const gstr = GUIDE_MODULES.find(module => module.exampleKey === '/accounts-gstr');
+  const vat = GUIDE_MODULES.find(module => module.exampleKey === '/accounts-vat');
   const cash = GUIDE_MODULES.find(module => module.module === 'CASH_DROP');
-  assert.equal(gstr.module, 'OFFICIAL_SALES_REPORTS');
+  assert.equal(vat.module, 'OFFICIAL_SALES_REPORTS');
   assert.equal(GUIDE_MODULES.length, 17);
   for (const language of ['en', 'hinglish']) {
     const chapterText = module => {
@@ -128,9 +128,9 @@ test('visibility guidance separates operational confidentiality from actual reco
       }
       assert.match(text, /stock/);
     }
-    for (const text of [chapterText(gstr), practiceText('/accounts-gstr')]) {
-      for (const token of ['OFFICIAL_SALES_REPORTS', 'POS_CASHIER', 'explicit', 'Owner-only', 'actual', 'filtered', 'auto']) {
-        assert.ok(text.includes(token), language + ' GSTR: ' + token);
+    for (const text of [chapterText(vat), practiceText('/accounts-vat')]) {
+      for (const token of ['OFFICIAL_SALES_REPORTS', 'POS_CASHIER', 'explicit', 'Owner-only', 'actual', 'filtered']) {
+        assert.ok(text.includes(token), language + ' VAT: ' + token);
       }
     }
     for (const text of [chapterText(cash), practiceText('/cash-drop')]) {

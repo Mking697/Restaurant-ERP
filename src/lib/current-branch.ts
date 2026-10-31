@@ -25,7 +25,7 @@ export function useSelectedBranchId(): string {
   return user.role === "SUPER_ADMIN" ? selected : user.branchId || "__no_branch__";
 }
 export interface BranchRecord {
-  id: string; code: string; name: string; address: string; lat: string; lng: string; geofenceRadiusM: number;
+  id: string; code: string; name: string; address: string; lat: string; lng: string; geofenceRadiusM: number; vatRatePercent: string | null;
 }
 export function notifyBranchesChanged() { window.dispatchEvent(new Event("restaurant-branches-changed")); }
 export function useBranches() {

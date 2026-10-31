@@ -185,26 +185,26 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
     "cat": "frontend",
     "status": "live",
     "title": "POS / Cashier",
-    "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + GST). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (GST invoice always stays in INR). A customer WhatsApp number triggers a real Thank You message after confirm. Operational confidentiality only: only Owner can set or restore Owner-only visibility, with a 3-500 character reason and audit history. All non-Owner operational users, including an accountant with official-report access, see filtered orders and visible totals only. Owner sees actual, visible and private totals for the selected scope. Visibility never cancels a sale, reverses stock or removes official records: authorized OFFICIAL_SALES_REPORTS exports remain actual. Existing printouts/downloads cannot be revoked; Dashboard/Reports now use database-backed permission-scoped data, not mock demos; official exports remain separate actual-record disclosure.",
+    "short": "Real billing: BOM-driven KOT + VAT invoice + 2 counters + multi-currency + WhatsApp Thank You.",
+    "what": "Confirming an order checks and atomically deducts its direct raw-material stock plus any already-PRODUCED Semi-FG stock (never a Semi-FG's own embedded raw ingredients) in real branch inventory — insufficient stock, or a Semi-FG that hasn't been produced yet, rejects the whole order, never a partial sale. The order splits into a kitchen KOT (item + qty, no price) and a customer receipt (price + VAT). Each branch supports 2 billing counters. An optional foreign payment currency locks its exchange rate at sale time (VAT invoice total stays in the base currency). A customer WhatsApp number triggers a real Thank You message after confirm. Operational confidentiality only: only Owner can set or restore Owner-only visibility, with a 3-500 character reason and audit history. All non-Owner operational users, including an accountant with official-report access, see filtered orders and visible totals only. Owner sees actual, visible and private totals for the selected scope. Visibility never cancels a sale, reverses stock or removes official records: authorized OFFICIAL_SALES_REPORTS exports remain actual. Existing printouts/downloads cannot be revoked; Dashboard/Reports now use database-backed permission-scoped data, not mock demos; official exports remain separate actual-record disclosure.",
     "how": [
       "In a QA test branch/account with POS_CASHIER, first Start Shift if shifts are configured but no run is open. Review and Accept Handover if PENDING: sales are blocked until acceptance. Unconfigured branches retain legacy POS but cannot real-close until shifts are configured. New Order writes real orders and stock; choose channel, counter (1 or 2), items and tender.",
       "Confirm Order checks and deducts direct raw + produced Semi-FG stock, and posts the order — a shortfall, or a dish whose Semi-FG hasn't been produced yet (see Menu & BOM's Production panel), rejects the whole order with a 409.",
-      "The receipt shows GST (CGST/SGST or IGST) when the branch and company GST state codes are configured, else it bills tax-free with a clear note.",
-      "Pick a non-INR payment currency (configured via the Owner-only Currency Rates panel) to also show the payable amount in that currency alongside the INR invoice total."
+      "The receipt shows VAT at a flat Tanzania (TRA) rate — the selling branch's own override if set, else each menu item's own rate (default 18%).",
+      "Pick a non-base-currency payment currency (configured via the Owner-only Currency Rates panel) to also show the payable amount in that currency alongside the invoice total."
     ],
-    "example": "Example: 2 plates of Butter Chicken on Counter 2, paid in USD. Receipt shows ₹363.20 (GST invoice, incl. 5% GST) and Payable in USD: $4.30 (rate locked at ₹84.50). Real direct raw material (chicken) + already-produced Semi-FG gravy stock both deduct from that branch's inventory — the gravy's own raw ingredients were already consumed when it was produced, not again at sale.",
+    "example": "Example: 2 plates of Butter Chicken on Counter 2, paid in USD. Receipt shows TSh354.00 (invoice total, incl. 18% VAT on a TSh300.00 subtotal) and Payable in USD: $4.30 (rate locked at the configured FX rate). Real direct raw material (chicken) + already-produced Semi-FG gravy stock both deduct from that branch's inventory — the gravy's own raw ingredients were already consumed when it was produced, not again at sale.",
     "hinglish": {
       "title": "POS / Cashier",
-      "short": "Real billing: BOM-driven KOT + GST invoice + 2 counters + multi-currency + WhatsApp Thank You.",
-      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+GST). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (GST invoice hamesha INR mein). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai. Yeh sirf operational confidentiality hai: sirf Owner, 3-500 character reason aur audit history ke saath, Owner-only visibility set ya restore kar sakta hai. Har non-Owner, official-report access wala accountant bhi, operational POS mein filtered orders aur visible totals hi dekhega. Owner selected scope ke actual, visible aur private totals dekhta hai. Visibility se sale cancel, stock reverse ya official records remove nahi hote: authorized OFFICIAL_SALES_REPORTS exports actual rehte hain. Existing printouts/downloads revoke nahi hote; Dashboard/Reports ab DB-backed permission-scoped data hain, mock demo nahi; official exports alag actual-record disclosure hain.",
+      "short": "Real billing: BOM-driven KOT + VAT invoice + 2 counters + multi-currency + WhatsApp Thank You.",
+      "what": "Order confirm karte hi uska direct raw-material stock aur jo bhi Semi-FG pehle se PRODUCE ho chuka hai uska stock check+deduct hota hai (Semi-FG ke apne embedded raw ingredients kabhi dobara nahi) — stock kam ho, ya koi Semi-FG abhi produce nahi hua, to poora order reject hota hai, kabhi partial sale nahi. Order 2 jagah split hota hai: kitchen ke liye KOT (item+qty, price nahi) aur customer ke liye receipt (price+VAT). Har branch mein 2 billing counters hain. Optional foreign payment currency sale time par apna FX rate lock kar leti hai (VAT invoice total base currency mein rehta hai). Customer WhatsApp number do to confirm hote hi real Thank You message jaata hai. Yeh sirf operational confidentiality hai: sirf Owner, 3-500 character reason aur audit history ke saath, Owner-only visibility set ya restore kar sakta hai. Har non-Owner, official-report access wala accountant bhi, operational POS mein filtered orders aur visible totals hi dekhega. Owner selected scope ke actual, visible aur private totals dekhta hai. Visibility se sale cancel, stock reverse ya official records remove nahi hote: authorized OFFICIAL_SALES_REPORTS exports actual rehte hain. Existing printouts/downloads revoke nahi hote; Dashboard/Reports ab DB-backed permission-scoped data hain, mock demo nahi; official exports alag actual-record disclosure hain.",
       "how": [
         "POS_CASHIER wale QA test branch/account mein configured shifts par run open na ho to Start Shift karo. PENDING handover check karke Accept Handover karo: acceptance tak sale blocked hai. Unconfigured branch ka legacy POS chalta hai par config ke bina real-close nahi. New Order real orders/stock likhta hai; channel, counter (1 ya 2), items aur tender chuno.",
         "Confirm Order direct raw + produced Semi-FG stock check+deduct karta hai aur order post karta hai — kami ho, ya kisi dish ka Semi-FG abhi produce na hua ho (Menu & BOM ke Production panel se produce karo), to 409 ke saath poora order reject.",
-        "Receipt GST dikhati hai (CGST/SGST ya IGST) jab branch aur company ke GST state code set hon, warna clear note ke saath tax-free bill ban jaata hai.",
-        "Non-INR payment currency chuno (Owner-only Currency Rates panel se configured) to INR invoice total ke saath us currency mein payable amount bhi dikhta hai."
+        "Receipt flat Tanzania (TRA) VAT rate dikhati hai — selling branch ka apna override set ho to wahi, warna har menu item ka apna rate (default 18%).",
+        "Non-base-currency payment currency chuno (Owner-only Currency Rates panel se configured) to invoice total ke saath us currency mein payable amount bhi dikhta hai."
       ],
-      "example": "Example: 2 plate Butter Chicken Counter 2 par, USD mein payment. Receipt ₹363.20 (GST invoice, 5% GST samet) aur Payable in USD: $4.30 (rate lock ₹84.50) dikhati hai. Real direct raw material (chicken) + pehle se produced Semi-FG gravy dono stock us branch ki inventory se minus hote hain — gravy ka apna raw ingredient production ke time hi consume ho chuka tha, sale par dobara nahi."
+      "example": "Example: 2 plate Butter Chicken Counter 2 par, USD mein payment. Receipt TSh354.00 (invoice total, TSh300.00 subtotal par 18% VAT samet) aur Payable in USD: $4.30 (configured FX rate lock) dikhati hai. Real direct raw material (chicken) + pehle se produced Semi-FG gravy dono stock us branch ki inventory se minus hote hain — gravy ka apna raw ingredient production ke time hi consume ho chuka tha, sale par dobara nahi."
     }
   },
   {
@@ -467,33 +467,31 @@ export const GUIDE_MODULES: BilingualGuideModule[] = [
   {
     "module": "OFFICIAL_SALES_REPORTS",
         "route": "/accounts",
-        "exampleKey": "/accounts-gstr",
+        "exampleKey": "/accounts-vat",
     "icon": "🧾",
     "cat": "finance",
     "status": "live",
-    "title": "GSTR-1 HSN Summary Export",
-    "short": "Real GSTR-1 Table 12 style HSN-wise export, built from actual completed orders — now a tab inside Accounts.",
-    "what": "Owner or a user explicitly granted OFFICIAL_SALES_REPORTS can open the Accounts GSTR Export tab. POS_CASHIER alone does not grant this access; existing grants are not automatically backfilled. This official report uses actual records including Owner-only orders, never filtered staff POS totals. Pick a date range and branch scope; it pulls every real completed order in range, groups taxable value + CGST/SGST/IGST by HSN/SAC code and rate, and lets you export it as CSV ready for the GST portal's offline tool. Orders from a branch (or before the company) had its GST state code configured are excluded from the summary and counted separately — a GSTR filing never silently includes tax-free sales as if they were GST-compliant.",
+    "title": "VAT Summary Export",
+    "short": "Real taxable value + VAT amount summary, built from actual completed orders — now a tab inside Accounts.",
+    "what": "Owner or a user explicitly granted OFFICIAL_SALES_REPORTS can open the Accounts VAT Summary tab. POS_CASHIER alone does not grant this access; existing grants are not automatically backfilled. This official report uses actual records including Owner-only orders, never filtered staff POS totals. Pick a date range and branch scope; it pulls every real completed order in range, groups taxable value + VAT by product code and rate, and lets you export it as CSV. Tanzania has no GSTR-1/HSN statutory filing format to replicate — this is a plain accounting summary (18% flat TRA rate by default, with an optional per-branch VAT rate override).",
     "how": [
-      "As Owner or with an explicit OFFICIAL_SALES_REPORTS grant, open Accounts, then click the GSTR Export tab. This grant authorizes actual official sales disclosure, not private operational POS access.",
+      "As Owner or with an explicit OFFICIAL_SALES_REPORTS grant, open Accounts, then click the VAT Summary tab. This grant authorizes actual official sales disclosure, not private operational POS access.",
       "Pick From/To dates and (optionally) a branch, then Generate.",
-      "Review the HSN-wise table: rate, quantity, taxable value, CGST/SGST/IGST, total tax and total value, with a Grand Total row.",
-      "If any orders in range are excluded for missing GST configuration, a clear warning states exactly how many.",
+      "Review the table: product code, rate, quantity, taxable value, VAT and total value, with a Grand Total row.",
       "Export CSV downloads the exact on-screen summary."
     ],
-    "example": "Example: two orders in October both have menu items under HSN 2106 at 5% GST — the export merges them into one row: Qty 3, Taxable ₹400.00, CGST ₹10.00, SGST ₹10.00, Total ₹420.00.",
+    "example": "Example: two orders in October both have menu items at 18% VAT — the export merges them into one row: Qty 3, Taxable TSh400.00, VAT TSh72.00, Total TSh472.00.",
     "hinglish": {
-      "title": "GSTR-1 HSN Summary Export",
-      "short": "Real GSTR-1 Table 12 jaisa HSN-wise export, real completed orders se bana — ab Accounts ke andar ek tab hai.",
-      "what": "Owner ya explicit OFFICIAL_SALES_REPORTS grant wala user Accounts ka GSTR Export tab khole. Sirf POS_CASHIER se access nahi milta; existing grants ka auto-backfill nahi hota. Official report actual records se banti hai, Owner-only orders samet; filtered staff POS totals se nahi. Date range aur branch scope chuno; page us range ke saare real completed orders uthati hai, HSN/SAC code aur rate ke hisaab se taxable value + CGST/SGST/IGST group karti hai, aur CSV export deti hai jo GST portal ke offline tool mein seedha ja sake. Jin branch (ya jab tak company) ka GST state code configure nahi tha unke orders summary se exclude hote hain aur alag count hote hain — GSTR filing mein kabhi tax-free sales GST-compliant jaisi silently nahi dikhti.",
+      "title": "VAT Summary Export",
+      "short": "Real taxable value + VAT amount summary, real completed orders se bana — ab Accounts ke andar ek tab hai.",
+      "what": "Owner ya explicit OFFICIAL_SALES_REPORTS grant wala user Accounts ka VAT Summary tab khole. Sirf POS_CASHIER se access nahi milta; existing grants ka auto-backfill nahi hota. Official report actual records se banti hai, Owner-only orders samet; filtered staff POS totals se nahi. Date range aur branch scope chuno; page us range ke saare real completed orders uthati hai, product code aur rate ke hisaab se taxable value + VAT group karti hai, aur CSV export deti hai. Tanzania mein GSTR-1/HSN filing format nahi hai — yeh sirf plain accounting summary hai (default 18% flat TRA rate, optional per-branch VAT rate override ke saath).",
       "how": [
-        "Owner ya explicit OFFICIAL_SALES_REPORTS grant se Accounts ka GSTR Export tab kholo. Yeh actual official sales disclose karne ka access hai, private operational POS access nahi.",
+        "Owner ya explicit OFFICIAL_SALES_REPORTS grant se Accounts ka VAT Summary tab kholo. Yeh actual official sales disclose karne ka access hai, private operational POS access nahi.",
         "From/To dates aur (optional) branch chuno, phir Generate dabao.",
-        "HSN-wise table dekho: rate, quantity, taxable value, CGST/SGST/IGST, total tax aur total value, saath mein Grand Total row.",
-        "Agar range ke kuch orders GST configuration na hone ki wajah se exclude hue hain, ek clear warning exact count batati hai.",
+        "Table dekho: product code, rate, quantity, taxable value, VAT aur total value, saath mein Grand Total row.",
         "Export CSV se wahi on-screen summary download hoti hai."
       ],
-      "example": "Example: October ke 2 orders dono mein HSN 2106 @ 5% GST ke menu items hain — export unhe ek row mein merge karta hai: Qty 3, Taxable ₹400.00, CGST ₹10.00, SGST ₹10.00, Total ₹420.00."
+      "example": "Example: October ke 2 orders dono mein 18% VAT ke menu items hain — export unhe ek row mein merge karta hai: Qty 3, Taxable TSh400.00, VAT TSh72.00, Total TSh472.00."
     }
   }
 ];

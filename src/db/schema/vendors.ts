@@ -6,7 +6,7 @@ export const vendors = pgTable("vendors", {
   name: text("name").notNull(),
   phoneE164: text("phone_e164").notNull().unique(), // vendor WhatsApp portal identity
   email: text("email").notNull().default(""),
-  gstin: text("gstin").notNull().default(""),
+  tin: text("tin").notNull().default(""), // Tanzania TRA Taxpayer Identification Number
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

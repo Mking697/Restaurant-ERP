@@ -55,8 +55,8 @@ export async function cloneBranch(tx: Executor, actor: Identity, input: Record<s
         isActive: item.isActive,
         isSemiFg: item.isSemiFg,
         isSellable: item.isSellable,
-        hsnSacCode: item.hsnSacCode,
-        gstRatePercent: item.gstRatePercent,
+        productCode: item.productCode,
+        vatRatePercent: item.vatRatePercent,
       }))
     );
   }

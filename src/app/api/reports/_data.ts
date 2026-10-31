@@ -49,7 +49,7 @@ export async function branchFoodCost(actor: Identity, branchId: string, range: {
   const recipes = await db.select().from(bomRecipes).where(eq(bomRecipes.branchId, branchId));
   const result = computeFoodCost(sold, buildRecipeIndex(recipes), rates);
   const reason = excludedOrders.length ? "Completed orders have no priceable POS lines" : result.excludedCount ? "Sold items have incomplete recipes/vendor rates" : !orders.length ? "No completed sales in this period" : Number(result.revenueInr) <= 0 ? "No positive completed-sale revenue" : null;
-  return { ...result, revenueInr: sumMoneyInr(orders.map((o) => o.totalAmount)), cogsInr: excludedOrders.length ? null : result.cogsInr, foodCostPercent: excludedOrders.length ? null : result.foodCostPercent, excludedOrders, reason, notes: [...result.notes, "Revenue is the completed invoice total (discounts and GST included), allocated proportionally across POS lines; current recipes/rates are estimates, not historical posted COGS."] };
+  return { ...result, revenueInr: sumMoneyInr(orders.map((o) => o.totalAmount)), cogsInr: excludedOrders.length ? null : result.cogsInr, foodCostPercent: excludedOrders.length ? null : result.foodCostPercent, excludedOrders, reason, notes: [...result.notes, "Revenue is the completed invoice total (discounts and VAT included), allocated proportionally across POS lines; current recipes/rates are estimates, not historical posted COGS."] };
 }
 export async function closingCash(scope: string | null, range?: { start: Date; end: Date }) {
   // Read the variance persisted by endShiftAndHandover, never recompute it.

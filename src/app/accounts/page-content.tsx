@@ -35,17 +35,17 @@ function AccountsScope({ selected }: { selected: string }) {
   const allowed = hasCurrentModule(actor, "ACCOUNTS_EXPENSES");
   const petty = hasCurrentModule(actor, "PETTY_CASH"); const recon = hasCurrentModule(actor, "AGGREGATOR_RECON");
   const pnl = hasCurrentModule(actor, "ACCOUNTS_EXPENSES", "PAYROLL");
-  const gstr = hasCurrentModule(actor, "OFFICIAL_SALES_REPORTS");
+  const vat = hasCurrentModule(actor, "OFFICIAL_SALES_REPORTS");
   const refunds = hasCurrentModule(actor, "VENDOR_REFUNDS");
-  const any = pnl || petty || recon || gstr || refunds;
+  const any = pnl || petty || recon || vat || refunds;
   return <><PageHeader title={t("Accounts", "Accounts")} description={t("Saved expenses, finalized payroll costs and expected refund/credit claims (not money received). Demonstration tabs remain labelled separately.", "Saved expenses, final payroll costs aur expected refund/credit claims (paisa receive nahi hua). Demo tabs alag label kiye gaye hain.")} />
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!any ? <p role="alert">{t("Accounts permission is required.", "Accounts permission chahiye.")}</p> : <>
       {pnl && <div className="mb-4 grid max-w-xl gap-3 sm:grid-cols-2"><Field label={t("Branch", "Branch")}><select className={inputClass} value={validBranch ? branchId : ""} disabled={actor.role !== "SUPER_ADMIN" || selected !== "all"} onChange={e => setChoice(e.target.value)}><option value="">{t("Select one branch", "Ek branch chuno")}</option>{branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field><Field label={t("Month", "Mahina")}><input className={inputClass} type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>}
-      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : gstr ? "gstr" : refunds ? "vendor-refunds" : "demos"}><TabsList className="h-auto flex-wrap justify-start">{refunds && <TabsTrigger value="vendor-refunds">{t("Vendor refunds", "Vendor refunds")}</TabsTrigger>}{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{gstr && <TabsTrigger value="gstr">{t("GSTR Export", "GSTR Export")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts · Demo", "Baaki accounts · Demo")}</TabsTrigger>}</TabsList>
+      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : vat ? "vat" : refunds ? "vendor-refunds" : "demos"}><TabsList className="h-auto flex-wrap justify-start">{refunds && <TabsTrigger value="vendor-refunds">{t("Vendor refunds", "Vendor refunds")}</TabsTrigger>}{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{vat && <TabsTrigger value="vat">{t("VAT Summary", "VAT Summary")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts · Demo", "Baaki accounts · Demo")}</TabsTrigger>}</TabsList>
         {allowed && <TabsContent value="expenses">{validBranch && month ? <ExpensePanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month to view or post real expenses.", "Real expenses dekhne ya save karne ke liye branch aur mahina chuno.")}</Panel>}</TabsContent>}{pnl && <TabsContent value="pnl">{validBranch && month ? <ProfitLossPanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month.", "Branch aur mahina chuno.")}</Panel>}</TabsContent>}
         {refunds && <TabsContent value="vendor-refunds"><VendorReturnsPanel mode="accounts" /></TabsContent>}
-        {gstr && <TabsContent value="gstr"><GstrExportPanel selectedBranchId={selected} /></TabsContent>}
+        {vat && <TabsContent value="vat"><VatSummaryPanel selectedBranchId={selected} /></TabsContent>}
         {(petty || recon) && <TabsContent value="demos"><LegacyAccountsDemo petty={petty} recon={recon} balance={petty || recon} /></TabsContent>}
       </Tabs>
     </>}
@@ -97,14 +97,14 @@ function ProfitLossPanel({ branchId, month }: {branchId:string;month:string}) {
 }
 function categoryLabel(category: Category, t: (en:string, hi?:string) => string) { return ({RENT:t("Rent", "Kiraya"),UTILITIES:t("Utilities", "Bijli / paani"),MARKETING:t("Marketing", "Marketing"),OTHER:t("Other", "Anya")})[category]; }
 
-interface HsnRow { hsnSacCode: string; ratePercent: string; totalQty: number; taxableValue: string; cgst: string; sgst: string; igst: string; totalTax: string; totalValue: string; }
-interface SummaryResponse { rows: HsnRow[]; grandTaxableValue: string; grandTotalTax: string; grandTotalValue: string; ordersIncluded: number; ordersExcludedNoGst: number; }
-function gstrToday() { return new Date().toISOString().slice(0, 10); }
-function gstrFirstOfMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; }
-function GstrExportPanel({ selectedBranchId }: { selectedBranchId: string }) {
+interface VatRow { productCode: string; ratePercent: string; totalQty: number; taxableValue: string; vatAmount: string; totalValue: string; }
+interface SummaryResponse { rows: VatRow[]; grandTaxableValue: string; grandTotalTax: string; grandTotalValue: string; ordersIncluded: number; }
+function vatToday() { return new Date().toISOString().slice(0, 10); }
+function vatFirstOfMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; }
+function VatSummaryPanel({ selectedBranchId }: { selectedBranchId: string }) {
   const { t } = useTranslation();
-  const [from, setFrom] = React.useState(gstrFirstOfMonth());
-  const [to, setTo] = React.useState(gstrToday());
+  const [from, setFrom] = React.useState(vatFirstOfMonth());
+  const [to, setTo] = React.useState(vatToday());
   const [data, setData] = React.useState<SummaryResponse | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -112,7 +112,7 @@ function GstrExportPanel({ selectedBranchId }: { selectedBranchId: string }) {
   async function load() {
     setLoading(true); setError(""); setData(null);
     try {
-      const url = `/api/gst/gstr1-hsn-summary?from=${from}&to=${to}` + (selectedBranchId !== "all" ? `&branchId=${encodeURIComponent(selectedBranchId)}` : "");
+      const url = `/api/vat/vat-summary?from=${from}&to=${to}` + (selectedBranchId !== "all" ? `&branchId=${encodeURIComponent(selectedBranchId)}` : "");
       const result = await requestJson<SummaryResponse>(url);
       setData(result);
     } catch (err) { setError(err instanceof Error ? err.message : "Load failed"); }
@@ -122,44 +122,40 @@ function GstrExportPanel({ selectedBranchId }: { selectedBranchId: string }) {
 
   function exportCsv() {
     if (!data?.rows.length) return;
-    downloadCsv(`gstr1-hsn-summary-${from}-to-${to}.csv`, data.rows.map((r) => ({
-      "HSN/SAC": r.hsnSacCode, "Rate %": r.ratePercent, "Total Qty": r.totalQty, "Taxable Value": r.taxableValue, CGST: r.cgst, SGST: r.sgst, IGST: r.igst, "Total Tax": r.totalTax, "Total Value": r.totalValue,
+    downloadCsv(`vat-summary-${from}-to-${to}.csv`, data.rows.map((r) => ({
+      "Product Code": r.productCode, "Rate %": r.ratePercent, "Total Qty": r.totalQty, "Taxable Value": r.taxableValue, VAT: r.vatAmount, "Total Value": r.totalValue,
     })));
   }
 
-  const inputClassGstr = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+  const inputClassVat = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-sm text-muted-foreground">{t("Official HSN-wise summary from all eligible completed orders, including Owner-only orders. This is an unfiltered accounting view, not staff-visible sales. OFFICIAL_SALES_REPORTS permission is required.", "Sabhi eligible completed orders ka official HSN summary, Owner-only orders bhi included hain. Yeh unfiltered accounting view hai, staff-visible sales nahi. OFFICIAL_SALES_REPORTS permission chahiye.")}</p>
+      <p className="text-sm text-muted-foreground">{t("Official VAT summary from all eligible completed orders, including Owner-only orders. This is an unfiltered accounting view, not staff-visible sales. OFFICIAL_SALES_REPORTS permission is required. Tanzania has no GSTR-1/HSN filing format — this is a plain taxable value + VAT amount summary by rate.", "Sabhi eligible completed orders ka official VAT summary, Owner-only orders bhi included hain. Yeh unfiltered accounting view hai, staff-visible sales nahi. OFFICIAL_SALES_REPORTS permission chahiye. Tanzania mein GSTR-1/HSN filing format nahi hai — yeh sirf rate ke hisaab se taxable value + VAT amount summary hai.")}</p>
       <Button size="sm" variant="outline" disabled={!data?.rows.length} onClick={exportCsv}><Download className="size-4" /> {t("Export CSV", "Export CSV")}</Button>
     </div>
     <Card><CardContent className="flex flex-wrap items-end gap-3 pt-5">
-      <label className="block space-y-1 text-xs font-medium"><span>{t("From", "From")}</span><input type="date" className={inputClassGstr} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-      <label className="block space-y-1 text-xs font-medium"><span>{t("To", "To")}</span><input type="date" className={inputClassGstr} value={to} onChange={(e) => setTo(e.target.value)} /></label>
+      <label className="block space-y-1 text-xs font-medium"><span>{t("From", "From")}</span><input type="date" className={inputClassVat} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+      <label className="block space-y-1 text-xs font-medium"><span>{t("To", "To")}</span><input type="date" className={inputClassVat} value={to} onChange={(e) => setTo(e.target.value)} /></label>
       <Button size="sm" disabled={loading} onClick={load}>{loading ? t("Loading…", "Load ho raha hai…") : t("Generate", "Generate")}</Button>
     </CardContent></Card>
 
     {error && <p role="alert" className="text-destructive">{t(error)}</p>}
 
     {data && <>
-      {data.ordersExcludedNoGst > 0 && <p role="alert" className="text-sm text-destructive">{t(`${data.ordersExcludedNoGst} order(s) in this range are EXCLUDED — their branch or company GST state code isn't configured yet, so they can't be part of a GST filing.`)}</p>}
-      <p className="text-sm text-muted-foreground">{t(`${data.ordersIncluded} GST-compliant order(s) included in this summary.`)}</p>
+      <p className="text-sm text-muted-foreground">{t(`${data.ordersIncluded} order(s) included in this summary.`)}</p>
       <Card><CardContent className="pt-5">
-        <Table><TableHeader><TableRow><TableHead>{t("HSN/SAC", "HSN/SAC")}</TableHead><TableHead>{t("Rate %", "Rate %")}</TableHead><TableHead>{t("Qty", "Qty")}</TableHead><TableHead>{t("Taxable Value", "Taxable Value")}</TableHead><TableHead>{t("CGST", "CGST")}</TableHead><TableHead>{t("SGST", "SGST")}</TableHead><TableHead>{t("IGST", "IGST")}</TableHead><TableHead>{t("Total Tax", "Total Tax")}</TableHead><TableHead>{t("Total Value", "Total Value")}</TableHead></TableRow></TableHeader><TableBody>
+        <Table><TableHeader><TableRow><TableHead>{t("Product Code", "Product Code")}</TableHead><TableHead>{t("Rate %", "Rate %")}</TableHead><TableHead>{t("Qty", "Qty")}</TableHead><TableHead>{t("Taxable Value", "Taxable Value")}</TableHead><TableHead>{t("VAT", "VAT")}</TableHead><TableHead>{t("Total Value", "Total Value")}</TableHead></TableRow></TableHeader><TableBody>
           {data.rows.map((r, i) => <TableRow key={i}>
-            <TableCell className="font-medium">{r.hsnSacCode}</TableCell>
+            <TableCell className="font-medium">{r.productCode}</TableCell>
             <TableCell>{r.ratePercent}%</TableCell>
             <TableCell>{r.totalQty}</TableCell>
-            <TableCell>₹{r.taxableValue}</TableCell>
-            <TableCell>₹{r.cgst}</TableCell>
-            <TableCell>₹{r.sgst}</TableCell>
-            <TableCell>₹{r.igst}</TableCell>
-            <TableCell>₹{r.totalTax}</TableCell>
-            <TableCell className="font-medium">₹{r.totalValue}</TableCell>
+            <TableCell>{formatCurrency(r.taxableValue)}</TableCell>
+            <TableCell>{formatCurrency(r.vatAmount)}</TableCell>
+            <TableCell className="font-medium">{formatCurrency(r.totalValue)}</TableCell>
           </TableRow>)}
-          {data.rows.length > 0 && <TableRow className="font-semibold"><TableCell colSpan={3}>{t("Grand Total", "Grand Total")}</TableCell><TableCell>₹{data.grandTaxableValue}</TableCell><TableCell colSpan={3}></TableCell><TableCell>₹{data.grandTotalTax}</TableCell><TableCell>₹{data.grandTotalValue}</TableCell></TableRow>}
+          {data.rows.length > 0 && <TableRow className="font-semibold"><TableCell colSpan={3}>{t("Grand Total", "Grand Total")}</TableCell><TableCell>{formatCurrency(data.grandTaxableValue)}</TableCell><TableCell>{formatCurrency(data.grandTotalTax)}</TableCell><TableCell>{formatCurrency(data.grandTotalValue)}</TableCell></TableRow>}
         </TableBody></Table>
-        {!data.rows.length && <p>{t("No GST-compliant orders in this date range/scope.", "Is date range/scope mein koi GST-compliant orders nahi hain.")}</p>}
+        {!data.rows.length && <p>{t("No orders in this date range/scope.", "Is date range/scope mein koi orders nahi hain.")}</p>}
       </CardContent></Card>
     </>}
   </div>;

@@ -13,11 +13,12 @@ export const branches = pgTable(
     name: text("name").notNull(),
     code: text("code").notNull().unique(), // "B1".."B6"
     address: text("address").notNull().default(""),
-    // GST state code (2-digit, e.g. "07" = Delhi) — compared against the
-    // company's registered GSTIN state (settings key GST_HOME_STATE_CODE) to
-    // decide CGST+SGST (same state) vs IGST (different state) on an invoice.
-    // Empty means "not configured yet"; see src/lib/server/gst.ts.
-    gstStateCode: text("gst_state_code").notNull().default(""),
+    // Tanzania VAT is a flat national rate (18% standard, TRA) — no state/
+    // CGST-SGST-IGST concept exists here. This column is an OPTIONAL
+    // branch-level override of that flat rate (e.g. a branch not VAT
+    // registered, or a special zone) — null means "use each menu item's
+    // own vatRatePercent (defaults 18.00)". See src/lib/server/vat.ts.
+    vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }),
     lat: numeric("lat").notNull(),
     lng: numeric("lng").notNull(),
     geofenceRadiusM: integer("geofence_radius_m").notNull().default(50),

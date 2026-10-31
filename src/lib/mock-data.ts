@@ -398,7 +398,7 @@ export function getBalanceSheet(): BalanceSheetRow[] {
     { section: "ASSET", accountName: "Accounts Receivable (aggregator payouts pending)", amountInr: 214000 },
     { section: "ASSET", accountName: "Equipment & Fixtures (net)", amountInr: 3200000 },
     { section: "LIABILITY", accountName: "Accounts Payable (vendor bills pending)", amountInr: 612000 },
-    { section: "LIABILITY", accountName: "GST Payable", amountInr: 148000 },
+    { section: "LIABILITY", accountName: "VAT Payable", amountInr: 148000 },
     { section: "EQUITY", accountName: "Owner's Capital", amountInr: 3000000 },
     { section: "EQUITY", accountName: "Retained Earnings", amountInr: 1493400 },
   ];

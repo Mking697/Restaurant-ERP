@@ -22,7 +22,7 @@ const branches = [a, b], users = [owner, staff, admin];
 const tokens = Object.fromEntries(users.map(uid => [uid, randomBytes(32).toString('hex')]));
 const triggerName = 'qa_visibility_' + id().replaceAll('-', '');
 const functionName = triggerName + '_fn';
-let checks = 0, dbApproved = false, gstInserted = false, bindingPassed = false;
+let checks = 0, dbApproved = false, bindingPassed = false;
 const pass = label => { checks++; console.log('PASS ' + label); };
 async function api(path, who = owner, method = 'GET', input, status = 200, extra = {}) {
   const response = await fetch(target.origin + path, {
@@ -73,8 +73,6 @@ async function cleanup() {
   await pool.query('delete from sessions where user_id=any($1::text[])', [users]);
   await pool.query('delete from users where id=any($1::text[])', [users]);
   await pool.query('delete from branches where id=any($1::text[])', [branches]);
-  // Only remove the setting if THIS run inserted it; never rewrites pre-existing values.
-  if (gstInserted) await pool.query("delete from settings where key='GST_HOME_STATE_CODE' and value='07'");
   assert.equal((await pool.query('select count(*)::int n from branches where id=any($1::text[])', [branches])).rows[0].n, 0);
   assert.equal((await pool.query('select count(*)::int n from users where id=any($1::text[])', [users])).rows[0].n, 0);
 }
@@ -84,7 +82,7 @@ async function cleanup() {
     dbApproved = true;
     // Refuse old/unmigrated DB before any fixture writes.
     await pool.query('select owner_only from pos_orders limit 0');
-    for (const branch of branches) await pool.query('insert into branches(id,name,code,lat,lng,gst_state_code) values($1,$2,$1,0,0,$3)', [branch, 'Visibility QA ' + branch, '07']);
+    for (const branch of branches) await pool.query('insert into branches(id,name,code,lat,lng) values($1,$2,$1,0,0)', [branch, 'Visibility QA ' + branch]);
     for (const [uid, role, grants] of [[owner, 'SUPER_ADMIN', []], [staff, 'CASHIER', ['POS_CASHIER', 'CASH_DROP']], [admin, 'BRANCH_MANAGER', ['POS_CASHIER', 'CASH_DROP', 'SHIFT_MANAGEMENT', 'OFFICIAL_SALES_REPORTS']]]) {
       const phone = '+1999' + String(BigInt('0x' + uid.replaceAll('-', '').slice(0, 12)) % 10000000n).padStart(7, '0');
       await pool.query('insert into users(id,name,phone_e164,role,branch_id,module_access) values($1,$2,$3,$4,$5,$6)', [uid, 'Visibility QA ' + uid, phone, role, role === 'SUPER_ADMIN' ? null : a, grants]);
@@ -95,13 +93,8 @@ async function cleanup() {
     for (const uid of users) assert.equal((await api('/api/auth/me', uid)).user.id, uid);
     bindingPassed = true;
     pass('current_database and all three unpredictable /api/auth/me sessions bind app to approved QA DB');
-    const gst = (await pool.query("select value from settings where key='GST_HOME_STATE_CODE'")).rows[0];
-    if (!gst) { gstInserted = (await pool.query("insert into settings(key,value) values('GST_HOME_STATE_CODE','07') on conflict do nothing returning key")).rowCount === 1; }
-    const state = (await pool.query("select value from settings where key='GST_HOME_STATE_CODE'")).rows[0]?.value;
-    assert.match(state || '', /^\d{2}$/, 'QA GST state must already be valid or absent (never overwrite it)');
-    await pool.query('update branches set gst_state_code=$1 where id=any($2::text[])', [state, branches]);
-    // 400 taxable + 25% GST = exactly 500 per invoice, with nonzero tax.
-    await pool.query("insert into menu_items(id,branch_id,name,price,is_sellable,output_unit,hsn_sac_code,gst_rate_percent) values($1,$2,$1,400,true,'portion','2106',25)", [item, a]);
+    // 400 taxable + 25% VAT = exactly 500 per invoice, with nonzero tax.
+    await pool.query("insert into menu_items(id,branch_id,name,price,is_sellable,output_unit,product_code,vat_rate_percent) values($1,$2,$1,400,true,'portion','P-2106',25)", [item, a]);
     await pool.query("insert into raw_materials(id,name,unit) values($1,$1,'kg')", [raw]);
     await pool.query('insert into inventory_stock(id,branch_id,raw_material_id,qty_on_hand) values($1,$2,$3,10)', [id(), a, raw]);
     await pool.query("insert into bom_recipes(id,branch_id,menu_item_id,component_type,raw_material_id,qty_per_unit) values($1,$2,$3,'RAW_MATERIAL',$4,0.1)", [id(), a, item, raw]);
@@ -194,16 +187,16 @@ async function cleanup() {
     }
     pass('Owner has actual1000/visible500/private500; staff/admin list and summary reveal no hidden id/contact/private aggregates, including query spoofing');
     const date = offset => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
-    const gstPath = '/api/gst/gstr1-hsn-summary?branchId=' + a + '&from=' + date(-1) + '&to=' + date(1);
-    await api(gstPath, staff, 'GET', undefined, 403);
+    const vatPath = '/api/vat/vat-summary?branchId=' + a + '&from=' + date(-1) + '&to=' + date(1);
+    await api(vatPath, staff, 'GET', undefined, 403);
     for (const uid of [owner, admin]) {
-      const official = await api(gstPath, uid);
+      const official = await api(vatPath, uid);
       assert.equal(official.ordersIncluded, 2);
       assert.equal(official.grandTaxableValue, '800.00');
       assert.equal(official.grandTotalTax, '200.00');
       assert.equal(official.grandTotalValue, '1000.00');
     }
-    await api(gstPath.replace(a, b), admin, 'GET', undefined, 403);
+    await api(vatPath.replace(a, b), admin, 'GET', undefined, 403);
     pass('official report includes BOTH invoices and tax; POS-only staff denied; OFFICIAL_SALES_REPORTS admin remains branch-scoped');
     assert.equal((await api(audiencePath)).targetCount, 2);
     assert.equal((await api(audiencePath, staff)).targetCount, 1);

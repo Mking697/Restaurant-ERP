@@ -3,7 +3,6 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { menuItems } from "@/db/schema/menu";
 import { posOrderLines, posOrders } from "@/db/schema/pos";
 import { branches } from "@/db/schema/platform";
-import { settings } from "@/db/schema/settings";
 import { currencyRates } from "@/db/schema/currency";
 import { locked, mutate, requireIdentity } from "@/lib/server/auth";
 import { operationalOrderVisibility, salesSummaryFor } from "@/lib/server/order-visibility";
@@ -11,7 +10,7 @@ import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { deductStock, lockRecipeStock, readStockRecipe } from "@/lib/server/production";
 import { directRequirements } from "@/lib/server/production-quantity";
-import { gstInvoiceSummary } from "@/lib/server/gst";
+import { vatInvoiceSummary } from "@/lib/server/vat";
 import { requireOperableShift } from "@/lib/server/shifts";
 import { thankYouMessage, validOptionalPhone } from "@/lib/server/whatsapp-triggers";
 import { sendWhatsAppMessage } from "@/lib/chatxflow";
@@ -61,13 +60,14 @@ export async function GET(request: Request) {
 // a real kitchen would refuse to fire a ticket it can't fulfil.
 //
 // Returns two views per the planned process-flow split: `kot` (dish name +
-// qty, no price — what the kitchen prints) and `receipt` (price + GST
-// breakdown + total — what the customer gets). GST is computed per-line from
-// each menu item's gstRatePercent and split CGST+SGST/IGST per
-// src/lib/server/gst.ts — but only when both the branch and company GST
-// state codes are configured; otherwise the order still posts tax-free
-// rather than blocking billing. WhatsApp Thank You and multi-currency are
-// NOT part of this endpoint yet — explicitly out of scope for this pass.
+// qty, no price — what the kitchen prints) and `receipt` (price + VAT
+// breakdown + total — what the customer gets). VAT is computed per-line at
+// a flat Tanzania (TRA) rate: the selling branch's own vatRatePercent
+// override if set (branches.vatRatePercent), else the menu item's own
+// vatRatePercent (default 18.00) — see src/lib/server/vat.ts. No CGST/SGST/
+// IGST state split (no Tanzania equivalent). WhatsApp Thank You and
+// multi-currency are NOT part of this endpoint yet — explicitly out of
+// scope for this pass.
 export async function POST(request: Request) {
   return api(async () => {
     const result = await mutate(request, async (tx, actor) => {
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       const { shiftRunId } = await requireOperableShift(tx, branchId);
       const menuItemIds = [...new Set(lines.map((l) => l.menuItemId))];
       const items = await tx
-        .select({ id: menuItems.id, branchId: menuItems.branchId, name: menuItems.name, price: menuItems.price, isActive: menuItems.isActive, isSellable: menuItems.isSellable, gstRatePercent: menuItems.gstRatePercent, hsnSacCode: menuItems.hsnSacCode })
+        .select({ id: menuItems.id, branchId: menuItems.branchId, name: menuItems.name, price: menuItems.price, isActive: menuItems.isActive, isSellable: menuItems.isSellable, vatRatePercent: menuItems.vatRatePercent, productCode: menuItems.productCode })
         .from(menuItems)
         .where(inArray(menuItems.id, menuItemIds));
       const itemById = new Map(items.map((item) => [item.id, item]));
@@ -124,31 +124,26 @@ export async function POST(request: Request) {
 
       const subtotal = lines.reduce((sum, line) => sum + Number(itemById.get(line.menuItemId)!.price) * line.qty, 0);
 
-      // GST — optional per order. If either this branch's gst_state_code or
-      // the company-wide GST_HOME_STATE_CODE setting isn't configured yet,
-      // the order still posts (tax-free) rather than blocking billing for a
-      // branch that hasn't been GST-onboarded — see src/lib/server/gst.ts.
-      const [branchRow] = await tx.select({ gstStateCode: branches.gstStateCode, name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1);
-      const [companyStateRow] = await tx.select({ value: settings.value }).from(settings).where(eq(settings.key, "GST_HOME_STATE_CODE")).limit(1);
-      const companyStateCode = companyStateRow?.value ?? "";
-      const gstConfigured = !!branchRow?.gstStateCode && !!companyStateCode;
-      const gstSummary = gstConfigured
-        ? gstInvoiceSummary(
-            lines.map((line) => {
-              const item = itemById.get(line.menuItemId)!;
-              return { taxableAmountDecimal: (Number(item.price) * line.qty).toFixed(2), ratePercent: item.gstRatePercent };
-            }),
-            branchRow!.gstStateCode,
-            companyStateCode
-          )
-        : null;
-      const taxAmount = gstSummary ? gstSummary.grandTotalTax : "0.00";
-      const totalAmount = gstSummary ? gstSummary.grandTotal : subtotal.toFixed(2);
+      // VAT — Tanzania (TRA) flat-rate, always computed, no "unconfigured
+      // tax-free" state. Effective rate per line: this branch's own
+      // vatRatePercent override (branches.vatRatePercent) if set, else the
+      // menu item's own vatRatePercent (default 18.00) — see
+      // src/lib/server/vat.ts. No CGST/SGST/IGST state split.
+      const [branchRow] = await tx.select({ vatRatePercent: branches.vatRatePercent, name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1);
+      const branchVatOverride = branchRow?.vatRatePercent ?? null;
+      const vatSummaryResult = vatInvoiceSummary(
+        lines.map((line) => {
+          const item = itemById.get(line.menuItemId)!;
+          return { taxableAmountDecimal: (Number(item.price) * line.qty).toFixed(2), ratePercent: branchVatOverride ?? item.vatRatePercent };
+        })
+      );
+      const taxAmount = vatSummaryResult.grandTotalTax;
+      const totalAmount = vatSummaryResult.grandTotal;
       // tenderCurrencyAmount is a payment-convenience conversion, NOT the
-      // GST invoice amount (that's always totalAmount, in INR) — rounding
-      // here uses plain decimal math, same spirit as the BOM costing
-      // estimate (src/lib/server/bom.ts), deliberately different from the
-      // paise-exact BigInt math src/lib/server/gst.ts uses for tax.
+      // VAT invoice amount (that's always totalAmount) — rounding here uses
+      // plain decimal math, same spirit as the BOM costing estimate
+      // (src/lib/server/bom.ts), deliberately different from the
+      // paise-exact BigInt math src/lib/server/vat.ts uses for tax.
       const tenderCurrencyAmount = tenderCurrencyCode === "INR" ? totalAmount : (Number(totalAmount) / fxRateToInr).toFixed(2);
 
       const orderId = randomUUID();
@@ -178,11 +173,11 @@ export async function POST(request: Request) {
 
       const kot = lines.map((line) => ({ menuItemId: line.menuItemId, name: itemById.get(line.menuItemId)!.name, qty: line.qty }));
       const receipt = {
-        lines: lines.map((line) => ({ menuItemId: line.menuItemId, name: itemById.get(line.menuItemId)!.name, qty: line.qty, price: itemById.get(line.menuItemId)!.price, lineTotal: (Number(itemById.get(line.menuItemId)!.price) * line.qty).toFixed(2), hsnSacCode: itemById.get(line.menuItemId)!.hsnSacCode, gstRatePercent: itemById.get(line.menuItemId)!.gstRatePercent })),
+        lines: lines.map((line) => ({ menuItemId: line.menuItemId, name: itemById.get(line.menuItemId)!.name, qty: line.qty, price: itemById.get(line.menuItemId)!.price, lineTotal: (Number(itemById.get(line.menuItemId)!.price) * line.qty).toFixed(2), productCode: itemById.get(line.menuItemId)!.productCode, vatRatePercent: branchVatOverride ?? itemById.get(line.menuItemId)!.vatRatePercent })),
         subtotal: subtotal.toFixed(2),
         taxAmount,
         totalAmount,
-        gst: gstSummary ? { configured: true, ...gstSummary } : { configured: false, note: "GST not configured for this branch/company yet — billed tax-free." },
+        vat: vatSummaryResult,
         currency: tenderCurrencyCode === "INR" ? null : { tenderCurrencyCode, fxRateToInr: fxRateToInr.toFixed(6), tenderCurrencyAmount },
       };
       // Preserve existing numeric POS output; internal stock math stays exact.

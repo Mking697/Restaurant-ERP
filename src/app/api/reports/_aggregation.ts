@@ -41,7 +41,7 @@ export function istDayLabel(date: Date) {
 }
 
 // -- Fixed-point INR money helpers (same paise-BigInt convention as the rest
-// of this project's money code — expenses.ts/accounts-ledger.ts/gst.ts) ----
+// of this project's money code — expenses.ts/accounts-ledger.ts/vat.ts) ----
 
 export function toPaise(value: string): bigint {
   if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) throw new HttpError(500, "Invalid persisted money value");

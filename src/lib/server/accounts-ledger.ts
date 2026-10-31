@@ -12,7 +12,7 @@ import { assertModule, branchScope, HttpError, type Identity } from "./permissio
 // profit-loss) are a separate, already-real pass — this file does not import
 // from or modify that one; money/date helpers below are local copies of the
 // same fixed-point-paise convention used throughout this project (expenses.ts,
-// gst.ts) rather than a cross-module dependency.
+// vat.ts) rather than a cross-module dependency.
 // ---------------------------------------------------------------------------
 
 function text(value: unknown, field: string, min: number, max: number): string {

@@ -22,12 +22,16 @@ export const menuItems = pgTable(
     // collapsed into one column.
     isSemiFg: boolean("is_semi_fg").notNull().default(false),
     isSellable: boolean("is_sellable").notNull().default(true),
-    // GST — restaurant HSN/SAC + slab rate per item (5/12/18 typically differ
-    // by AC/non-AC/liquor). Empty/0 means "not configured yet"; the invoice
-    // layer (not built yet) must refuse to bill an unconfigured item, not
-    // silently charge 0% tax — see src/lib/server/gst.ts.
-    hsnSacCode: text("hsn_sac_code").notNull().default(""),
-    gstRatePercent: numeric("gst_rate_percent", { precision: 5, scale: 2 }).notNull().default("5.00"),
+    // Tanzania VAT (TRA) — flat 18% standard rate by default, per item so a
+    // genuinely zero-rated/exempt item can be set to 0.00 explicitly. A
+    // branch can override this for every item it sells via
+    // branches.vatRatePercent (see src/db/schema/platform.ts) — when a
+    // branch override is set, it wins over this item-level value at billing
+    // time; see src/lib/server/vat.ts. productCode is an optional internal
+    // product/category code (NOT a statutory HSN/SAC filing field — Tanzania
+    // has no GSTR-1/HSN filing requirement).
+    productCode: text("product_code").notNull().default(""),
+    vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }).notNull().default("18.00"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("menu_items_branch_id_idx").on(table.branchId)]

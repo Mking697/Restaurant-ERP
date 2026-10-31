@@ -136,7 +136,7 @@ export function billUrl(value: unknown): string {
 // >25% spike threshold is fixed by the schema comment on indentStatusEnum
 // (src/db/schema/purchase.ts) — not changed here. Window/minimum-samples are
 // this pass's own scoped defaults, matching the project's existing "never
-// fabricate from insufficient data" convention (GST missing-rate handling,
+// fabricate from insufficient data" convention (VAT missing-rate handling,
 // MIS component re-normalization): with fewer than
 // ROLLING_AVERAGE_MIN_SAMPLES real data points in the trailing window for a
 // (branch, material) pair, no average/spike figure is computed at all.
