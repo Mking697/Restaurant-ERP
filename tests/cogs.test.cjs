@@ -99,3 +99,18 @@ test('computeOrderCogs returns 0.00/complete for an order whose only lines have 
   assert.equal(result.cogsAmount, '0.00');
   assert.equal(result.complete, true);
 });
+
+test('computeOrderCogs sums many raw materials with exact BigInt paise, never a float-drifted total', async () => {
+  const { computeOrderCogs } = load();
+  // 20 raw materials, each contributing a cost whose paise sum is a classic
+  // float-accumulation trap (0.1 + 0.2 !== 0.3 in IEEE-754): qty 0.010 of a
+  // material costing 10.00/unit = exactly 0.10 paise-wise, repeated 20x.
+  // A running `total += qty * rate` float accumulator can drift off the
+  // exact 2.00 by a cent; the BigInt-paise sum must land exactly on it.
+  const recipes = Array.from({ length: 20 }, (_, i) => recipeRow({ id: `r${i}`, menuItemId: 'dish', rawMaterialId: `mat${i}`, qtyPerUnit: '0.010' }));
+  const rates = Array.from({ length: 20 }, (_, i) => rateRow({ rawMaterialId: `mat${i}`, rate: '10.00' }));
+  const tx = makeTx(recipes, rates);
+  const result = await computeOrderCogs(tx, 'b1', [{ menuItemId: 'dish', qty: 1 }]);
+  assert.equal(result.cogsAmount, '2.00');
+  assert.equal(result.complete, true);
+});

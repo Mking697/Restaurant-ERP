@@ -32,16 +32,20 @@ export const indents = pgTable(
   (table) => [index("indents_branch_id_idx").on(table.branchId)]
 );
 
-export const indentLines = pgTable("indent_lines", {
-  id: text("id").primaryKey(),
-  indentId: text("indent_id")
-    .notNull()
-    .references(() => indents.id),
-  rawMaterialId: text("raw_material_id")
-    .notNull()
-    .references(() => rawMaterials.id),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-});
+export const indentLines = pgTable(
+  "indent_lines",
+  {
+    id: text("id").primaryKey(),
+    indentId: text("indent_id")
+      .notNull()
+      .references(() => indents.id),
+    rawMaterialId: text("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id),
+    qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
+  },
+  (table) => [index("indent_lines_indent_id_idx").on(table.indentId)]
+);
 
 export const poStatusEnum = pgEnum("po_status", [
   "CREATED",
@@ -90,21 +94,25 @@ export const purchaseOrders = pgTable(
   (table) => [index("purchase_orders_branch_id_idx").on(table.branchId)]
 );
 
-export const purchaseOrderLines = pgTable("purchase_order_lines", {
-  id: text("id").primaryKey(),
-  poId: text("po_id")
-    .notNull()
-    .references(() => purchaseOrders.id),
-  // Exactly one of these two is set: rawMaterialId for a store/Indent-driven
-  // line, itemDescription for a general (non-store) purchase line — enforce
-  // "exactly one" in the API layer, a DB CHECK across two nullable columns
-  // is possible but adds little here given this project's existing
-  // plain-text-FK convention elsewhere.
-  rawMaterialId: text("raw_material_id").references(() => rawMaterials.id),
-  itemDescription: text("item_description").notNull().default(""),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(), // locked vendor rate at PO time
-});
+export const purchaseOrderLines = pgTable(
+  "purchase_order_lines",
+  {
+    id: text("id").primaryKey(),
+    poId: text("po_id")
+      .notNull()
+      .references(() => purchaseOrders.id),
+    // Exactly one of these two is set: rawMaterialId for a store/Indent-driven
+    // line, itemDescription for a general (non-store) purchase line — enforce
+    // "exactly one" in the API layer, a DB CHECK across two nullable columns
+    // is possible but adds little here given this project's existing
+    // plain-text-FK convention elsewhere.
+    rawMaterialId: text("raw_material_id").references(() => rawMaterials.id),
+    itemDescription: text("item_description").notNull().default(""),
+    qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
+    rate: numeric("rate", { precision: 10, scale: 2 }).notNull(), // locked vendor rate at PO time
+  },
+  (table) => [index("purchase_order_lines_po_id_idx").on(table.poId)]
+);
 
 export const grnStatusEnum = pgEnum("grn_status", ["PENDING", "RECEIVED", "QUALITY_HOLD", "APPROVED"]);
 // Store-side quality check outcome at material receipt (Step 3). PASS -> the
@@ -136,21 +144,25 @@ export const grns = pgTable(
   (table) => [index("grns_branch_id_idx").on(table.branchId)]
 );
 
-export const grnLines = pgTable("grn_lines", {
-  id: text("id").primaryKey(),
-  grnId: text("grn_id")
-    .notNull()
-    .references(() => grns.id),
-  rawMaterialId: text("raw_material_id").references(() => rawMaterials.id),
-  itemDescription: text("item_description").notNull().default(""), // general-purchase line, mirrors PO line
-  qtyOrdered: numeric("qty_ordered", { precision: 12, scale: 3 }).notNull(),
-  qtyReceived: numeric("qty_received", { precision: 12, scale: 3 }).notNull(),
-  // Qty that FAILED quality check, in the material's own UOM — goes back to
-  // the vendor, never posted to inventoryStock. qtyReceived - qtyFailed is
-  // what actually lands in stock on a PASS/PARTIAL result.
-  qtyFailed: numeric("qty_failed", { precision: 12, scale: 3 }).notNull().default("0"),
-  rateOrdered: numeric("rate_ordered", { precision: 10, scale: 2 }).notNull(),
-});
+export const grnLines = pgTable(
+  "grn_lines",
+  {
+    id: text("id").primaryKey(),
+    grnId: text("grn_id")
+      .notNull()
+      .references(() => grns.id),
+    rawMaterialId: text("raw_material_id").references(() => rawMaterials.id),
+    itemDescription: text("item_description").notNull().default(""), // general-purchase line, mirrors PO line
+    qtyOrdered: numeric("qty_ordered", { precision: 12, scale: 3 }).notNull(),
+    qtyReceived: numeric("qty_received", { precision: 12, scale: 3 }).notNull(),
+    // Qty that FAILED quality check, in the material's own UOM — goes back to
+    // the vendor, never posted to inventoryStock. qtyReceived - qtyFailed is
+    // what actually lands in stock on a PASS/PARTIAL result.
+    qtyFailed: numeric("qty_failed", { precision: 12, scale: 3 }).notNull().default("0"),
+    rateOrdered: numeric("rate_ordered", { precision: 10, scale: 2 }).notNull(),
+  },
+  (table) => [index("grn_lines_grn_id_idx").on(table.grnId)]
+);
 
 // One row per failed-quality return — the money side of a GRN quality FAIL.
 // qtyFailed * rateOrdered (from the grnLine) is the refund/credit amount the
