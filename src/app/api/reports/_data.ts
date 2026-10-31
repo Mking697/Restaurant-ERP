@@ -8,7 +8,7 @@ import { bomRecipes, menuItems } from "@/db/schema/menu";
 import { vendorRates } from "@/db/schema/vendors";
 import { HttpError, type Identity } from "@/lib/server/permissions";
 import { operationalOrderVisibility } from "@/lib/server/order-visibility";
-import { allocateSaleRevenue, buildRecipeIndex, computeFoodCost, istDayKey, istMonthRange, sumMoneyInr, type SoldLine } from "./_aggregation";
+import { allocateSaleRevenue, buildRecipeIndex, computeFoodCost, postedFoodCost, istDayKey, istMonthRange, sumMoneyInr, type SoldLine } from "./_aggregation";
 
 export async function reportBranches(scope: string | null) {
   const rows = await db.select({ id: branches.id, name: branches.name }).from(branches).where(scope ? eq(branches.id, scope) : undefined).orderBy(branches.name);
@@ -33,7 +33,7 @@ export async function inventoryRates() {
   return rates;
 }
 export async function branchFoodCost(actor: Identity, branchId: string, range: { start: Date; end: Date }, rates: Map<string, number>) {
-  const orders = await db.select({ id: posOrders.id, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED"), gte(posOrders.createdAt, range.start), lt(posOrders.createdAt, range.end), operationalOrderVisibility(actor)));
+  const orders = await db.select({ id: posOrders.id, totalAmount: posOrders.totalAmount, cogsAmount: posOrders.cogsAmount, cogsComplete: posOrders.cogsComplete }).from(posOrders).where(and(eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED"), gte(posOrders.createdAt, range.start), lt(posOrders.createdAt, range.end), operationalOrderVisibility(actor)));
   const lines = orders.length ? await db.select({ id: posOrderLines.id, orderId: posOrderLines.orderId, menuItemId: posOrderLines.menuItemId, menuItemName: menuItems.name, price: posOrderLines.price, qty: posOrderLines.qty }).from(posOrderLines).innerJoin(menuItems, eq(menuItems.id, posOrderLines.menuItemId)).where(inArray(posOrderLines.orderId, orders.map((o) => o.id))).orderBy(posOrderLines.id) : [];
   const sold: SoldLine[] = [];
   const excludedOrders: { orderId: string; reason: string }[] = [];
@@ -49,7 +49,14 @@ export async function branchFoodCost(actor: Identity, branchId: string, range: {
   const recipes = await db.select().from(bomRecipes).where(eq(bomRecipes.branchId, branchId));
   const result = computeFoodCost(sold, buildRecipeIndex(recipes), rates);
   const reason = excludedOrders.length ? "Completed orders have no priceable POS lines" : result.excludedCount ? "Sold items have incomplete recipes/vendor rates" : !orders.length ? "No completed sales in this period" : Number(result.revenueInr) <= 0 ? "No positive completed-sale revenue" : null;
-  return { ...result, revenueInr: sumMoneyInr(orders.map((o) => o.totalAmount)), cogsInr: excludedOrders.length ? null : result.cogsInr, foodCostPercent: excludedOrders.length ? null : result.foodCostPercent, excludedOrders, reason, notes: [...result.notes, "Revenue is the completed invoice total (discounts and VAT included), allocated proportionally across POS lines; current recipes/rates are estimates, not historical posted COGS."] };
+  const revenueInr = sumMoneyInr(orders.map((o) => o.totalAmount));
+  // Actual (posted) COGS — the real per-order ingredient cost captured once at
+  // sale time (src/lib/server/cogs.ts), as opposed to the estimate above
+  // (current recipes/rates applied retroactively). Same withhold-never-
+  // understate discipline as Accounts P&L: null unless every completed order
+  // in this period priced completely at sale time.
+  const { actualCogsInr, actualFoodCostPercent, actualReason } = postedFoodCost(orders);
+  return { ...result, revenueInr, cogsInr: excludedOrders.length ? null : result.cogsInr, foodCostPercent: excludedOrders.length ? null : result.foodCostPercent, actualCogsInr, actualFoodCostPercent, actualReason, excludedOrders, reason, notes: [...result.notes, "Revenue is the completed invoice total (discounts and VAT included), allocated proportionally across POS lines; current recipes/rates are estimates, not historical posted COGS.", "Actual (Posted) COGS/food-cost% come from each order's own ingredient cost captured at sale time; shown only when every completed order in this period priced completely — otherwise withheld (null), never understated."] };
 }
 export async function closingCash(scope: string | null, range?: { start: Date; end: Date }) {
   // Read the variance persisted by endShiftAndHandover, never recompute it.

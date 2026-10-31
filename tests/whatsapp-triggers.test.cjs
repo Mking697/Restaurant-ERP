@@ -51,11 +51,23 @@ test('taskEscalationMessage flags overdue, names the doer and branch, defaults a
   assert.match(blank, /the assigned staff member/);
 });
 
-test('dailySummaryMessage reports sales/overdue/handover, and handles unavailable sales data', () => {
+test('dailySummaryMessage reports sales/overdue/handover/low stock, and handles unavailable sales data', () => {
   const { dailySummaryMessage } = load();
-  const msg = dailySummaryMessage({ branchName: 'B6', completedSales: 12, overdueTasks: 2, pendingHandover: true });
+  const msg = dailySummaryMessage({ branchName: 'B6', completedSales: 12, overdueTasks: 2, pendingHandover: true, lowStockCount: 3 });
   assert.match(msg, /B6/); assert.match(msg, /12 completed sale/); assert.match(msg, /2 overdue task/); assert.match(msg, /handover pending/);
-  const noSales = dailySummaryMessage({ branchName: 'B7', completedSales: null, overdueTasks: 0, pendingHandover: false });
+  assert.match(msg, /3 item\(s\) below minimum stock level/);
+  const noSales = dailySummaryMessage({ branchName: 'B7', completedSales: null, overdueTasks: 0, pendingHandover: false, lowStockCount: 1 });
   assert.match(noSales, /sales data not available/);
+  assert.match(noSales, /1 item\(s\) below minimum stock level/);
   assert.doesNotMatch(noSales, /handover pending/);
+});
+
+test('dailySummaryMessage omits low stock alert for zero count without hiding other summary fields', () => {
+  const { dailySummaryMessage } = load();
+  const msg = dailySummaryMessage({ branchName: 'B8', completedSales: 0, overdueTasks: 4, pendingHandover: true, lowStockCount: 0 });
+  assert.match(msg, /B8/);
+  assert.match(msg, /0 completed sale\(s\)/);
+  assert.match(msg, /4 overdue task\(s\)/);
+  assert.match(msg, /handover pending/);
+  assert.doesNotMatch(msg, /below minimum stock level|item\(s\)|low stock/i);
 });

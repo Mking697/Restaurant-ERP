@@ -120,6 +120,13 @@
       "when": 1793439919433,
       "tag": "0016_fearless_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793530000001,
+      "tag": "0017_groovy_lizard",
+      "breakpoints": true
     }
   ]
 }

@@ -66,7 +66,9 @@ export const posOrders = pgTable(
     // the whole period's gross profit rather than understate it when any
     // completed order in that period has cogsComplete=false.
     cogsAmount: numeric("cogs_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-    cogsComplete: boolean("cogs_complete").notNull().default(true),
+    // Fail closed for writers that omit cost capture. Only the POS capture
+    // path may explicitly mark a cost complete, including a genuine zero.
+    cogsComplete: boolean("cogs_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
   },

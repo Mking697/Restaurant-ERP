@@ -60,6 +60,17 @@ export function sumMoneyInr(values: string[]): string {
   return fromPaise(values.reduce((sum, v) => sum + toPaise(v), 0n));
 }
 
+export function postedFoodCost(orders: { totalAmount: string; cogsAmount: string | null; cogsComplete: boolean }[]) {
+  if (!orders.length || orders.some((order) => order.cogsComplete !== true || order.cogsAmount === null)) {
+    return { actualCogsInr: null, actualFoodCostPercent: null, actualReason: orders.length ? "Some completed orders lack complete posted ingredient cost" : "No completed sales in this period" };
+  }
+  const cost = orders.reduce((sum, order) => sum + toPaise(order.cogsAmount!), 0n);
+  const revenue = orders.reduce((sum, order) => sum + toPaise(order.totalAmount), 0n);
+  // Percentage to two decimals, half-up, with no money converted to Number.
+  const percent = revenue > 0n ? (cost * 10000n + revenue / 2n) / revenue : null;
+  return { actualCogsInr: fromPaise(cost), actualFoodCostPercent: percent === null ? null : fromPaise(percent), actualReason: revenue > 0n ? null : "No positive completed-sale revenue" };
+}
+
 export function allocateSaleRevenue(total: string, lines: { price: string; qty: number }[]): string[] {
   const weights = lines.map((l) => toPaise(l.price) * BigInt(l.qty));
   const denominator = weights.reduce((s, v) => s + v, 0n);

@@ -16,7 +16,7 @@ import { useUiCopy } from "@/lib/ui-copy";
 type Cell = string | number | boolean | null;
 type Row = Record<string, Cell>;
 interface FoodBranch {
-  branchId: string; branchName: string; revenueInr: string; cogsInr: string | null; foodCostPercent: number | null; reason: string | null; notes: string[];
+  branchId: string; branchName: string; revenueInr: string; cogsInr: string | null; foodCostPercent: number | null; actualCogsInr: string | null; actualFoodCostPercent: string | null; actualReason: string | null; reason: string | null; notes: string[];
   items: { name: string; qtySold: number; revenueInr: string; bomCostPerUnit: number | null; lineCogsInr: string | null; foodCostPercent: number | null; exclusionReason?: string }[];
   excludedOrders: { orderId: string; reason: string }[];
 }
@@ -75,7 +75,7 @@ function LoadedReport({ slug, branch, month, days, from, to }: { slug: ReportSlu
       } else if (slug === "food-cost") {
         params.set("month", month);
         const data = await get<{ branches: FoodBranch[] }>("/api/reports/food-cost");
-        summaries = data.branches.map((b) => ({ Branch: b.branchName, RevenueInr: b.revenueInr, CogsInr: b.cogsInr, FoodCostPercent: b.foodCostPercent, Reason: b.reason }));
+        summaries = data.branches.map((b) => ({ Branch: b.branchName, RevenueTSh: b.revenueInr, EstimatedCogsTSh: b.cogsInr, EstimatedFoodCostPercent: b.foodCostPercent, ActualPostedCogsTSh: b.actualCogsInr, ActualPostedFoodCostPercent: b.actualFoodCostPercent, EstimateReason: b.reason, ActualReason: b.actualReason }));
         next = data.branches.flatMap((b) => b.items.map((r) => ({ Branch: b.branchName, MenuItem: r.name, QtySold: r.qtySold, RevenueInr: r.revenueInr, BomCostPerUnit: r.bomCostPerUnit, CogsInr: r.lineCogsInr, FoodCostPercent: r.foodCostPercent, Reason: r.exclusionReason ?? null })));
         messages = [...new Set(data.branches.flatMap((b) => [...b.notes, ...b.excludedOrders.map((o) => `${b.branchName}: order ${o.orderId}: ${o.reason}`)]))];
       } else if (slug === "mis-scorecard") {

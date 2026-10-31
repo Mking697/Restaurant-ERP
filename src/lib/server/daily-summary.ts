@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { branches } from "@/db/schema/platform";
 import { dailySummaryLog } from "@/db/schema/notifications";
+import { inventoryStock } from "@/db/schema/inventory";
 import { posOrders } from "@/db/schema/pos";
 import { shiftHandovers } from "@/db/schema/shifts";
 import { taskInstances } from "@/db/schema/tasks";
@@ -94,6 +95,15 @@ export async function runDailySummary(now: Date = new Date()): Promise<DailySumm
       .where(and(eq(shiftHandovers.branchId, branch.id), eq(shiftHandovers.status, "PENDING")))
       .limit(1);
 
+    // minStockLevel = 0 is "no alert configured yet" at this branch for that
+    // material (see inventory.ts schema comment) — exclude it, never treat
+    // an unconfigured par level as "always below minimum".
+    const [lowStockRow] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(inventoryStock)
+      .where(and(eq(inventoryStock.branchId, branch.id), sql`${inventoryStock.minStockLevel} > 0`, lt(inventoryStock.qtyOnHand, inventoryStock.minStockLevel)));
+    const lowStockCount = Number(lowStockRow?.count ?? 0);
+
     const recipients = await branchEscalationRecipients(db, branch.id);
     if (!recipients.length) continue;
 
@@ -103,6 +113,7 @@ export async function runDailySummary(now: Date = new Date()): Promise<DailySumm
         completedSales: recipient.role === "SUPER_ADMIN" ? completedRows.length : publicCompletedToday,
         overdueTasks: overdueRows.length,
         pendingHandover: Boolean(pendingHandover),
+        lowStockCount,
       });
       const result = await sendWhatsAppMessage(recipient.phone, message, {
         relatedEntityType: "DAILY_SUMMARY",

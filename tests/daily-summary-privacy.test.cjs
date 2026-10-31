@@ -7,15 +7,30 @@ const ts = require('typescript');
 
 // Execute real summary, recipient resolution and message builder. Only persistence,
 // transaction locking and provider I/O are replaced; no DB/env/network is accessed.
-function harness(orders, contacts) {
+function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'Branch A' }]) {
   const sent = [], claims = new Set(), cache = {};
-  const table = (name, columns) => Object.fromEntries(['_table', ...columns].map(k => [k, k === '_table' ? name : k]));
+  const table = (name, columns) => ({ _table: name, ...Object.fromEntries(columns.map(key => [key, { kind: 'column', key }])) });
+  const value = (row, operand) => operand?.kind === 'column' ? row[operand.key] : operand;
+  const compare = (left, right, fn) => row => {
+    const a = value(row, left), b = value(row, right);
+    // SQL comparisons involving NULL are not true. Numeric stock is returned as
+    // decimal strings by Postgres, so compare values rather than string order.
+    return a != null && b != null && fn(Number(a), Number(b));
+  };
+  const sql = (strings, ...operands) => {
+    if (strings.join('') === 'count(*)' && operands.length === 0) return { kind: 'count' };
+    if (strings.length === 2 && strings[0] === '' && strings[1].trim() === '> 0' && operands.length === 1) {
+      return compare(operands[0], 0, (a, b) => a > b);
+    }
+    assert.fail(`Unsupported SQL expression: ${strings.join('?')}`);
+  };
   const branches = table('branches', ['id', 'name']);
   const posOrders = table('orders', ['id', 'branchId', 'status', 'createdAt', 'ownerOnly']);
   const taskInstances = table('tasks', ['id', 'branchId', 'status']);
   const shiftHandovers = table('handovers', ['id', 'branchId', 'status']);
   const users = table('users', ['name', 'phoneE164', 'role', 'branchId', 'status']);
-  const data = { branches: [{ id: 'a', name: 'Branch A' }], orders, users: contacts, tasks: [], handovers: [] };
+  const inventoryStock = table('stock', ['branchId', 'qtyOnHand', 'minStockLevel']);
+  const data = { branches: branchRows, orders, users: contacts, tasks: [], handovers: [], stock };
   const db = {
     select(columns) {
       let rows;
@@ -23,7 +38,16 @@ function harness(orders, contacts) {
         from(t) { rows = data[t._table]; return q; },
         where(predicate) { rows = rows.filter(predicate); return q; },
         limit(n) { rows = rows.slice(0, n); return q; },
-        then(resolve, reject) { return Promise.resolve(rows.map(row => Object.fromEntries(Object.entries(columns).map(([key, col]) => [key, row[col]])))).then(resolve, reject); },
+        then(resolve, reject) {
+          const selections = Object.entries(columns);
+          const result = selections.some(([, col]) => col.kind === 'count')
+            ? [Object.fromEntries(selections.map(([key, col]) => {
+                assert.equal(col.kind, 'count', 'Only ungrouped count aggregates are supported');
+                return [key, String(rows.length)];
+              }))]
+            : rows.map(row => Object.fromEntries(selections.map(([key, col]) => [key, value(row, col)])));
+          return Promise.resolve(result).then(resolve, reject);
+        },
       };
       return q;
     },
@@ -31,7 +55,15 @@ function harness(orders, contacts) {
   };
   const dependencies = {
     'node:crypto': require('node:crypto'), './permissions': { HttpError: Error },
-    'drizzle-orm': { and: (...ps) => row => ps.every(p => p(row)), eq: (col, value) => row => row[col] === value, gte: (col, value) => row => row[col] >= value, lt: (col, value) => row => row[col] < value, inArray: (col, values) => row => values.includes(row[col]) },
+    'drizzle-orm': {
+      and: (...ps) => row => ps.every(p => p(row)),
+      eq: (col, operand) => row => value(row, col) === value(row, operand),
+      gte: (col, operand) => compare(col, operand, (a, b) => a >= b),
+      lt: (col, operand) => compare(col, operand, (a, b) => a < b),
+      inArray: (col, values) => row => values.includes(value(row, col)),
+      sql,
+    },
+    '@/db/schema/inventory': { inventoryStock },
     '@/db/client': { db }, '@/db/schema/platform': { branches }, '@/db/schema/pos': { posOrders },
     '@/db/schema/tasks': { taskInstances }, '@/db/schema/shifts': { shiftHandovers }, '@/db/schema/auth': { users },
     '@/db/schema/notifications': { dailySummaryLog: {} }, './auth': { locked: fn => fn(db) },
@@ -52,6 +84,46 @@ function harness(orders, contacts) {
 }
 const contact = (phoneE164, role, branchId = 'a', status = 'Active') => ({ name: role, phoneE164, role, branchId, status });
 const order = (id, ownerOnly, extra = {}) => ({ id, ownerOnly, branchId: 'a', status: 'COMPLETED', createdAt: new Date('2026-10-30T01:00:00Z'), ...extra });
+const stockRow = (qtyOnHand, minStockLevel, branchId = 'a') => ({ qtyOnHand, minStockLevel, branchId });
+
+for (const { name, stock, expected } of [
+  { name: 'counts strictly below a positive configured minimum', stock: [stockRow('2.000', '10.000'), stockRow('0.000', '0.500')], expected: 2 },
+  { name: 'excludes stock equal to its minimum', stock: [stockRow('10.000', '10.000')], expected: 0 },
+  { name: 'excludes stock above its minimum numerically', stock: [stockRow('10.000', '2.000')], expected: 0 },
+  { name: 'excludes zero unconfigured minimum even with negative stock', stock: [stockRow('-1.000', '0.000')], expected: 0 },
+  { name: 'excludes negative minimum even when stock is lower', stock: [stockRow('-2.000', '-1.000')], expected: 0 },
+  { name: 'excludes null stock or minimum like SQL comparisons', stock: [stockRow(null, '5.000'), stockRow('-1.000', null)], expected: 0 },
+  { name: 'omits the alert when there are no stock rows', stock: [], expected: 0 },
+]) {
+  test(`daily summary low stock ${name}`, async () => {
+    const h = harness([], [contact('manager', 'BRANCH_MANAGER')], stock);
+    assert.equal((await h.run()).notified, 1);
+    assert.equal(h.sent.length, 1);
+    if (expected > 0) {
+      assert.match(h.sent[0].message, new RegExp(`${expected} item\\(s\\) below minimum stock level`));
+    } else {
+      assert.doesNotMatch(h.sent[0].message, /below minimum stock level/);
+    }
+  });
+}
+
+test('daily summary low stock counts are branch-isolated and repeat invocation never re-sends', async () => {
+  const stock = [stockRow('1.000', '4.000'), stockRow('0.000', '2.000', 'b'), stockRow('2.000', '3.000', 'b'), stockRow('0.000', '9.000', 'c')];
+  const h = harness([], [contact('manager-a', 'BRANCH_MANAGER'), contact('manager-b', 'BRANCH_MANAGER', 'b')], stock, [{ id: 'a', name: 'Branch A' }, { id: 'b', name: 'Branch B' }]);
+  const first = await h.run();
+  assert.equal(first.branches, 2);
+  assert.equal(first.claimed, 2);
+  assert.equal(first.notified, 2);
+  assert.equal(h.sent.length, 2);
+  assert.match(h.sent.find(row => row.phone === 'manager-a').message, /1 item\(s\) below minimum stock level/);
+  assert.match(h.sent.find(row => row.phone === 'manager-b').message, /2 item\(s\) below minimum stock level/);
+  stock.push(stockRow('0.000', '10.000'));
+  const repeat = await h.run();
+  assert.equal(repeat.alreadySent, 2);
+  assert.equal(repeat.claimed, 0);
+  assert.equal(repeat.notified, 0);
+  assert.equal(h.sent.length, 2, 'Stock changes must not bypass the existing per-branch daily claim');
+});
 
 test('real daily summary hides private sales from manager while Owner receives actual count', async () => {
   const contacts = [contact('manager', 'BRANCH_MANAGER'), contact('owner', 'SUPER_ADMIN', null)];
