@@ -11,19 +11,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 interface ReturnRow { id: string; branchId: string; grnId: string; poNumber: string; vendor: string; itemName: string; unit: string; qtyReturned: string; status: string; }
 interface DispatchRow { id: string; qtyDispatched: string; reasonNote: string; evidencePhotoUrl: string; dispatchedAt: string; vendorAcknowledgedAt: string | null; }
+interface DebitNoteRow { id: string; debitNoteNumber: string; amountTsh: string; reasonNote: string; issuedAt: string; cancelledAt: string | null; }
 
 // GAP-018 — physical dispatch/vendor-acknowledgment of rejected stock
 // already claimed in materialReturns (GRN quality FAIL/PARTIAL). Does NOT
 // touch inventoryStock (failed qty never entered usable stock) — purely
 // evidentiary. Scoped to this EXISTING claim type only.
+//
+// GAP-019 — numbered debit notes, 1:1 with a claim, ACCOUNTS_EXPENSES/
+// Owner-only issue+cancel. Tax treatment deliberately deferred (no field).
 export function VendorReturnDispatchPanel() {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
   const branchId = useSelectedBranchId();
   const owner = actor.role === "SUPER_ADMIN";
+  const accountsAllowed = owner || actor.moduleAccess.includes("ACCOUNTS_EXPENSES");
   const [claims, setClaims] = React.useState<ReturnRow[]>([]);
   const [dispatchesByClaimId, setDispatchesByClaimId] = React.useState<Record<string, DispatchRow[]>>({});
+  const [debitNotesByClaimId, setDebitNotesByClaimId] = React.useState<Record<string, DebitNoteRow[]>>({});
   const [drafts, setDrafts] = React.useState<Record<string, { qty: string; reason: string; photoUrl: string }>>({});
+  const [debitDrafts, setDebitDrafts] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
 
@@ -36,6 +43,11 @@ export function VendorReturnDispatchPanel() {
       return [c.id, d.dispatches] as const;
     }));
     setDispatchesByClaimId(Object.fromEntries(entries));
+    const debitEntries = await Promise.all(res.returns.map(async (c) => {
+      const d = await requestJson<{ debitNotes: DebitNoteRow[] }>(`/api/purchase/material-returns/${c.id}/debit-notes`).catch(() => ({ debitNotes: [] }));
+      return [c.id, d.debitNotes] as const;
+    }));
+    setDebitNotesByClaimId(Object.fromEntries(debitEntries));
   }
   React.useEffect(() => { void load().catch(() => {}); }, [branchId]);
 
@@ -67,6 +79,23 @@ export function VendorReturnDispatchPanel() {
     catch (err) { setError(err instanceof Error ? err.message : "Could not cancel remaining."); }
     finally { setBusy(false); }
   }
+  async function issueDebitNote(claimId: string) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      await requestJson(`/api/purchase/material-returns/${claimId}/debit-notes`, { method: "POST", body: JSON.stringify({ reasonNote: debitDrafts[claimId] ?? "" }) });
+      setDebitDrafts((prev) => ({ ...prev, [claimId]: "" }));
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not issue debit note."); }
+    finally { setBusy(false); }
+  }
+  async function cancelDebitNote(debitNoteId: string) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try { await requestJson(`/api/purchase/debit-notes/${debitNoteId}/cancel`, { method: "POST", body: JSON.stringify({}) }); await load(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not cancel debit note."); }
+    finally { setBusy(false); }
+  }
 
   const dispatchedQty = (claimId: string) => dispatchesByClaimId[claimId]?.reduce((sum, d) => sum + Number(d.qtyDispatched), 0) ?? 0;
 
@@ -92,6 +121,17 @@ export function VendorReturnDispatchPanel() {
             <div className="min-w-[160px]"><Field label={uiText("Evidence photo URL (optional)", "Evidence photo URL (optional)")}><input className={inputClass} value={draftFor(c.id).photoUrl} onChange={(e) => setDraft(c.id, { photoUrl: e.target.value })} /></Field></div>
             <Button type="button" size="sm" disabled={busy} onClick={() => dispatch(c.id)}>{uiText("Record dispatch", "Dispatch record karein")}</Button>
             {owner && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => cancelRemaining(c.id)}>{uiText("Cancel remaining", "Baaki cancel karein")}</Button>}
+          </div>}
+          {accountsAllowed && <div className="border-t pt-2 space-y-1">
+            <p className="font-medium">{uiText("Debit notes", "Debit notes")}</p>
+            {(debitNotesByClaimId[c.id] ?? []).map((n) => <div key={n.id} className="flex items-center justify-between gap-2">
+              <span>{n.debitNoteNumber} — TSh {n.amountTsh} — {n.reasonNote} {n.cancelledAt ? `(${uiText("cancelled", "cancelled")})` : ""}</span>
+              {!n.cancelledAt && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => cancelDebitNote(n.id)}>{uiText("Cancel", "Cancel karein")}</Button>}
+            </div>)}
+            {!(debitNotesByClaimId[c.id] ?? []).some((n) => !n.cancelledAt) && <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[200px]"><Field label={uiText("Reason", "Reason")}><input className={inputClass} value={debitDrafts[c.id] ?? ""} onChange={(e) => setDebitDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))} /></Field></div>
+              <Button type="button" size="sm" disabled={busy} onClick={() => issueDebitNote(c.id)}>{uiText("Issue debit note", "Debit note issue karein")}</Button>
+            </div>}
           </div>}
         </div>;
       })}

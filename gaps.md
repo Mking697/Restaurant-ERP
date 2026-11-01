@@ -784,13 +784,36 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-019 - Numbered debit notes and vendor credit reconciliation
 
-Status: PENDING
+Status: DONE for the simple 1:1-claim scope (November 1, 2026)
 Coverage: MISSING | Phase: P3 | Depends on: GAP-005, GAP-017, GAP-018
 Source: S1 Debit Note; E03.
 
 Acceptance: authorized numbered debit-note document links invoice/return/reason/amount and approved tax treatment, records review/cancellation and reconciles vendor credit/refund/payment allocation without double-counting. Confirm the client's document/legal/accounting rules rather than inferring them from a settlement note. Existing manual claim settlement remains distinct.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Owner decisions (confirmed via clarify, November 1, 2026)
+
+1. Tax treatment is explicitly DEFERRED — no VAT/TRA field at all on the debit note, consistent with this project's standing GST->VAT deferral (never guess Tanzania VAT/TRA rules without the client's real rules).
+2. Simple 1:1 scope: one debit note per `materialReturns` claim, for EXACTLY that claim's `refundAmountInr` — never a partial amount or a document covering multiple claims.
+3. Both issue AND cancel are Owner/ACCOUNTS_EXPENSES-only (same grant as `settleVendorReturn`).
+
+#### Implementation (November 1, 2026)
+
+New `debitNotes` table + a real Postgres `debit_note_seq` sequence (migration `0035_cold_salo.sql`, additive) — `src/lib/server/debit-notes.ts`'s `issueDebitNote` reserves the next sequence value inside the SAME transaction as the insert and formats it `DN-000123` (permanent identity, never reused even after cancellation). At most one NON-CANCELLED debit note per claim at a time (issuing a second while one is active is a 409 — no double-issuance of the same credit document); cancelling frees the claim for a fresh debit note with a brand-new number. `cancelDebitNote` is once-only, Owner/ACCOUNTS_EXPENSES-only, and never touches the underlying claim or any settlement.
+
+Debit-note issuance is explicitly a SEPARATE legal-document action from `settleVendorReturn` (money/credit actually received) — issuing one does not itself record settlement, and settlement does not require one; this pass's only double-count guard is the one-active-note-per-claim rule above (a formal "apply vendor credit against invoice payment" allocation feature does not exist anywhere in this codebase yet, so that specific double-count scenario from the acceptance text is not yet applicable).
+
+New routes: `POST/GET /api/purchase/material-returns/[id]/debit-notes`, `POST /api/purchase/debit-notes/[id]/cancel`. UI: `src/components/vendor-return-dispatch-panel.tsx` extended with a per-claim "Debit notes" section (ACCOUNTS_EXPENSES/Owner-gated) — issue form (reason note only, amount pre-filled from the claim and non-editable), per-note Owner/Accounts-only cancel button.
+
+Tests: `tsc`/`npm test` (491/491)/`npm run build` all clean. New `tests/debit-notes.integration.cjs` — **10/10 passed**: a non-Accounts actor cannot issue (403); issuing succeeds with the exact claim amount and the `DN-######` number format, no tax field present; a second issuance while one is active is rejected (409); a non-Owner/non-Accounts actor cannot cancel (403); Owner cancels (200), a second cancel is rejected (409, once-only); a fresh debit note can then be issued with a DIFFERENT number (never reused); a real-DB read proves the cancelled note's original number is permanently preserved; a second, independent claim gets its own debit note for its own exact amount; all three issued numbers across the run are distinct (no sequence collision). Backward-compat: re-ran `tests/purchase-phase1.integration.cjs` (27/27, unchanged).
+Release: N/A — local, uncommitted source only; ask before committing/deploying. `restaurant_erp_local` has not had migrations `0025`-`0035` applied (only disposable QA databases were used this pass); production Neon is untouched.
+
+#### Remaining work before this GAP can be marked fully DONE (all scopes)
+
+- Tax treatment remains entirely deferred — if/when the client confirms real Tanzania VAT/TRA rules, the debit note's amount/number format would need a design pass to add that field (never retrofitted by guessing).
+- No "apply vendor credit against a specific invoice payment" allocation feature exists yet anywhere in this codebase — the acceptance's "reconciles...payment allocation without double-counting" language anticipates a future feature this pass does not build.
+- No UI click-through verification in a live browser yet — same honest caveat standing for every new panel this session.
+
+#### Current-project integration blueprint (fulfilled above for the core flow; remaining items listed above)
 
 - Current-project reuse: Existing vendor invoice/claim/match models in `src/db/schema/purchase.ts`, `src/lib/server/vendor-returns.ts`, `src/lib/server/accounts-ledger.ts` and private-document helpers in `src/lib/server/purchase-documents.ts` reuse karein.
 - Proposed data/server change: PROPOSED: scoped numbered debit-note headers/lines, immutable issued value/tax snapshots, review/cancellation events and vendor credit/refund allocations referencing original invoice/return. Document issuance and financial realization are distinct, with one claim-value consumption rule.

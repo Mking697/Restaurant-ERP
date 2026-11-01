@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, numeric, pgEnum, pgSequence, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { branches } from "./platform";
 import { rawMaterials } from "./menu";
 import { users } from "./auth";
@@ -425,4 +425,45 @@ export const materialReturnDispatches = pgTable(
     vendorAcknowledgedById: text("vendor_acknowledged_by_id").references(() => users.id),
   },
   (table) => [index("material_return_dispatches_claim_id_idx").on(table.materialReturnId), index("material_return_dispatches_branch_id_idx").on(table.branchId)]
+);
+
+// ---------------------------------------------------------------------------
+// GAP-019 (November 2026). Numbered debit notes — the formal document a
+// vendor is issued claiming credit for a material-return claim. Owner
+// decisions:
+//  1) Tax treatment is explicitly DEFERRED (no VAT/TRA field at all) —
+//     consistent with this project's standing GST->VAT deferral; never
+//     guess Tanzania VAT/TRA numbering rules.
+//  2) Simple 1:1 scope — one debit note per materialReturns claim, for
+//     EXACTLY that claim's refundAmountInr (never a partial or a
+//     multi-claim document).
+//  3) Create AND cancel are both Owner/ACCOUNTS_EXPENSES-only (same grant
+//     as settleVendorReturn).
+//
+// Debit-note issuance is a SEPARATE legal-document action from
+// settleVendorReturn (money/credit actually received) — issuing one does
+// NOT itself record settlement, and settling does NOT require one; this
+// pass only prevents a SECOND non-cancelled debit note against the SAME
+// claim (no double-issuance of the same credit document). A cancelled
+// debit note permanently keeps its number (never reused) but frees the
+// claim to receive a fresh one.
+export const debitNoteSeq = pgSequence("debit_note_seq", { startWith: 1, increment: 1 });
+
+export const debitNotes = pgTable(
+  "debit_notes",
+  {
+    id: text("id").primaryKey(),
+    debitNoteNumber: text("debit_note_number").notNull().unique(), // e.g. "DN-000123" — reserved via debitNoteSeq's nextval, inside the same transaction as the insert; permanent even after cancellation
+    materialReturnId: text("material_return_id").notNull().references(() => materialReturns.id),
+    branchId: text("branch_id").notNull().references(() => branches.id),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id),
+    amountTsh: numeric("amount_tsh", { precision: 12, scale: 2 }).notNull(), // must exactly equal the claim's refundAmountInr at issuance time
+    reasonNote: text("reason_note").notNull(),
+    issuedById: text("issued_by_id").notNull().references(() => users.id),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledById: text("cancelled_by_id").references(() => users.id),
+    cancelledNote: text("cancelled_note").notNull().default(""),
+  },
+  (table) => [index("debit_notes_claim_id_idx").on(table.materialReturnId), index("debit_notes_branch_id_idx").on(table.branchId)]
 );
