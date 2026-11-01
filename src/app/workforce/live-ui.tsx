@@ -17,7 +17,8 @@ export function DataTable({ headers, children }: { headers: string[]; children: 
 // call site needs no change — delegates to the one real TSh formatter.
 export function money(value: string) { return formatCurrency(value); }
 export function today() {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  // GAP-008 (October 31, 2026): Tanzania EAT (fixed UTC+3), was India IST.
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Dar_es_Salaam", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const part = (type: string) => parts.find(value => value.type === type)!.value;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }

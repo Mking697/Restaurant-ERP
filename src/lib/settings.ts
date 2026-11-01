@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { settings } from "@/db/schema/settings";
+import { db } from "../db/client";
+import { settings } from "../db/schema/settings";
 
 /** Single DB round-trip per read/write — no in-memory cache layer yet (add one
  * if this becomes a hot path; Pro ERP's getAllSettings() batches reads for its

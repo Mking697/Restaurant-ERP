@@ -16,6 +16,7 @@ export const NAV_ITEMS = [
   { href: "/admin/users", label: "Users & Access", icon: "Users", module: "USER_ADMIN" },
   { href: "/admin/branches", label: "Branches", icon: "Building2", module: "BRANCH_ADMIN" },
   { href: "/admin/settings/whatsapp", label: "WhatsApp Settings", icon: "MessageCircle", module: "WHATSAPP_LOGS" },
+  { href: "/admin/settings/business-policy", label: "Business Policy Settings", icon: "SlidersHorizontal", module: "USER_ADMIN" },
 ] as const;
 
 export const BRANCHES = [

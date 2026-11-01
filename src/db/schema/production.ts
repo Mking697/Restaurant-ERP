@@ -19,6 +19,17 @@ export const semiFgStock = pgTable("semi_fg_stock", {
   branchId: text("branch_id").notNull().references(() => branches.id),
   menuItemId: text("menu_item_id").notNull().references(() => menuItems.id),
   qtyOnHand: numeric("qty_on_hand", { precision: 12, scale: 3 }).notNull().default("0"),
+  // GAP-012 (November 2026): per-branch prepared-stock par levels, same
+  // "0 means unconfigured" convention as inventoryStock's own
+  // minStockLevel/maxStockLevel (src/db/schema/inventory.ts) — low breach
+  // is qtyOnHand < minStockLevel (strict, so exact equality is NOT a
+  // breach), high breach is qtyOnHand > maxStockLevel (same rule). Never
+  // settable directly alongside qtyOnHand — qtyOnHand itself is only ever
+  // moved by a real production/consumption writer, never a manual entry;
+  // see src/lib/server/prepared-stock-thresholds.ts for the dedicated
+  // threshold-only setter.
+  minStockLevel: numeric("min_stock_level", { precision: 12, scale: 3 }).notNull().default("0"),
+  maxStockLevel: numeric("max_stock_level", { precision: 12, scale: 3 }).notNull().default("0"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, table => [
   uniqueIndex("semi_fg_stock_branch_menu_unique").on(table.branchId, table.menuItemId),

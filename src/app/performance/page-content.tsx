@@ -26,7 +26,8 @@ interface MisScoreRow {
 }
 
 function todayIst() {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  // GAP-008 (October 31, 2026): Tanzania EAT (fixed UTC+3), was India IST.
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Dar_es_Salaam", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const part = (type: string) => parts.find((p) => p.type === type)!.value;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }

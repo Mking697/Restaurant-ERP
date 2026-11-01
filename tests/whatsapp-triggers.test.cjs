@@ -35,7 +35,7 @@ test('offerMessage includes branch, text and optional validity', () => {
 
 test('taskReminderMessage includes doer name, title, branch and defaults a blank name', () => {
   const { taskReminderMessage } = load();
-  const due = new Date('2026-10-30T03:30:00.000Z'); // 09:00 IST
+  const due = new Date('2026-10-30T06:00:00.000Z'); // 09:00 EAT
   const msg = taskReminderMessage({ doerName: 'Priya', title: 'Closing checklist', branchName: 'B1', dueAt: due });
   assert.match(msg, /Priya/); assert.match(msg, /Closing checklist/); assert.match(msg, /B1/); assert.match(msg, /09:00/);
   const blank = taskReminderMessage({ doerName: '  ', title: 'T', branchName: 'B2', dueAt: due });

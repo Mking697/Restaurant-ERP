@@ -5,13 +5,13 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
-test('MIS inclusive IST calendar days produce shared half-open bounds and reject invalid/overlong dates', () => {
+test('MIS inclusive Tanzania EAT calendar days produce shared half-open bounds and reject invalid/overlong dates', () => {
   const { misCalendarWindow } = load('src/lib/mis-period.ts', {});
   const one = misCalendarWindow('2024-02-29', '2024-02-29');
-  assert.equal(one.periodStart, '2024-02-28T18:30:00.000Z');
-  assert.equal(one.periodEnd, '2024-02-29T18:30:00.000Z');
+  assert.equal(one.periodStart, '2024-02-28T21:00:00.000Z');
+  assert.equal(one.periodEnd, '2024-02-29T21:00:00.000Z');
   assert.equal(new Date(one.periodEnd) - new Date(one.periodStart), 86400000);
-  assert.equal(misCalendarWindow('2024-01-01','2024-01-31').periodEnd,'2024-01-31T18:30:00.000Z');
+  assert.equal(misCalendarWindow('2024-01-01','2024-01-31').periodEnd,'2024-01-31T21:00:00.000Z');
   for (const [from,to] of [['2024-02-30','2024-03-01'],['2024-01-01','2024-02-01'],['2024-02-02','2024-02-01']]) assert.throws(()=>misCalendarWindow(from,to));
 });
 test('REPORTS-only picker explains prerequisite grants instead of linking to forbidden reports', () => {

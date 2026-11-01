@@ -4,6 +4,7 @@ import { branchShifts, shiftHandovers, shiftRuns } from "../../db/schema/shifts"
 import { cashDrops, posOrders } from "../../db/schema/pos";
 import type { Executor } from "./auth";
 import { HttpError, type Identity } from "./permissions";
+import { businessTimeHHMM } from "./business-calendar";
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -43,11 +44,12 @@ export function validateShiftDefinitions(list: ShiftDefinitionInput[]): ShiftDef
   return cleaned;
 }
 
-// IST "HH:MM" for the current instant — shift windows are wall-clock, not
-// UTC, same business-day convention as src/lib/server/workforce-calculation.ts.
+// GAP-008 (October 31, 2026): now Tanzania EAT wall-clock time, delegating
+// to the canonical src/lib/server/business-calendar.ts definition — kept
+// under this name (despite no longer being IST) to avoid touching every
+// call site in this file in the same pass; behavior is fully Tanzania EAT.
 export function currentIstTime(now = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(now);
-  return `${parts.find((p) => p.type === "hour")!.value}:${parts.find((p) => p.type === "minute")!.value}`;
+  return businessTimeHHMM(now);
 }
 
 function isWithin(nowHHMM: string, startTime: string, endTime: string) {

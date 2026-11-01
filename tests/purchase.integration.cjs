@@ -51,6 +51,9 @@ async function cleanup() {
   await pool.query(`delete from purchase_orders where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from indent_lines where indent_id in (select id from indents where branch_id = any($1))`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from indents where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
+  await pool.query(`delete from stock_movements where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
+  await pool.query(`delete from batch_movements where batch_id in (select id from stock_batches where branch_id = any($1))`, [[ids.branchA, ids.branchB]]);
+  await pool.query(`delete from stock_batches where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from inventory_stock where branch_id = any($1)`, [[ids.branchA, ids.branchB]]);
   await pool.query(`delete from vendor_rates where vendor_id = $1`, [ids.vendor]);
   await pool.query(`delete from vendors where id = $1`, [ids.vendor]);

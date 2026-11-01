@@ -54,6 +54,6 @@ export async function GET(request: Request) {
     }));
     const channels = new Map<string, string[]>();
     for (const row of orders.filter((o) => o.createdAt <= now)) channels.set(row.channel, [...channels.get(row.channel) ?? [], row.totalAmount]);
-    return json({ branches: results, channelSplit: [...channels].map(([channel, amounts]) => ({ channel, revenueInr: Number(sumMoneyInr(amounts)) })), compiled: scope === null, timezone: "Asia/Kolkata", asOf: now.toISOString() });
+    return json({ branches: results, channelSplit: [...channels].map(([channel, amounts]) => ({ channel, revenueInr: Number(sumMoneyInr(amounts)) })), compiled: scope === null, timezone: "Africa/Dar_es_Salaam", asOf: now.toISOString() });
   });
 }

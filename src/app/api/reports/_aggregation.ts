@@ -1,5 +1,6 @@
 import { HttpError } from "../../../lib/server/permissions";
 import { buildRecipeIndex, computeRecipeCost, explodeBom, type BomRow } from "../../../lib/server/bom";
+import { businessDateParts, businessDayRange, businessMonthRange, businessDayKey as realBusinessDayKey, businessDayLabel as realBusinessDayLabel } from "../../../lib/server/business-calendar";
 
 // ---------------------------------------------------------------------------
 // Dashboard KPIs + Reports (sales-trend, food-cost, cash-reconciliation) —
@@ -12,36 +13,32 @@ import { buildRecipeIndex, computeRecipeCost, explodeBom, type BomRow } from "..
 // it never recomputes MIS scores, cash variance, or recipe cost logic itself.
 // ---------------------------------------------------------------------------
 
-// -- IST calendar-day/month helpers (fixed UTC+5:30, no DST) ----------------
+// -- Calendar-day/month helpers -----------------------------------------
+// GAP-008 (October 31, 2026): now Tanzania EAT (fixed UTC+3, no DST),
+// delegating to the canonical src/lib/server/business-calendar.ts
+// definition — kept under these "ist"-prefixed exported names (despite no
+// longer being India-coded) to avoid touching every dashboard/report/cron
+// caller in this same pass; the underlying BEHAVIOR is fully Tanzania EAT.
 
 export function istDateParts(now: Date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
-  const y = Number(parts.find((p) => p.type === "year")!.value);
-  const m = Number(parts.find((p) => p.type === "month")!.value);
-  const d = Number(parts.find((p) => p.type === "day")!.value);
-  return { y, m, d };
+  return businessDateParts(now);
 }
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 export function istDayRange(now: Date = new Date()) {
-  const { y, m, d } = istDateParts(now);
-  const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - IST_OFFSET_MS);
-  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+  return businessDayRange(now);
 }
 export function istMonthRange(now: Date = new Date()) {
-  const { y, m } = istDateParts(now);
-  const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0) - IST_OFFSET_MS);
-  const end = new Date(Date.UTC(y, m, 1, 0, 0, 0) - IST_OFFSET_MS);
-  return { start, end };
+  return businessMonthRange(now);
 }
 export function istDayKey(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); // yyyy-mm-dd
+  return realBusinessDayKey(date);
 }
 export function istDayLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short" }).format(date);
+  return realBusinessDayLabel(date);
 }
 
 // -- Fixed-point INR money helpers (same paise-BigInt convention as the rest
 // of this project's money code — expenses.ts/accounts-ledger.ts/vat.ts) ----
+
 
 export function toPaise(value: string): bigint {
   if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) throw new HttpError(500, "Invalid persisted money value");

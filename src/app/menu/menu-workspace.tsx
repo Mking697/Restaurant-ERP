@@ -11,6 +11,10 @@ import { hasCurrentModule, requestJson, useCurrentUser } from "@/lib/current-use
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 import { RecipeBuilder } from "./recipe-builder";
 import { ProductionPanel } from "./production-panel";
+import { ActualCuttingPanel } from "./actual-cutting-panel";
+import { YieldStandardsPanel } from "./yield-standards-panel";
+import { PreparedStockThresholdsPanel } from "./prepared-stock-thresholds-panel";
+import { SemiFgTransferPanel } from "./semi-fg-transfer-panel";
 import { foodCostPercent, type BomRow, type MenuItemRow, type RawMaterialRow } from "./menu-ui-helpers";
 
 interface ConsumptionRow { type: "RAW_MATERIAL" | "SEMI_FG"; id: string; name: string; unit: string; required: number; available: number; shortage: number; }
@@ -180,6 +184,18 @@ export default function MenuWorkspace() {
 
       {actor.branchId && <ProductionPanel branchId={actor.branchId} identity={actor.id} items={visibleItems} />}
       {!actor.branchId && selected !== "all" && <ProductionPanel branchId={selected} identity={actor.id} items={visibleItems} />}
+
+      {actor.branchId && <ActualCuttingPanel branchId={actor.branchId} items={visibleItems} materials={materials} />}
+      {!actor.branchId && selected !== "all" && <ActualCuttingPanel branchId={selected} items={visibleItems} materials={materials} />}
+
+      {actor.branchId && <YieldStandardsPanel branchId={actor.branchId} items={visibleItems} />}
+      {!actor.branchId && selected !== "all" && <YieldStandardsPanel branchId={selected} items={visibleItems} />}
+
+      {actor.branchId && <PreparedStockThresholdsPanel branchId={actor.branchId} items={visibleItems} />}
+      {!actor.branchId && selected !== "all" && <PreparedStockThresholdsPanel branchId={selected} items={visibleItems} />}
+
+      {actor.branchId && <SemiFgTransferPanel branchId={actor.branchId} items={visibleItems} branches={branches} />}
+      {!actor.branchId && selected !== "all" && <SemiFgTransferPanel branchId={selected} items={visibleItems} branches={branches} />}
 
       {builderOpen && <RecipeBuilder
         item={editingItem} recipe={editingRecipe} items={visibleItems} materials={materials}

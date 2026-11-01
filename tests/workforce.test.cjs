@@ -12,7 +12,7 @@ test('future leave cannot become preview pay; pending leaves remain missing',()=
  const w=require('../src/lib/server/workforce-calculation.ts');const e={id:'x',branchId:'b',name:'X',employmentType:'OFF_ROLL',joinedOn:'2024-03-01',leftOn:'2024-03-03'};
  const r=w.calculatePayroll(e,[{effectiveFrom:'2024-03-01',rate:'10.01',employmentType:'OFF_ROLL'}],[{date:'2024-03-01',status:'HALF_DAY'}],[{startDate:'2024-03-02',endDate:'2024-03-02',status:'PENDING',payType:null},{startDate:'2024-03-03',endDate:'2024-03-03',status:'APPROVED',payType:'PAID'}],'2024-03','2024-03-02');
  assert.equal(r.amount,'5.01');assert.deepEqual(r.missingDates,['2024-03-02']);assert.equal(r.unpaidDays,0);
- assert.equal(w.businessDate(new Date('2024-03-31T19:00:00Z')),'2024-04-01');
+ assert.equal(w.businessDate(new Date('2024-03-31T22:00:00Z')),'2024-04-01');
 });
 test('strict calendar and decimal validation rejects normalized invalid dates and floating INR',()=>{
  const w=require('../src/lib/server/workforce-calculation.ts');for(const x of ['2024-02-30','2023-02-29','24-01-01','2024-13-01'])assert.throws(()=>w.day(x),e=>e.status===400);for(const x of ['1.001','-1','1e2',1,'0'])assert.throws(()=>w.paise(x));

@@ -4,7 +4,8 @@ import { db } from "@/db/client";
 import { mutate } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope } from "@/lib/server/permissions";
-import { aggregateIndentLinesByMaterial, allowedFields, assertIndentDraft, computeRollingAverages, evaluateIndentSpike } from "@/lib/server/purchase";
+import { aggregateIndentLinesByMaterial, allowedFields, appliesValueThresholdGate, assertIndentDraft, computeRollingAverages, estimateIndentValueTsh, evaluateIndentSpike } from "@/lib/server/purchase";
+import { readBusinessPolicy } from "@/lib/server/business-policy";
 import { sendIndentApprovalPing } from "@/lib/server/purchase-notifications";
 import { loadIndent } from "../../../_shared";
 
@@ -12,8 +13,18 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/purchase/indents/[id]/submit — DRAFT -> PENDING_APPROVAL or
-// DRAFT -> APPROVED (free path), decided by a REAL rolling-average spike
-// check against actually-posted GRN receipts (AUTOMATION-1c).
+// DRAFT -> APPROVED (free path), decided by TWO independent real checks:
+//
+// 1) A rolling-average QUANTITY spike check against actually-posted GRN
+//    receipts (AUTOMATION-1c, unchanged — see below).
+// 2) An Owner-configurable VALUE threshold (P0 decision, October 31, 2026 —
+//    src/lib/server/business-policy.ts). If the Owner has set a TSh value
+//    threshold, an indent whose estimated value (latest locked vendor rate
+//    x requested qty, per src/lib/server/purchase.ts's estimateIndentValueTsh)
+//    is at/above it — OR whose value cannot be fully priced (missing vendor
+//    rate) — also routes to PENDING_APPROVAL, even if the quantity-spike
+//    check alone would have auto-approved. Either check can force approval;
+//    neither can override the other into auto-approving.
 //
 // Per (branchId, rawMaterialId), computeRollingAverages looks at the
 // trailing ROLLING_AVERAGE_WINDOW_DAYS of already-posted GRNs (status
@@ -48,7 +59,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const averages = await computeRollingAverages(tx, indent.branchId, lines.map((l) => l.rawMaterialId));
       const spike = evaluateIndentSpike(lines, averages);
 
-      const status = spike.isSpike || !spike.hasData ? "PENDING_APPROVAL" : "APPROVED";
+      const policy = await readBusinessPolicy();
+      const valueEstimate = await estimateIndentValueTsh(tx, lines);
+      const valueGate = appliesValueThresholdGate(valueEstimate, policy.indentValueThresholdTsh);
+
+      const status = spike.isSpike || !spike.hasData || valueGate ? "PENDING_APPROVAL" : "APPROVED";
       await tx
         .update(indents)
         .set({
@@ -59,12 +74,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         .where(eq(indents.id, id));
       const [row] = await tx.select().from(indents).where(eq(indents.id, id));
 
-      const note = !spike.hasData
+      const notes: string[] = [];
+      notes.push(!spike.hasData
         ? "Adequate real rolling daily-average data is missing for one or more requested materials (fewer than the minimum historical GRN receipts); retained for approval with spikePercent left null rather than fabricated."
         : spike.isSpike
           ? "Real rolling-average spike detected (>25% over the trailing-window average of actually-posted GRN receipts); routed to owner approval."
-          : "Real rolling-average data exists and no line exceeded the 25% spike threshold; auto-approved without owner review.";
-      return { indent: row, spikeComputed: spike.hasData, note };
+          : "Real rolling-average data exists and no line exceeded the 25% spike threshold.");
+      if (policy.indentValueThresholdTsh) {
+        notes.push(!valueEstimate.allRatesKnown
+          ? `Estimated indent value could not be fully priced (missing vendor rate for at least one material); routed to owner approval under the configured TSh ${policy.indentValueThresholdTsh} value threshold.`
+          : valueGate
+            ? `Estimated indent value TSh ${valueEstimate.valueTsh} is at/above the Owner-configured TSh ${policy.indentValueThresholdTsh} threshold; routed to owner approval.`
+            : `Estimated indent value TSh ${valueEstimate.valueTsh} is below the Owner-configured TSh ${policy.indentValueThresholdTsh} threshold.`);
+      }
+      if (status === "APPROVED") notes.push("Auto-approved without owner review.");
+      return { indent: row, spikeComputed: spike.hasData, valueEstimate, note: notes.join(" ") };
     });
     // Best-effort owner/approver ping, deliberately AFTER the transaction
     // above has committed (same ordering discipline as

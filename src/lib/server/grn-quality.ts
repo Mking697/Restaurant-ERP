@@ -11,6 +11,9 @@ import { assertModule, branchScope, HttpError, type Identity } from "./permissio
 import { decimal, MAX_QUANTITY } from "./production-quantity";
 import { lockRecipeStock } from "./production";
 import { assertVendorReturnsRecorded, recordVendorReturns } from "./vendor-returns";
+import { postStockMovement } from "./stock-ledger";
+import { creditBatch } from "./stock-batches";
+import { parseBatchInput } from "./batch-policy";
 import { parseQualityInput, persistedQuantity, qualityDecision, qualityReceiptId, qualityReceiptState, QUALITY_ACTION, sameQualityRequest, qualityOriginId, validQualityOrigin } from "./grn-quality-policy";
 
 export async function readGrns(tx: Executor, actor: Identity, query: { branchId?: string | null; status?: typeof grns.$inferSelect.status; id?: string } = {}) {
@@ -96,9 +99,31 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
       } else {
         await tx.insert(inventoryStock).values({ id: randomUUID(), branchId: grn.branchId, rawMaterialId: credit.rawMaterialId, qtyOnHand: credit.qty, minStockLevel: "0", maxStockLevel: "0" });
       }
+      // GAP-004 first slice: audited parallel ledger record of this real
+      // accepted-stock credit, alongside (not instead of) the qtyOnHand
+      // update above. See src/lib/server/stock-ledger.ts.
+      await postStockMovement(tx, {
+        branchId: grn.branchId, rawMaterialId: credit.rawMaterialId, qtyDelta: amount,
+        movementType: "GRN_RECEIPT", sourceType: "GRN", sourceId: id, actorId: actor.id,
+      });
     }
   }
   for (const line of decision.failedLines) await tx.update(grnLines).set({ qtyFailed: line.qtyFailed }).where(and(eq(grnLines.id, line.id), eq(grnLines.grnId, id)));
+  // GAP-006: one batch row per accepted GRN LINE (not the aggregated-by-
+  // material `decision.credits`, so two lines of the same material with
+  // different expiry dates stay as separate lots). expiryDate is whatever
+  // the submitter entered for that line in `request.lines` (nullable —
+  // "no expiry tracked for this lot", treated as never-expiring).
+  if (!po.isGeneralPurchase) {
+    const failedById = new Map(decision.failedLines.map(l => [l.id, persistedQuantity(l.qtyFailed, true)]));
+    const batchesById = new Map(request.lines.map(l => [l.id, parseBatchInput(l as unknown as Record<string, unknown>, actor.role === "SUPER_ADMIN")]));
+    for (const line of lines) {
+      if (!line.rawMaterialId) continue;
+      const accepted = persistedQuantity(line.qtyReceived) - (failedById.get(line.id) ?? 0n);
+      const batch = batchesById.get(line.id)!;
+      if (accepted > 0n) await creditBatch(tx, grn.branchId, line.rawMaterialId, decimal(accepted), batch.expiryDate, line.id, { actorId: actor.id, sourceType: "GRN", sourceId: id }, batch, line.rateOrdered);
+    }
+  }
   await tx.update(grns).set({ qualityResult: request.result, status: request.result === "FAIL" ? "QUALITY_HOLD" : "APPROVED", qualityNote: request.note, qualityPhotoUrl: request.photoUrl }).where(eq(grns.id, id));
   await tx.insert(auditLog).values({ id: qualityReceiptId(id), userId: actor.id, action: QUALITY_ACTION, entityType: "GRN", entityId: id, metadataJson: { version: 1, branchId: grn.branchId, request, credits: decision.credits, ...(request.result !== "PASS" ? { vendorReturnsVersion: 1 } : {}) } });
   if (request.result !== "PASS") await recordVendorReturns(tx, actor, id, {});

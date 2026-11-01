@@ -53,6 +53,10 @@ async function recipe(menu, type, component, qty) {
   await pool.query('update users set branch_id=$1 where id=any($2::text[])', [a, [staff, cashier]]);
   await pool.query('insert into raw_materials(id,name,unit) values($1,$2,\'kg\'),($3,$4,\'kg\')', [raw, 'QA flour ' + raw, salt, 'QA salt ' + salt]);
   for (const material of [raw, salt]) await pool.query('insert into inventory_stock(id,branch_id,raw_material_id,qty_on_hand) values($1,$2,$3,10)', [id(), a, material]);
+  // GAP-006 invariant: real stock always has a matching stockBatches lot —
+  // seed one here too (DATED, far future) so this production test's raw
+  // debits (hard-blocked FEFO allocation) have real lot stock to draw from.
+  for (const material of [raw, salt]) await pool.query('insert into stock_batches(id,branch_id,raw_material_id,batch_no,qty_received,qty_remaining,expiry_date,expiry_status) values($1,$2,$3,$4,10,10,\'2099-01-01\',\'DATED\')', [id(), a, material, 'QA-SEED-' + material]);
   for (const [mid, bid, semi, sellable] of [[gravy,a,true,false], [nested,a,true,false], [dish,a,false,true], [empty,a,true,true], [foreign,b,true,false], [rawDish,a,false,true]]) await pool.query('insert into menu_items(id,branch_id,name,price,is_semi_fg,is_sellable,output_unit) values($1,$2,$1,100,$3,$4,\'kg\')', [mid,bid,semi,sellable]);
   await recipe(gravy, 'RAW_MATERIAL', raw, '0.200');
   await recipe(nested, 'SEMI_FG', gravy, '0.500');
@@ -126,7 +130,10 @@ async function recipe(menu, type, component, qty) {
   await pool.query('delete from semi_fg_productions where branch_id=any($1::text[])',[branchIds]);
   await pool.query('delete from semi_fg_stock where branch_id=any($1::text[])',[branchIds]);
   await pool.query('delete from bom_recipes where branch_id=any($1::text[])',[branchIds]);
+  await pool.query('delete from stock_movements where branch_id=any($1::text[])',[branchIds]);
   await pool.query('delete from menu_items where id=any($1::text[])',[menuIds]);
+  await pool.query('delete from batch_movements where batch_id in (select id from stock_batches where branch_id=any($1::text[]))',[branchIds]);
+  await pool.query('delete from stock_batches where branch_id=any($1::text[])',[branchIds]);
   await pool.query('delete from inventory_stock where branch_id=any($1::text[])',[branchIds]);
   await pool.query('delete from raw_materials where id=any($1::text[])',[[raw,salt]]);
   await pool.query('delete from sessions where user_id=any($1::text[])',[userIds]);

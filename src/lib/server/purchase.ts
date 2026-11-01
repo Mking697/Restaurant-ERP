@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { grnLines, grns } from "../../db/schema/purchase";
+import { vendorRates } from "../../db/schema/vendors";
 import { numeric, string } from "./http";
 import { HttpError } from "./permissions";
 import type { Executor } from "./auth";
@@ -73,6 +74,73 @@ export function parsePoLines(value: unknown, isGeneralPurchase: boolean): Parsed
 export function parseGeneralPurchase(value: unknown): boolean {
   if (typeof value !== "boolean") throw new HttpError(400, "isGeneralPurchase must be a boolean");
   return value;
+}
+
+// GAP-005: the real COUNTED quantity at material-receive time may be LESS
+// than what was ordered (vendor shortage) — qtyOrdered and qtyReceived are
+// genuinely different numbers, not a copy of one another. Keyed the same
+// way a PO line is addressed (rawMaterialId for a store line, itemDescription
+// for a general-purchase line). Omitting a line's entry keeps the old
+// default (received == the full cap passed in) for full back-compat.
+// `poLines` here is really "the cap for THIS receive" — on a PO's FIRST
+// receive that's simply the ordered qty; on a later delivery against a
+// PARTIALLY_RECEIVED PO, the caller passes the REMAINING outstanding qty
+// instead (see computeOutstandingReceive below) — this function itself is
+// agnostic to which, it just enforces "cannot exceed the cap given".
+export function parseReceiveLines(value: unknown, poLines: { rawMaterialId: string | null; itemDescription: string; qty: string }[]): Map<string, string> {
+  const result = new Map<string, string>();
+  const keyOf = (l: { rawMaterialId: string | null; itemDescription: string }) => l.rawMaterialId ?? `desc:${l.itemDescription}`;
+  if (value === undefined || value === null) return result;
+  if (!Array.isArray(value)) throw new HttpError(400, "lines must be an array");
+  const byKey = new Map(poLines.map((l) => [keyOf(l), l]));
+  const seen = new Set<string>();
+  for (const [i, raw] of value.entries()) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new HttpError(400, `Invalid receive line ${i + 1}`);
+    const line = raw as Record<string, unknown>;
+    allowedFields(line, ["rawMaterialId", "itemDescription", "qtyReceived"]);
+    const key = line.rawMaterialId !== undefined && line.rawMaterialId !== null ? string(line.rawMaterialId, `line ${i + 1} rawMaterialId`) : `desc:${string(line.itemDescription, `line ${i + 1} itemDescription`, 300)}`;
+    const poLine = byKey.get(key);
+    if (!poLine) throw new HttpError(400, `Receive line ${i + 1} does not match any line on this purchase order`);
+    if (seen.has(key)) throw new HttpError(400, `Receive line ${i + 1} duplicates an earlier line`);
+    seen.add(key);
+    const qtyReceived = numeric(line.qtyReceived, `line ${i + 1} qtyReceived`);
+    if (Number(qtyReceived) < 0) throw new HttpError(400, `Line ${i + 1} qtyReceived cannot be negative`);
+    if (quantity(qtyReceived, true) > quantity(poLine.qty, true)) throw new HttpError(400, `Line ${i + 1} qtyReceived (${qtyReceived}) cannot exceed the remaining outstanding quantity (${poLine.qty})`);
+    result.set(key, qtyReceived);
+  }
+  return result;
+}
+
+// GAP-005 multi-delivery follow-up: a PO can now be received across SEVERAL
+// GRNs. Computes, per PO line, what's still outstanding = ordered - sum of
+// every PRIOR GRN's qtyReceived for that same line (exact decimal, never
+// floating point — same Map<string,bigint> aggregation convention as
+// assertPoMatchesIndent). Lines fully received (remaining 0) are DROPPED
+// from the returned array — they cannot be the target of a further receive.
+export function computeOutstandingReceive(
+  poLines: { rawMaterialId: string | null; itemDescription: string; qty: string }[],
+  priorGrnLines: { rawMaterialId: string | null; itemDescription: string; qtyReceived: string }[]
+): { rawMaterialId: string | null; itemDescription: string; qty: string }[] {
+  const keyOf = (l: { rawMaterialId: string | null; itemDescription: string }) => l.rawMaterialId ?? `desc:${l.itemDescription}`;
+  const received = new Map<string, bigint>();
+  for (const line of priorGrnLines) {
+    const key = keyOf(line);
+    received.set(key, (received.get(key) ?? 0n) + quantity(line.qtyReceived, true));
+  }
+  return poLines
+    .map((l) => {
+      const remaining = quantity(l.qty, true) - (received.get(keyOf(l)) ?? 0n);
+      if (remaining < 0n) throw new HttpError(409, "Received quantity exceeds ordered quantity; reconcile this purchase order first");
+      return { rawMaterialId: l.rawMaterialId, itemDescription: l.itemDescription, qty: decimal(remaining) };
+    })
+    .filter((l) => Number(l.qty) > 0);
+}
+
+// A PO is still receivable as long as at least one line has a remaining
+// outstanding quantity > 0. Once every line is fully received, a further
+// receive attempt is rejected outright (there's nothing left to receive).
+export function assertPoReceivable(outstanding: { qty: string }[]) {
+  if (!outstanding.length) throw new HttpError(409, "This purchase order has already been fully received");
 }
 
 export function parsePoIndentId(value: unknown, isGeneralPurchase: boolean): string | null {
@@ -341,4 +409,72 @@ export function aggregateIndentLinesByMaterial(lines: { rawMaterialId: string; q
   const totals = new Map<string, bigint>();
   for (const line of lines) totals.set(line.rawMaterialId, (totals.get(line.rawMaterialId) ?? 0n) + quantity(line.qty));
   return [...totals].map(([rawMaterialId, total]) => ({ rawMaterialId, qty: decimal(total) }));
+}
+
+// --- P0 decision (October 31, 2026): Owner-configurable value-based HO
+// approval gate, on top of (not replacing) the quantity-spike check above. --
+//
+// Reuses the LATEST locked vendor rate per raw material, same lookup as
+// src/lib/server/cogs.ts's real POS COGS pricing (desc lockedAt, desc id —
+// first match wins). This is an APPROXIMATE estimate for approval-routing
+// only (not an accounting-grade figure, no claim of exact decimal money
+// matching GAP-008's eventual business-day/currency contract) — a missing
+// rate for any requested material makes the whole estimate `unknown`, and
+// (same fail-closed convention as cogsComplete/VAT missing-rate handling
+// elsewhere in this project) an unknown estimate is treated as "exceeds the
+// threshold" rather than silently auto-approved, so an untracked-cost
+// indent never slips past Owner review by accident.
+function toPaiseLocal(value: string): bigint {
+  const negative = value.startsWith("-");
+  const raw = negative ? value.slice(1) : value;
+  const [whole, fraction = ""] = raw.split(".");
+  const amount = BigInt(whole || "0") * 100n + BigInt((fraction || "").padEnd(2, "0").slice(0, 2));
+  return negative ? -amount : amount;
+}
+function fromPaiseLocal(value: bigint): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  return `${negative ? "-" : ""}${abs / 100n}.${String(abs % 100n).padStart(2, "0")}`;
+}
+
+export interface IndentValueEstimate { valueTsh: string; allRatesKnown: boolean }
+
+export async function estimateIndentValueTsh(
+  tx: Executor,
+  lines: { rawMaterialId: string; qty: string }[],
+): Promise<IndentValueEstimate> {
+  if (!lines.length) return { valueTsh: "0.00", allRatesKnown: true };
+  const rawIds = lines.map((l) => l.rawMaterialId);
+  const rateRows = await tx
+    .select()
+    .from(vendorRates)
+    .where(inArray(vendorRates.rawMaterialId, rawIds))
+    .orderBy(desc(vendorRates.lockedAt), desc(vendorRates.id));
+  const rateByRaw = new Map<string, string>();
+  for (const row of rateRows) if (!rateByRaw.has(row.rawMaterialId)) rateByRaw.set(row.rawMaterialId, row.rate);
+  let totalPaise = 0n;
+  let allRatesKnown = true;
+  for (const line of lines) {
+    const rate = rateByRaw.get(line.rawMaterialId);
+    if (rate === undefined) { allRatesKnown = false; continue; }
+    const qtyDecimal = Number(quantity(line.qty)) / 1000;
+    const ratePaise = toPaiseLocal(rate);
+    totalPaise += BigInt(Math.round(qtyDecimal * Number(ratePaise)));
+  }
+  return { valueTsh: fromPaiseLocal(totalPaise), allRatesKnown };
+}
+
+// Combines the real quantity-spike result with the Owner's configured
+// value threshold (if any). Threshold absent/empty => value gate disabled,
+// quantity-spike result alone decides. Threshold present => an unknown
+// estimate OR an estimate at/above the threshold forces PENDING_APPROVAL
+// even when the quantity-spike check alone would have auto-approved.
+export function appliesValueThresholdGate(
+  estimate: IndentValueEstimate,
+  thresholdTsh: string | null,
+): boolean {
+  if (thresholdTsh === null || thresholdTsh.trim() === "") return false;
+  if (!estimate.allRatesKnown) return true;
+  const thresholdPaise = toPaiseLocal(thresholdTsh);
+  return toPaiseLocal(estimate.valueTsh) >= thresholdPaise;
 }

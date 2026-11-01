@@ -19,17 +19,17 @@ test('sumMoneyInr adds fixed-point paise correctly, including negatives', () => 
   assert.equal(sumMoneyInr([]), '0.00');
 });
 
-test('istDayRange/istMonthRange produce exactly 24h / full-month windows at the fixed +5:30 offset', () => {
+test('istDayRange/istMonthRange produce exactly 24h / full-month windows at the fixed +3:00 Tanzania EAT offset', () => {
   const { istDayRange, istMonthRange } = load();
-  // 2026-01-15 10:00 UTC = 2026-01-15 15:30 IST — same IST calendar day.
+  // 2026-01-15 10:00 UTC = 2026-01-15 13:00 EAT — same EAT calendar day.
   const now = new Date('2026-01-15T10:00:00.000Z');
   const day = istDayRange(now);
   assert.equal(day.end.getTime() - day.start.getTime(), 24 * 60 * 60 * 1000);
-  // IST midnight 2026-01-15 00:00 IST = 2026-01-14T18:30:00.000Z
-  assert.equal(day.start.toISOString(), '2026-01-14T18:30:00.000Z');
+  // EAT midnight 2026-01-15 00:00 EAT = 2026-01-14T21:00:00.000Z
+  assert.equal(day.start.toISOString(), '2026-01-14T21:00:00.000Z');
   const month = istMonthRange(now);
-  assert.equal(month.start.toISOString(), '2025-12-31T18:30:00.000Z'); // Jan 1 00:00 IST
-  assert.equal(month.end.toISOString(), '2026-01-31T18:30:00.000Z'); // Feb 1 00:00 IST
+  assert.equal(month.start.toISOString(), '2025-12-31T21:00:00.000Z'); // Jan 1 00:00 EAT
+  assert.equal(month.end.toISOString(), '2026-01-31T21:00:00.000Z'); // Feb 1 00:00 EAT
 });
 
 test('parseDaysParam validates/clamps and defaults', () => {
@@ -43,11 +43,11 @@ test('parseDaysParam validates/clamps and defaults', () => {
 
 test('groupRevenueByDay pre-seeds every requested day to zero, including days with zero sales', () => {
   const { groupRevenueByDay } = load();
-  const now = new Date('2026-01-15T12:00:00.000Z'); // 2026-01-15 17:30 IST
+  const now = new Date('2026-01-15T12:00:00.000Z'); // 2026-01-15 15:00 EAT
   const orders = [
-    { createdAt: new Date('2026-01-15T06:00:00.000Z'), totalAmount: '500.00' }, // 2026-01-15 11:30 IST
-    { createdAt: new Date('2026-01-14T20:00:00.000Z'), totalAmount: '300.00' }, // 2026-01-15 01:30 IST
-    { createdAt: new Date('2026-01-13T20:00:00.000Z'), totalAmount: '100.00' }, // 2026-01-14 01:30 IST
+    { createdAt: new Date('2026-01-15T06:00:00.000Z'), totalAmount: '500.00' }, // 2026-01-15 09:00 EAT
+    { createdAt: new Date('2026-01-14T22:00:00.000Z'), totalAmount: '300.00' }, // 2026-01-15 01:00 EAT
+    { createdAt: new Date('2026-01-13T22:00:00.000Z'), totalAmount: '100.00' }, // 2026-01-14 01:00 EAT
   ];
   const buckets = groupRevenueByDay(orders, 3, now);
   assert.equal(buckets.length, 3);

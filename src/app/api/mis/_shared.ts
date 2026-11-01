@@ -40,7 +40,7 @@ function isoDate(value: unknown, field: string): Date {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)) throw new HttpError(400, `Invalid ${field}`);
   const day = value.slice(0, 10), calendar = new Date(`${day}T00:00:00Z`);
   if (Number.isNaN(calendar.getTime()) || calendar.toISOString().slice(0,10) !== day) throw new HttpError(400, `Invalid ${field}`);
-  const parsed = new Date(value.length === 10 ? `${value}T00:00:00+05:30` : value);
+  const parsed = new Date(value.length === 10 ? `${value}T00:00:00+03:00` : value);
   if (Number.isNaN(parsed.getTime())) throw new HttpError(400, `Invalid ${field}`);
   return parsed;
 }

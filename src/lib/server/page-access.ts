@@ -19,6 +19,7 @@ export function canOpenPath(user: Identity, path: string) {
  if (path === "/guide" || path === "/") return true;
  if (path === "/admin/settings/restaurant" || path.startsWith("/admin/settings/restaurant/")) return user.role === "SUPER_ADMIN";
  if (path === "/admin/settings/whatsapp") return user.role === "SUPER_ADMIN";
+ if (path === "/admin/settings/business-policy") return user.role === "SUPER_ADMIN";
  if ((path === "/admin/users" || path === "/admin/branches") && user.role === "BRANCH_MANAGER") return true;
  const rule = RULES.find(([prefix]) => path === prefix || path.startsWith(prefix + "/"));
  return !!rule && (user.role === "SUPER_ADMIN" || rule[1].some(key => user.moduleAccess.includes(key)));
@@ -26,7 +27,7 @@ export function canOpenPath(user: Identity, path: string) {
 // No mock business records are exposed as if persisted and branch-isolated.
 // Enable each remaining route only after its DB-backed acceptance is complete.
 export function isPersistedPath(path: string) {
- const persisted = ["/", "/guide", "/dashboard", "/reports", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/cash-drop"];
+ const persisted = ["/", "/guide", "/dashboard", "/reports", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/admin/settings/business-policy", "/cash-drop"];
  // Report details share the real-data implementation; do not classify other
  // arbitrary nested routes as persisted. Purchase labels its remaining
  // quality-result/return/refund limitations beside those specific actions.

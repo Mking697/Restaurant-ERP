@@ -25,9 +25,13 @@ export type Frequency =
 
 const INTERVAL_DAYS: Partial<Record<Frequency, number>> = { DAILY: 1, WEEKLY: 7, FORTNIGHTLY: 15 };
 const INTERVAL_MONTHS: Partial<Record<Frequency, number>> = { MONTHLY: 1, QUARTERLY: 3, HALF_YEARLY: 6, YEARLY: 12 };
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // India is a fixed UTC+5:30 offset, no DST.
+// GAP-008 (October 31, 2026): Tanzania EAT is a fixed UTC+3 offset, no DST —
+// was previously India-coded IST (UTC+5:30). Kept the name IST_OFFSET_MS
+// (and istDateOnly/dueAtForCycle below) to avoid touching every caller in
+// this same pass; the underlying value/behavior is now fully Tanzania EAT.
+const IST_OFFSET_MS = 3 * 60 * 60 * 1000;
 
-// IST calendar date (YYYY-MM-DD) for a UTC instant.
+// Tanzania EAT calendar date (YYYY-MM-DD) for a UTC instant.
 export function istDateOnly(date: Date): string {
   return new Date(date.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
@@ -129,7 +133,7 @@ function indexForGeneratedDate(anchorDateStr: string, frequency: Frequency, date
   return idx;
 }
 
-// IST wall-clock `shiftTime` ("HH:MM") on an IST calendar date -> UTC instant.
+// Tanzania EAT wall-clock `shiftTime` ("HH:MM") on an EAT calendar date -> UTC instant.
 export function dueAtForCycle(cycleDateStr: string, shiftTime: string): Date {
   const [hh, mm] = shiftTime.split(":").map(Number);
   const { y, m, d } = parseDateStr(cycleDateStr);

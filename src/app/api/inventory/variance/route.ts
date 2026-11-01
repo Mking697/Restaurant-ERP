@@ -4,9 +4,11 @@ import { nightVarianceEntries, wastageLogs } from "@/db/schema/inventory";
 import { branches } from "@/db/schema/platform";
 import { rawMaterials } from "@/db/schema/menu";
 import { users } from "@/db/schema/auth";
-import { requireIdentity } from "@/lib/server/auth";
-import { api, json } from "@/lib/server/http";
+import { mutate, requireIdentity } from "@/lib/server/auth";
+import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
+import { allowedFields } from "@/lib/server/purchase";
+import { parseNightVarianceInput, submitNightVariance } from "@/lib/server/inventory-adjustments";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,12 +67,34 @@ export async function GET(request: Request) {
 
     const wastage = await db.select({ id: wastageLogs.id, branchId: wastageLogs.branchId, branchName: branches.name, rawMaterialId: wastageLogs.rawMaterialId, rawMaterialName: rawMaterials.name, unit: rawMaterials.unit, qty: wastageLogs.qty, reason: wastageLogs.reason, photoUrl: wastageLogs.photoUrl, loggedById: wastageLogs.loggedById, loggedByName: users.name, loggedAt: wastageLogs.loggedAt })
       .from(wastageLogs).innerJoin(rawMaterials, eq(rawMaterials.id, wastageLogs.rawMaterialId)).innerJoin(users, eq(users.id, wastageLogs.loggedById)).innerJoin(branches, eq(branches.id, wastageLogs.branchId))
-      .where(and(scope ? eq(wastageLogs.branchId, scope) : undefined, from ? gte(wastageLogs.loggedAt, new Date(`${from}T00:00:00+05:30`)) : undefined, to ? lt(wastageLogs.loggedAt, new Date(new Date(`${to}T00:00:00+05:30`).getTime() + 86400000)) : undefined)).orderBy(desc(wastageLogs.loggedAt));
+      .where(and(scope ? eq(wastageLogs.branchId, scope) : undefined, from ? gte(wastageLogs.loggedAt, new Date(`${from}T00:00:00+03:00`)) : undefined, to ? lt(wastageLogs.loggedAt, new Date(new Date(`${to}T00:00:00+03:00`).getTime() + 86400000)) : undefined)).orderBy(desc(wastageLogs.loggedAt));
     // Sum fixed-point stored money rather than binary floating-point INR.
     const cents = entries.reduce((sum, row) => sum + BigInt(row.varianceValueInr.replace(".", "")), 0n);
     const absolute = cents < 0n ? -cents : cents;
     const totalVarianceValueInr = `${cents < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2,"0")}`;
     const pilferageFlagCount = entries.filter((row) => row.flaggedPilferage).length;
     return json({ entries, wastage, summary: { totalVarianceValueInr, pilferageFlagCount, count: entries.length, wastageCount: wastage.length, totalWastageValueInr: null, wastageValueReason: "Wastage logs do not store historical valuation; quantities are reported in each material's own unit, not priced with an invented rate." } });
+  });
+}
+
+// POST /api/inventory/variance — submit a real physical stock count for one
+// raw material. theoreticalQty is captured server-side from the CURRENT
+// inventory_stock.qtyOnHand (never client-supplied); the real counted qty
+// overrides it, the signed difference is posted to the GAP-004 stock ledger
+// (src/lib/server/stock-ledger.ts), and a nightVarianceEntries audit row is
+// written. flaggedPilferage is the submitter's own manual judgment call —
+// no auto-threshold exists (and none is invented here).
+export async function POST(request: Request) {
+  return api(async () => {
+    const result = await mutate(request, async (tx, actor) => {
+      assertModule(actor, "INVENTORY");
+      const input = await body(request);
+      allowedFields(input, ["branchId", "rawMaterialId", "physicalQty", "shiftDate", "flaggedPilferage"]);
+      if (typeof input.branchId !== "string" || !input.branchId) throw new HttpError(400, "branchId is required");
+      const branchId = branchScope(actor, input.branchId) ?? input.branchId;
+      const parsed = parseNightVarianceInput({ rawMaterialId: input.rawMaterialId, physicalQty: input.physicalQty, shiftDate: input.shiftDate, flaggedPilferage: input.flaggedPilferage });
+      return submitNightVariance(tx, actor, branchId, parsed);
+    });
+    return json({ entry: result }, 201);
   });
 }

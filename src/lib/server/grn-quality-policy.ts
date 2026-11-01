@@ -1,3 +1,4 @@
+import { calendarDate, parseBatchInput } from "./batch-policy";
 import { HttpError } from "./permissions";
 import { string } from "./http";
 import { allowedFields } from "./purchase";
@@ -13,7 +14,7 @@ export function validQualityOrigin(grn: { id: string; branchId: string; poId: st
 }
 export interface QualityInput {
   result: "PASS" | "FAIL" | "PARTIAL";
-  lines: { id: string; qtyFailed: string }[];
+  lines: { id: string; qtyFailed: string; expiryDate: string | null; batchNo?: string; nonExpiring?: boolean; evidence?: string }[];
   note: string;
   photoUrl: string;
 }
@@ -27,6 +28,9 @@ function reference(value: unknown, field: string, max: number) {
   if (typeof value !== "string" || value.length > max) throw new HttpError(400, `Invalid ${field}`);
   return value.trim();
 }
+function nullableExpiryDate(value: unknown): string | null {
+  return calendarDate(value);
+}
 export function parseQualityInput(input: Record<string, unknown>): QualityInput {
   allowedFields(input, ["result", "lines", "note", "photoUrl"]);
   if (!["PASS", "FAIL", "PARTIAL"].includes(input.result as string)) throw new HttpError(400, "Invalid quality result");
@@ -35,11 +39,12 @@ export function parseQualityInput(input: Record<string, unknown>): QualityInput 
   const lines = input.lines.map((value: unknown) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new HttpError(400, "Invalid quality line");
     const line = value as Record<string, unknown>;
-    allowedFields(line, ["id", "qtyFailed"]);
+    allowedFields(line, ["id", "qtyFailed", "expiryDate", "batchNo", "nonExpiring", "evidence"]);
+    const batch = parseBatchInput(line, true);
     const id = string(line.id, "GRN line ID");
     if (ids.has(id)) throw new HttpError(400, "Duplicate quality line ID");
     ids.add(id);
-    return { id, qtyFailed: decimal(quantity(line.qtyFailed, true)) };
+    return { id, qtyFailed: decimal(quantity(line.qtyFailed, true)), expiryDate: nullableExpiryDate(line.expiryDate), ...(line.batchNo !== undefined ? { batchNo: batch.batchNo! } : {}), ...(line.nonExpiring !== undefined ? { nonExpiring: line.nonExpiring as boolean } : {}), ...(line.evidence !== undefined ? { evidence: batch.evidence } : {}) };
   }).sort((a, b) => a.id.localeCompare(b.id));
   const note = reference(input.note, "quality note", 1000);
   if (input.result !== "PASS" && note.length < 3) throw new HttpError(400, "Failure reason must be 3-1000 characters");

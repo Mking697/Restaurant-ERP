@@ -68,6 +68,11 @@ function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'B
     '@/db/schema/tasks': { taskInstances }, '@/db/schema/shifts': { shiftHandovers }, '@/db/schema/auth': { users },
     '@/db/schema/notifications': { dailySummaryLog: {} }, './auth': { locked: fn => fn(db) },
     './task-generation': { istDateOnly: () => '2026-10-30' },
+    // GAP-012: stubbed — this harness tests sales-privacy isolation, not
+    // prepared-stock thresholds; a real semiFgStock table model would add
+    // unrelated complexity here. See low-stock-summary.integration.cjs for
+    // the real end-to-end prepared-stock proof instead.
+    './prepared-stock-thresholds': { countPreparedStockBreaches: async () => ({ preparedLowStockCount: 0, preparedHighStockCount: 0 }) },
     '@/lib/chatxflow': { sendWhatsAppMessage: async (phone, message, metadata) => { sent.push({ phone, message, metadata }); return { ok: true }; } },
   };
   function load(name) {

@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
 import { HttpError } from "./permissions";
 export function json(data: unknown, status = 200) { return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } }); }
+// Postgres jsonb reorders object keys (and may drop undefined values) on
+// storage, so a byte-identical retry request is NOT guaranteed to come
+// back out of a jsonb column as the same JSON.stringify() string it went
+// in as. Use this for any "is this retry the same request as last time"
+// idempotency check against a value read back from a jsonb column.
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value as Record<string, unknown>).sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 export async function api(action: () => Promise<Response>): Promise<Response> {
   try { return await action(); } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status);
+    if (process.env.GAP006_DEBUG === "1") console.error("API_DEBUG", error);
     const code = (error as { code?: string; cause?: { code?: string } })?.code ?? (error as { cause?: { code?: string } })?.cause?.code;
     if (code === "23505") return json({ error: "Record already exists" }, 409);
     if (code === "23503") return json({ error: "Record has linked data or invalid reference" }, 409);

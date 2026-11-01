@@ -1,4 +1,5 @@
 import { HttpError } from './permissions';
+import { businessDateString } from './business-calendar';
 export function day(value: unknown): string {
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||value<'1900-01-01'||value>'2199-12-31') throw new HttpError(400,'Invalid date'); const parsed=new Date(value+'T00:00:00Z'); if(!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==value) throw new HttpError(400,'Invalid date'); return value;
 }
@@ -14,7 +15,11 @@ export type Employee = {id:string;branchId:string;name:string;employmentType:str
 export type Rate={effectiveFrom:string;rate:string;employmentType:string};
 export type Mark={date:string;status:string};
 export type Leave={startDate:string;endDate:string;status:string;payType:string|null};
-export function businessDate(now=new Date()) { const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now); return `${p.find(x=>x.type==='year')!.value}-${p.find(x=>x.type==='month')!.value}-${p.find(x=>x.type==='day')!.value}`; }
+// GAP-008 (October 31, 2026): Tanzania EAT, delegating to the canonical
+// src/lib/server/business-calendar.ts definition — kept under this name
+// (despite no longer being India-coded) to avoid touching every payroll/
+// attendance caller in this same pass; behavior is fully Tanzania EAT.
+export function businessDate(now=new Date()) { return businessDateString(now); }
 export function calculatePayroll(e:Employee,rates:Rate[],marks:Mark[],leaves:Leave[],month:string,today=businessDate()){
  const {start,end,calendarDays}=monthRange(month); const applicable=rates.filter(r=>r.effectiveFrom<=end).sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom));
  let presentDays=0,halfDays=0,paidLeaveDays=0,unpaidDays=0,units=0,numerator=BigInt(0); const missingDates:string[]=[];

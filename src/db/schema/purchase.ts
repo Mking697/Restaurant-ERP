@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { branches } from "./platform";
 import { rawMaterials } from "./menu";
 import { users } from "./auth";
@@ -247,10 +247,12 @@ export const threeWayMatch = pgTable(
       .notNull()
       .unique()
       .references(() => purchaseOrders.id),
-    grnId: text("grn_id")
-      .notNull()
-      .unique()
-      .references(() => grns.id),
+    // GAP-005 multi-delivery follow-up: no longer the SOLE GRN behind this
+    // match — see three_way_match_grns below for the full contributing
+    // list. Kept here, now nullable and non-unique, purely as an
+    // informational "last/triggering GRN" pointer for old call sites that
+    // may still read it; new code should read three_way_match_grns.
+    grnId: text("grn_id").references(() => grns.id),
     invoiceId: text("invoice_id")
       .notNull()
       .references(() => vendorInvoices.id),
@@ -267,4 +269,27 @@ export const threeWayMatch = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
   },
   (table) => [index("three_way_match_branch_id_idx").on(table.branchId)]
+);
+
+// GAP-005 multi-delivery follow-up: one row per GRN that contributed to a
+// match's aggregated accepted value — a PO can now be delivered (and
+// quality-checked) across multiple GRNs before its ONE final invoice/match
+// is raised (see vendor-invoices.ts's loadPoAndGrnForInvoice, now requiring
+// the PO's status to be RECEIVED — fully delivered — before invoicing).
+// "One invoice per PO" itself is UNCHANGED, still enforced in vendor-invoices.ts.
+export const threeWayMatchGrns = pgTable(
+  "three_way_match_grns",
+  {
+    id: text("id").primaryKey(),
+    matchId: text("match_id")
+      .notNull()
+      .references(() => threeWayMatch.id),
+    grnId: text("grn_id")
+      .notNull()
+      .references(() => grns.id),
+  },
+  (table) => [
+    index("three_way_match_grns_match_id_idx").on(table.matchId),
+    uniqueIndex("three_way_match_grns_match_grn_unique").on(table.matchId, table.grnId),
+  ]
 );
