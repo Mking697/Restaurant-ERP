@@ -232,6 +232,13 @@
       "when": 1793552690585,
       "tag": "0032_classy_taskmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793555222491,
+      "tag": "0033_short_cable",
+      "breakpoints": true
     }
   ]
 }

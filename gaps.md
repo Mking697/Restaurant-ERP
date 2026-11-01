@@ -708,13 +708,33 @@ Partial implementation note (October 31, 2026, NOT a DONE closure — remains PE
 
 ### GAP-017 - Auditable vendor payment records and allocations
 
-Status: PENDING
+Status: DONE for full-payment evidence (November 1, 2026)
 Coverage: PARTIAL | Phase: P3 | Depends on: GAP-001, GAP-005
 Source: S1 Payment; E03.
 
 Acceptance: agreed payment record captures amount/date/method/reference/actor and allocation to matched invoices, reconciles paid/outstanding/overpayment and prevents duplicate allocation. Implement partial payments only if approved in GAP-001; otherwise enforce/document the approved full-payment rule. Preserve current match/approval gates and distinguish payment evidence from actual bank execution. Bank integration is NOT presumed by the screenshot.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Owner decisions (confirmed via clarify, November 1, 2026)
+
+1. Full-payment-only this pass — GAP-001 explicitly left partial payments unresolved/un-approved ("partial payment ... ko assumptions se enable na karein"); this pass enforces the documented full-payment default instead of building partial allocation.
+2. Payment method is a fixed enum (CASH/BANK_TRANSFER/CHEQUE/MOBILE_MONEY — Tanzania convention, not India's UPI), reference number is optional free text.
+
+#### Implementation (November 1, 2026)
+
+New `vendorPayments` table (migration `0033_short_cable.sql`, additive) — real evidence (`amountTsh`, `paymentMethod`, `referenceNumber`, `paidAt` the actual bank/cash execution date, `recordedById` the actor, `idempotencyKey` unique) replacing the old bare `markThreeWayPaid` status flip. `src/lib/server/vendor-payments.ts`'s `recordVendorPayment` preserves the existing APPROVED-only gate (payment still cannot bypass the quality/3-way-mismatch lock) and enforces: the amount must exactly equal `invoiceAdjustedTotalInr` (full-payment-only — any other amount is a 400, explicitly explaining partial payments aren't approved yet); at most one payment record per match EVER (a second, differently-keyed attempt against an already-paid match is a 409 duplicate-allocation rejection); and idempotent replay — the SAME `idempotencyKey` with the SAME payload returns the existing row (checked BEFORE the APPROVED-status gate, since the first successful call already flips the match to PAID — a genuine replay of an already-paid match must still succeed), while the SAME key with a DIFFERENT payload is rejected (never silently overwrites real evidence). The schema itself does NOT enforce "exactly one row per match" at the DB level (no unique constraint on `matchId`) — deliberately, so a future, separately-approved partial-payment pass never needs a breaking schema rewrite; the full-payment rule lives in the server, not baked into the table shape. `threeWayMatch.paymentStatus/paidById/paidAt` are kept and still updated for backward-compatible reads.
+
+`POST /api/purchase/orders/[id]/three-way/paid` now requires `{ amountTsh, paymentMethod, referenceNumber?, paidAt, idempotencyKey }` instead of an empty body. UI (`purchase/page-content.tsx`'s InvoiceStep): a small payment-evidence form (method dropdown, optional reference, paid-date) appears once the match is APPROVED; "Mark paid" now submits that evidence, pre-filling the amount from `invoiceAdjustedTotalInr` (not an editable field — the full-payment-only rule is visible in the UI, not just enforced silently server-side).
+
+Tests: `tsc`/`npm test` (491/491)/`npm run build` all clean. New `tests/vendor-payments.integration.cjs` — **9/9 passed** through a REAL end-to-end flow (Indent→submit→approve→PO→receive→quality PASS→invoice→3-way approve→payment), covering: payment rejected before APPROVED (409); a partial-amount payment rejected (400, full-payment-only); the full-amount payment succeeds with real evidence persisted exactly in the DB (actor, amount, method, reference); the same idempotency key + same payload replays (200, `replayed:true`, confirmed still exactly one DB row); the same key + a different payload is rejected (409, never overwrites real evidence); a different key against an already-paid match is rejected (409, duplicate-allocation prevention). Backward-compat: re-ran `tests/purchase-phase1.integration.cjs` (27/27) after updating its one `/three-way/paid` call site to the new required fields (its correct new behavior, not a regression) and fixing a genuine pre-existing cleanup-ordering bug exposed along the way (missing `three_way_match_grns`/`stock_batches`/`stock_movements` deletes before their parent rows, from GAP-005's/GAP-006's later schema additions — unrelated to GAP-017 itself, now fixed).
+Release: N/A — local, uncommitted source only; ask before committing/deploying. `restaurant_erp_local` has not had migrations `0025`-`0033` applied (only disposable QA databases were used this pass); production Neon is untouched.
+
+#### Remaining work before this GAP can be marked fully DONE (all scopes)
+
+- Partial payments / multiple-receipt allocation remain explicitly out of scope (GAP-001 never approved them) — the schema is forward-compatible (no unique constraint forcing exactly one row per match) but the server enforces full-payment-only today.
+- Overpayment handling is implicitly impossible under the full-payment-only rule (amount must EXACTLY equal the outstanding total) rather than a separately-modeled "overpayment credit" concept — acceptable for this pass's documented full-payment default, but would need its own design if partial/overpayment is ever approved.
+- No UI click-through verification in a live browser yet — same honest caveat standing for every new panel this session.
+
+#### Current-project integration blueprint (fulfilled above for the core flow; remaining items listed above)
 
 - Current-project reuse: Existing `src/lib/server/vendor-invoices.ts` (`createVendorInvoice`, `approveThreeWayPayment`, `markThreeWayPaid`), `src/db/schema/purchase.ts` (`vendorInvoices`, `threeWayMatch`) and `src/lib/server/accounts-ledger.ts` journal foundations reuse karein.
 - Proposed data/server change: PROPOSED: immutable payment-evidence header and invoice allocations with exact amount/date/method/reference/actor/vendor/branch and idempotency key. Extend paid action transactionally behind existing matched/approved gate. Outstanding derives from accepted invoice liability and approved allocations/credits, not an editable total.

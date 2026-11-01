@@ -93,12 +93,11 @@ export async function readPoInvoice(tx: Executor, actor: Identity, poId: string)
   return { invoice, match: match ?? null };
 }
 
-// Owner/Accounts-only (ACCOUNTS_EXPENSES) payment-release actions. Both are
-// once-only state transitions, same "the DB row's own status field is the
-// gate" convention as the rest of this module — no separate idempotency
-// receipt needed since there's nothing to replay (a second call with the
-// same inputs just hits the guard and 409s, which is the correct outcome:
-// an accidental double-click must never double-approve/double-pay).
+// Owner/Accounts-only (ACCOUNTS_EXPENSES) payment-approval action. A
+// once-only state transition, same "the DB row's own status field is the
+// gate" convention as the rest of this module. The subsequent PAID
+// transition (with real amount/date/method/reference evidence) now lives
+// in vendor-payments.ts's recordVendorPayment — GAP-017.
 export async function approveThreeWayPayment(tx: Executor, actor: Identity, poId: string) {
   assertModule(actor, "ACCOUNTS_EXPENSES");
   const [po] = await tx.select({ branchId: purchaseOrders.branchId }).from(purchaseOrders).where(eq(purchaseOrders.id, poId)).limit(1);
@@ -109,18 +108,6 @@ export async function approveThreeWayPayment(tx: Executor, actor: Identity, poId
   if (!row.matched) throw new HttpError(409, "PO, GRN and invoice do not match; cannot approve payment");
   if (row.paymentStatus !== "PENDING") throw new HttpError(409, `Payment is already ${row.paymentStatus}`);
   await tx.update(threeWayMatch).set({ paymentStatus: "APPROVED", approvedById: actor.id, approvedAt: new Date() }).where(and(eq(threeWayMatch.id, row.id), eq(threeWayMatch.branchId, po.branchId)));
-  const [updated] = await tx.select().from(threeWayMatch).where(eq(threeWayMatch.id, row.id));
-  return { match: updated };
-}
-export async function markThreeWayPaid(tx: Executor, actor: Identity, poId: string) {
-  assertModule(actor, "ACCOUNTS_EXPENSES");
-  const [po] = await tx.select({ branchId: purchaseOrders.branchId }).from(purchaseOrders).where(eq(purchaseOrders.id, poId)).limit(1);
-  if (!po) throw new HttpError(404, "Purchase order not found");
-  branchScope(actor, po.branchId);
-  const [row] = await tx.select().from(threeWayMatch).where(eq(threeWayMatch.poId, poId)).limit(1);
-  if (!row) throw new HttpError(404, "No invoice/3-way match recorded for this purchase order");
-  if (row.paymentStatus !== "APPROVED") throw new HttpError(409, "Payment must be APPROVED before it can be marked PAID");
-  await tx.update(threeWayMatch).set({ paymentStatus: "PAID", paidById: actor.id, paidAt: new Date() }).where(and(eq(threeWayMatch.id, row.id), eq(threeWayMatch.branchId, po.branchId)));
   const [updated] = await tx.select().from(threeWayMatch).where(eq(threeWayMatch.id, row.id));
   return { match: updated };
 }

@@ -680,6 +680,7 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
   const [data, setData] = React.useState<{ invoice: InvoiceApi | null; match: MatchApi | null }>({ invoice: null, match: null });
   const [form, setForm] = React.useState({ invoiceNumber: "", amount: "", taxAdjustmentInr: "", taxAdjustmentNote: "" });
   const [file, setFile] = React.useState<File | null>(null);
+  const [paymentForm, setPaymentForm] = React.useState({ paymentMethod: "BANK_TRANSFER", referenceNumber: "", paidAt: new Date().toISOString().slice(0, 10) });
   const [error, setError] = React.useState("");
 
   function load() {
@@ -721,7 +722,10 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
   async function markPaid() {
     setBusy(true); setError("");
     try {
-      await requestJson(`/api/purchase/orders/${po.id}/three-way/paid`, { method: "POST", body: JSON.stringify({}) });
+      await requestJson(`/api/purchase/orders/${po.id}/three-way/paid`, { method: "POST", body: JSON.stringify({
+        amountTsh: data.match?.invoiceAdjustedTotalInr, paymentMethod: paymentForm.paymentMethod,
+        referenceNumber: paymentForm.referenceNumber, paidAt: paymentForm.paidAt, idempotencyKey: `${po.id}-${paymentForm.paidAt}-${paymentForm.paymentMethod}-${paymentForm.referenceNumber}`,
+      }) });
       notify(uiText("Marked paid.", "Paid mark ho gaya."));
       load();
     } catch (err) { setError(errMsg(err, uiText("Could not mark paid.", "Paid mark nahi hua."))); }
@@ -757,7 +761,20 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
           {!data.match.matched && <p className="text-xs text-destructive">{data.match.mismatchReason}</p>}
           <Badge variant="outline">{data.match.paymentStatus}</Badge>
           {accountsAllowed && data.match.matched && data.match.paymentStatus === "PENDING" && <Button disabled={busy} onClick={approvePayment}>{uiText("Approve payment", "Payment approve karo")}</Button>}
-          {accountsAllowed && data.match.paymentStatus === "APPROVED" && <Button disabled={busy} onClick={markPaid}>{uiText("Mark paid", "Paid mark karo")}</Button>}
+          {accountsAllowed && data.match.paymentStatus === "APPROVED" && <div className="space-y-2 rounded border p-2">
+            <p className="text-xs text-muted-foreground">{uiText(`Recording payment evidence for the full outstanding amount (TSh ${data.match.invoiceAdjustedTotalInr}) — partial payments are not approved yet.`, `Payment evidence record ho raha hai poori outstanding amount ke liye (TSh ${data.match.invoiceAdjustedTotalInr}).`)}</p>
+            <div className="flex flex-wrap gap-2">
+              <select className="rounded-md border border-input bg-card px-2 py-1 text-sm" value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value }))}>
+                <option value="BANK_TRANSFER">{uiText("Bank Transfer", "Bank Transfer")}</option>
+                <option value="CASH">{uiText("Cash", "Cash")}</option>
+                <option value="CHEQUE">{uiText("Cheque", "Cheque")}</option>
+                <option value="MOBILE_MONEY">{uiText("Mobile Money", "Mobile Money")}</option>
+              </select>
+              <input className="w-40 rounded-md border border-input bg-card px-2 py-1 text-sm" placeholder={uiText("Reference # (optional)", "Reference # (optional)")} value={paymentForm.referenceNumber} onChange={(e) => setPaymentForm((p) => ({ ...p, referenceNumber: e.target.value }))} />
+              <input type="date" className="rounded-md border border-input bg-card px-2 py-1 text-sm" value={paymentForm.paidAt} onChange={(e) => setPaymentForm((p) => ({ ...p, paidAt: e.target.value }))} />
+            </div>
+            <Button disabled={busy} onClick={markPaid}>{uiText("Mark paid", "Paid mark karo")}</Button>
+          </div>}
         </div>
       )}
     </DialogContent>

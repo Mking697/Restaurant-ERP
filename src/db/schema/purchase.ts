@@ -337,3 +337,44 @@ export const generalPurchaseRequests = pgTable(
   },
   (table) => [index("general_purchase_requests_branch_id_idx").on(table.branchId)]
 );
+
+// ---------------------------------------------------------------------------
+// GAP-017 (November 2026). Auditable vendor payment records.
+//
+// Owner decision (confirmed via clarify, November 1, 2026): full-payment
+// only this pass (GAP-001 left partial payments explicitly unresolved/
+// un-approved) — one invoice/match is paid in exactly ONE real evidence
+// record covering its full invoiceAdjustedTotalInr, never a partial
+// allocation. The schema itself still allows multiple rows per matchId
+// (no unique constraint) so a future, separately-approved partial-payment
+// pass never needs a breaking schema rewrite — the "exactly one, for the
+// full amount" rule is enforced in the SERVER (vendor-payments.ts), not
+// baked into the table shape.
+//
+// This REPLACES the old markThreeWayPaid's bare status flip (PAID with no
+// amount/date/method/reference evidence) — the threeWayMatch.paymentStatus/
+// paidById/paidAt columns are kept for backward-compatible reads, but the
+// real evidence now lives here. Preserves the existing APPROVED-only gate
+// (payment still cannot bypass the quality/3-way-mismatch lock) and the
+// once-only state-transition discipline already used throughout this file.
+// ---------------------------------------------------------------------------
+export const paymentMethodEnum = pgEnum("payment_method", ["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_MONEY"]);
+
+export const vendorPayments = pgTable(
+  "vendor_payments",
+  {
+    id: text("id").primaryKey(),
+    matchId: text("match_id").notNull().references(() => threeWayMatch.id),
+    poId: text("po_id").notNull().references(() => purchaseOrders.id),
+    branchId: text("branch_id").notNull().references(() => branches.id),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id),
+    amountTsh: numeric("amount_tsh", { precision: 12, scale: 2 }).notNull(),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    referenceNumber: text("reference_number").notNull().default(""),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull(), // actual bank/cash execution date, supplied by the recording actor — distinct from createdAt (when recorded in this system); this record is evidence of a payment, never proof the bank transfer itself happened
+    recordedById: text("recorded_by_id").notNull().references(() => users.id),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("vendor_payments_match_id_idx").on(table.matchId), index("vendor_payments_branch_id_idx").on(table.branchId)]
+);
