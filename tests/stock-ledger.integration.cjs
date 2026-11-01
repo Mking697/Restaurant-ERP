@@ -126,7 +126,7 @@ async function main() {
   managerCookie = `restaurant_session=${managerToken}`;
   cashierCookie = `restaurant_session=${cashierToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Ledger Flour','kg'),($2,'QA Ledger Salt','kg')`, [ids.flour, ids.salt]);
-  await pool.query(`insert into vendors (id, name, phone_e164) values ($1,'QA Ledger Vendor','+255****0603')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA Ledger Vendor','+255****0603','APPROVED')`, [ids.vendor]);
   // Salt's opening balance is seeded DIRECTLY (bypassing the ledger) — same as
   // every real pre-existing/legacy stock row today. This is the explicit
   // "unwired opening balance" case the ledger does NOT claim to cover yet.

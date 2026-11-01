@@ -97,7 +97,7 @@ async function main() {
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(managerToken), ids.manager]);
   managerCookie = `restaurant_session=${managerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Spike Chicken','kg'),($2,'QA Spike Rice','kg')`, [ids.chicken, ids.rice]);
-  await pool.query(`insert into vendors (id, name, phone_e164) values ($1,'QA Spike Vendor','+255712000402')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA Spike Vendor','+255****0402','APPROVED')`, [ids.vendor]);
 
   const results = [];
   const check = (label, cond, extra) => results.push({ label, pass: !!cond, extra });

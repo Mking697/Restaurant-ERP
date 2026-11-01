@@ -66,7 +66,7 @@ async function main() {
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(accountsToken), ids.accounts]);
   const accountsCookie = `restaurant_session=${accountsToken}`;
 
-  await pool.query(`insert into vendors (id, name, phone_e164, email, tin) values ($1,'QA Vendor','+255000000779','v@qa.test','')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, email, tin, status) values ($1,'QA Vendor','+255****0779','v@qa.test','','APPROVED')`, [ids.vendor]);
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Purchase-1 Rice','kg')`, [ids.rice]);
 
   const results = [];

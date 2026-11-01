@@ -22,6 +22,7 @@ async function pageHarness(options = {}) {
   ] };
   const dependencies = {
     '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
+    '@/components/vendor-approval-panel': { VendorApprovalPanel: 'VendorApprovalPanel' },
     react: fakeReact,
     'react/jsx-runtime': require('react/jsx-runtime'),
     '@/lib/ui-copy': { useUiCopy: () => en => en },

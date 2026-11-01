@@ -622,13 +622,37 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-015 - Approved vendor onboarding and enforcement
 
-Status: PENDING
+Status: DONE for core onboarding + enforcement (November 1, 2026)
 Coverage: PARTIAL | Phase: P3 | Depends on: GAP-001
 Source: S2 approved listed vendors; E01.
 
 Acceptance: draft/approved/suspended vendor policy, review authority and branch/category applicability are recorded and enforced on new purchasing; historical documents retain their vendor identity. Unauthorized vendor activation and concurrent approval bypass are denied. Vendor creation alone is not approval.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Owner decisions (confirmed via clarify, November 1, 2026)
+
+1. Owner-only to approve or suspend a vendor (same single-actor authority pattern as every other approval gate this session).
+2. Simple applicability: ONE approval scope per vendor — an optional single branch restriction (NULL = all branches) and an optional single category restriction (NULL = all categories), not a multi-row join.
+3. One-time cutover: every vendor that already existed BEFORE this migration ran is backfilled to APPROVED (unrestricted) so existing purchasing was never silently halted. A vendor created from now on always starts DRAFT and needs an explicit Owner approval before it can be used on a new Purchase Order.
+
+#### Implementation (November 1, 2026)
+
+Schema (migration `0031_amused_beast.sql`, additive only): `vendors` gained `status` (DRAFT/APPROVED/SUSPENDED, default DRAFT), `approvedBranchId` (nullable FK), `approvedCategory` (nullable). The migration's own data UPDATE (hand-added after `drizzle-kit generate`, inside the same migration file — not a column default) backfills every PRE-EXISTING vendor row to APPROVED/unrestricted exactly once; verified directly (see Tests below) rather than assumed. New table `vendorReviewEvents` — append-only, one row per approve/suspend action with actor/reason/timestamp and a snapshot of the scope decided at that moment; never rewrites a past PO's own `vendorId`.
+
+`src/lib/server/vendor-approval.ts`: `approveVendor`/`suspendVendor` (Owner-only via `assertOwner`) and `assertVendorEligible(tx, vendorId, branchId, categories)` — the ONLY place that decides eligibility, called from INSIDE the same locked `mutate()` transaction that creates a Purchase Order (`src/app/api/purchase/orders/route.ts`), never a separate pre-check a concurrent suspension could race past. Rejects (409) when the vendor is not APPROVED, when it's branch-restricted to a different branch, or when any of the PO's raw-material categories don't match a category restriction; a general purchase (no raw-material category) only checks the branch restriction. API: `POST /api/purchase/vendors/[id]/approve` and `/suspend`; `GET /api/purchase/vendors` extended with `status`/`approvedBranchId`/`approvedCategory`.
+
+UI: `src/components/vendor-approval-panel.tsx` (new) — Owner-gated approve/suspend with branch/category scope inputs, wired into a new "Vendors" tab on `src/app/purchase/page-content.tsx`. The real enforcement lives server-side; this panel is a review convenience, never the gate itself.
+
+Tests: `tsc`/`npm test` (491/491)/`npm run build` all clean. New `tests/vendor-approval.integration.cjs` — **14/14 passed** against a fresh disposable QA database (31 migrations), covering: a DRAFT vendor is rejected for a new PO (409); a non-Owner cannot approve (403); an Owner-approved unrestricted vendor succeeds; a branch-restricted vendor is rejected at a different branch and succeeds at its own; a category-restricted vendor succeeds on a matching raw-material PO (via a real submitted->approved indent) and is unaffected by the category check on an unrelated general purchase; a vendor suspended AFTER a PO was created keeps that PO's own `vendorId` untouched while a NEW PO against it is rejected. The one-time cutover itself was proven with a dedicated two-step migration test (not just read): migrated a disposable database through migration `0030` only, inserted a vendor row (simulating a genuinely pre-existing vendor, before the `status` column existed), then applied migration `0031` alone and confirmed that row became `APPROVED`/unrestricted — and a vendor inserted AFTER the full migration chain correctly starts `DRAFT`, confirming the UPDATE runs exactly once and never touches a later insert. Backward-compat: re-ran `purchase.integration.cjs` (50/50), `batches-fefo.integration.cjs`, `indent-spike.integration.cjs`, `multi-grn-receive.integration.cjs`, `purchase-phase1.integration.cjs` and `stock-ledger.integration.cjs` on disposable QA databases after updating their vendor-seeding fixtures to explicitly insert `status='APPROVED'` (these fixtures insert a vendor directly via SQL then immediately use it through the live PO-creation API within the same test run — under the new default they would otherwise start DRAFT and correctly be rejected; this is the expected new behavior, not a bug, so the fixtures were updated to reflect it) — all passed with no other regression. `purchase-ui.test.cjs` and `grn-quality-ui.test.cjs` (component-harness tests that stub every import of `purchase/page-content.tsx`) needed a new stub entry for `@/components/vendor-approval-panel`, added; both suites pass.
+
+Separately discovered, NOT caused by this pass and NOT fixed in it (out of GAP-015's scope — flagged honestly rather than silently ignored): `tests/historical-purchase-lookup.integration.cjs` fails consistently, even on a completely fresh disposable QA database, with a vendor-return-claims assertion failure and a `stock_movements` FK violation during its own cleanup. That test seeds its Purchase Orders directly via raw SQL (never through the gated API), so this is unrelated to vendor-approval enforcement — a pre-existing issue in that test or the material-returns/stock_movements interaction it exercises, left for a future pass.
+Release: N/A — local, uncommitted source only; ask before committing/deploying. `restaurant_erp_local` has not had migrations `0025`-`0031` applied (only disposable QA databases were used this pass); production Neon is untouched.
+
+#### Remaining work before this GAP can be marked fully DONE (all scopes)
+
+- Vendor CRUD (create/edit a vendor's own name/phone/email/TIN) is still out of this pass's scope, same as before — this pass only added the approval/suspend/scope layer on top of the existing (already-seeded-elsewhere) vendor rows.
+- No UI click-through verification in a live browser yet — same honest caveat standing for every new panel this session.
+
+#### Current-project integration blueprint (fulfilled above for the core flow; remaining items listed above)
 
 - Current-project reuse: Existing `src/db/schema/vendors.ts` (`vendors`, `vendorRates`), `src/app/api/purchase/vendors/route.ts`, `src/app/api/purchase/_shared.ts` (`ensureVendor`) and `src/app/purchase/page-content.tsx` vendor selection reuse karein.
 - Proposed data/server change: PROPOSED: draft/approved/suspended vendor status, review actor/time/reason/version, branch/category applicability and append-only review events. Server eligibility guard runs inside PO mutation transaction; vendor existence/dropdown presence is not approval authority.

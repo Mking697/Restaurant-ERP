@@ -80,7 +80,7 @@ async function main() {
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(managerToken), ids.manager]);
   managerCookie = `restaurant_session=${managerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA B6 Flour','kg')`, [ids.flour]);
-  await pool.query(`insert into vendors (id, name, phone_e164) values ($1,'QA B6 Vendor','+255****2002')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA B6 Vendor','+255****2002','APPROVED')`, [ids.vendor]);
   await pool.query(`insert into vendor_rates (id, vendor_id, raw_material_id, rate, locked_by_user_id) values ($1,$2,$3,'10.00',$4)`, [id(), ids.vendor, ids.flour, ids.manager]);
   await pool.query(`insert into menu_items (id, branch_id, name, output_unit, price, is_active, is_semi_fg) values ($1,$2,'QA B6 Dish','portion','5.00',true,true)`, [ids.dish, ids.branchA]);
   await pool.query(`insert into bom_recipes (id, branch_id, menu_item_id, component_type, raw_material_id, qty_per_unit) values ($1,$2,$3,'RAW_MATERIAL',$4,'1.000')`, [id(), ids.branchA, ids.dish, ids.flour]);

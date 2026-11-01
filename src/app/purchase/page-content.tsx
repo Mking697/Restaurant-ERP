@@ -24,6 +24,7 @@ import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
 import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
+import { VendorApprovalPanel } from "@/components/vendor-approval-panel";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -512,6 +513,7 @@ export default function PurchasePage() {
           <TabsTrigger value="pos">{uiText("Purchase Orders")}</TabsTrigger>
           <TabsTrigger value="grns">{uiText("GRN / Quality")}</TabsTrigger>
           <TabsTrigger value="vendor-returns">{uiText("Vendor returns", "Vendor returns")}</TabsTrigger>
+          <TabsTrigger value="vendors">{uiText("Vendors", "Vendors")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="indents">
@@ -638,6 +640,7 @@ export default function PurchasePage() {
           <GrnQualitySection refreshToken={grnRefresh} />
         </TabsContent>
         <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /></TabsContent>
+        <TabsContent value="vendors"><VendorApprovalPanel /></TabsContent>
       </Tabs>
 
       <ToastHost />

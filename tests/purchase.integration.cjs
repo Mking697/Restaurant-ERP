@@ -73,7 +73,7 @@ async function main() {
   ownerCookie = `restaurant_session=${ownerToken}`;
   managerCookie = `restaurant_session=${managerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Purchase Chicken','kg'),($2,'QA Purchase Rice','kg')`, [ids.chicken, ids.rice]);
-  await pool.query(`insert into vendors (id, name, phone_e164) values ($1,'QA Purchase Vendor','+919****0303')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA Purchase Vendor','+919****0303','APPROVED')`, [ids.vendor]);
 
   const results = [];
   const check = (label, cond, extra) => results.push({ label, pass: !!cond, extra });

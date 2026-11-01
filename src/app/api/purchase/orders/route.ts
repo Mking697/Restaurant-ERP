@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { indents, indentLines, purchaseOrders, purchaseOrderLines } from "@/db/schema/purchase";
 import { branches } from "@/db/schema/platform";
@@ -8,7 +8,9 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, string } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { allowedFields, assertIndentApprovedForPo, assertPoMatchesIndent, generatePoNumber, parseGeneralPurchase, parsePoIndentId, parsePoLines, PO_STATUSES, parseStatusFilter } from "@/lib/server/purchase";
+import { assertVendorEligible } from "@/lib/server/vendor-approval";
 import { ensureBranch, ensureRawMaterial, ensureVendor, loadIndent } from "../_shared";
+import { rawMaterials } from "@/db/schema/menu";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,12 +89,17 @@ export async function POST(request: Request) {
       }
 
       const lines = parsePoLines(input.lines, isGeneralPurchase);
+      let categories: string[] = [];
       if (!isGeneralPurchase) {
         const approvedLines = await tx.select({ rawMaterialId: indentLines.rawMaterialId, qty: indentLines.qty })
           .from(indentLines).where(eq(indentLines.indentId, indentIdInput!));
         assertPoMatchesIndent(lines, approvedLines);
         for (const line of lines) await ensureRawMaterial(tx, line.rawMaterialId!);
+        const rawIds = [...new Set(lines.map((l) => l.rawMaterialId!))];
+        const categoryRows = await tx.select({ category: rawMaterials.category }).from(rawMaterials).where(inArray(rawMaterials.id, rawIds));
+        categories = [...new Set(categoryRows.map((r) => r.category).filter((c) => c))];
       }
+      await assertVendorEligible(tx, vendorId, branchId, categories);
 
       const id = randomUUID();
       const poNumber = generatePoNumber();

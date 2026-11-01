@@ -22,6 +22,7 @@ async function harness(options = {}) {
   };
   const deps = {
     '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
+    '@/components/vendor-approval-panel': { VendorApprovalPanel: 'VendorApprovalPanel' },
     react: hooks, 'react/jsx-runtime': require('react/jsx-runtime'), '@/lib/ui-copy': { useUiCopy: () => en => en },
     '@/lib/current-branch': { useBranches: () => ({ branches: [] }) },
     '@/lib/current-user': { RequestJsonError, useCurrentUser: () => user, requestJson: async (url, init) => {
