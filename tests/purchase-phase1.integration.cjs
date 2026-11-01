@@ -39,6 +39,8 @@ async function upload(path, fieldName, cookie) {
 
 async function cleanup() {
   await pool.query(`delete from audit_log where user_id in ($1,$2)`, [ids.owner, ids.accounts]);
+  await pool.query(`delete from vendor_payments where branch_id = $1`, [ids.branch]);
+  await pool.query(`delete from three_way_match_grns where match_id in (select id from three_way_match where branch_id=$1)`, [ids.branch]);
   await pool.query(`delete from three_way_match where branch_id = $1`, [ids.branch]);
   await pool.query(`delete from vendor_invoices where branch_id = $1`, [ids.branch]);
   await pool.query(`delete from material_returns where branch_id = $1`, [ids.branch]);
@@ -49,6 +51,9 @@ async function cleanup() {
   await pool.query(`delete from indent_lines where indent_id in (select id from indents where branch_id = $1)`, [ids.branch]);
   await pool.query(`delete from indents where branch_id = $1`, [ids.branch]);
   await pool.query(`delete from inventory_stock where branch_id = $1`, [ids.branch]);
+  await pool.query(`delete from batch_movements where batch_id in (select id from stock_batches where branch_id=$1 or raw_material_id=$2)`, [ids.branch, ids.rice]);
+  await pool.query(`delete from stock_batches where branch_id=$1 or raw_material_id=$2`, [ids.branch, ids.rice]);
+  await pool.query(`delete from stock_movements where branch_id=$1 or raw_material_id=$2`, [ids.branch, ids.rice]);
   await pool.query(`delete from raw_materials where id = $1`, [ids.rice]);
   await pool.query(`delete from vendors where id = $1`, [ids.vendor]);
   await pool.query(`delete from sessions where user_id in ($1,$2)`, [ids.owner, ids.accounts]);
@@ -66,7 +71,7 @@ async function main() {
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(accountsToken), ids.accounts]);
   const accountsCookie = `restaurant_session=${accountsToken}`;
 
-  await pool.query(`insert into vendors (id, name, phone_e164, email, tin) values ($1,'QA Vendor','+255000000779','v@qa.test','')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, email, tin, status) values ($1,'QA Vendor','+255****0779','v@qa.test','','APPROVED')`, [ids.vendor]);
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Purchase-1 Rice','kg')`, [ids.rice]);
 
   const results = [];
@@ -141,8 +146,12 @@ async function main() {
   const approveTwice = await req('POST', `/api/purchase/orders/${poId}/three-way/approve`, {}, accountsCookie);
   check('approve twice -> 409 (once-only)', approveTwice.status === 409, approveTwice.json);
 
-  const markPaid = await req('POST', `/api/purchase/orders/${poId}/three-way/paid`, {}, accountsCookie);
-  check('mark paid 200', markPaid.status === 200 && markPaid.json?.match?.paymentStatus === 'PAID', markPaid.json);
+  const markPaid = await req('POST', `/api/purchase/orders/${poId}/three-way/paid`, { amountTsh: '400.00', paymentMethod: 'BANK_TRANSFER', referenceNumber: 'TXN-QAP1-1', paidAt: '2026-11-01', idempotencyKey: 'qap1-pay-1' }, accountsCookie);
+  check('mark paid 201', markPaid.status === 201 && markPaid.json?.match?.paymentStatus === 'PAID', markPaid.json);
+  const markPaidReplay = await req('POST', `/api/purchase/orders/${poId}/three-way/paid`, { amountTsh: '400.00', paymentMethod: 'BANK_TRANSFER', referenceNumber: 'TXN-QAP1-1', paidAt: '2026-11-01', idempotencyKey: 'qap1-pay-1' }, accountsCookie);
+  check('mark paid replay (same idempotencyKey+payload) 200, replayed:true, no duplicate', markPaidReplay.status === 200 && markPaidReplay.json?.replayed === true, markPaidReplay.json);
+  const dbPaymentCount = await pool.query(`select count(*)::int as n from vendor_payments where po_id = $1`, [poId]);
+  check('real DB: exactly one vendor_payments row despite the replay', dbPaymentCount.rows[0]?.n === 1, dbPaymentCount.rows[0]);
   const dbMatch = await pool.query(`select payment_status, approved_by_id, paid_by_id from three_way_match where po_id = $1`, [poId]);
   check('real DB: PAID, approved_by_id and paid_by_id are the Accounts user', dbMatch.rows[0]?.payment_status === 'PAID' && dbMatch.rows[0]?.approved_by_id === ids.accounts && dbMatch.rows[0]?.paid_by_id === ids.accounts, dbMatch.rows[0]);
 

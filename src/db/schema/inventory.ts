@@ -1,4 +1,6 @@
-import { boolean, date, index, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, date, index, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { warehouses } from "./warehouses";
 import { branches } from "./platform";
 import { rawMaterials } from "./menu";
 import { users } from "./auth";
@@ -37,9 +39,8 @@ export const stockBatches = pgTable(
   "stock_batches",
   {
     id: text("id").primaryKey(),
-    branchId: text("branch_id")
-      .notNull()
-      .references(() => branches.id),
+    branchId: text("branch_id").references(() => branches.id),
+    warehouseId: text("warehouse_id").references(() => warehouses.id),
     rawMaterialId: text("raw_material_id")
       .notNull()
       .references(() => rawMaterials.id),
@@ -47,11 +48,26 @@ export const stockBatches = pgTable(
     qtyReceived: numeric("qty_received", { precision: 12, scale: 3 }).notNull(),
     qtyRemaining: numeric("qty_remaining", { precision: 12, scale: 3 }).notNull(), // FIFO draw-down
     expiryDate: date("expiry_date"),
+    // Legacy nulls remain UNKNOWN, never auto-classified as non-expiring.
+    expiryStatus: text("expiry_status").$type<"UNKNOWN" | "DATED" | "NON_EXPIRING">().notNull().default("UNKNOWN"),
+    originBatchId: text("origin_batch_id"),
     grnLineId: text("grn_line_id").notNull().default(""),
+    // GAP-010: real per-kg vendor cost, snapshotted at credit time, never
+    // retroactively recomputed from a later rate/BOM edit. Set from the
+    // GRN line's accepted rate on a real purchase credit; preserved (not
+    // reset) across a transfer receive, since it is the SAME lot's cost
+    // carried to a new location. Left NULL ("unknown cost") on opening
+    // stock, physical-count surplus, wastage/night-variance reconciliation
+    // and Owner batch-reconcile credits — GAP-010's actual-cutting costing
+    // fails closed (409) rather than guessing a cost for such a lot.
+    unitCostTsh: numeric("unit_cost_tsh", { precision: 12, scale: 4 }),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("stock_batches_branch_raw_idx").on(table.branchId, table.rawMaterialId),
+    index("stock_batches_warehouse_raw_idx").on(table.warehouseId, table.rawMaterialId),
+    check("stock_batches_location_xor", sql`(${table.branchId} is not null) <> (${table.warehouseId} is not null)`),
+    check("stock_batches_expiry_valid", sql`(${table.expiryStatus} = 'UNKNOWN') or (${table.expiryStatus} = 'DATED' and ${table.expiryDate} is not null) or (${table.expiryStatus} = 'NON_EXPIRING' and ${table.expiryDate} is null)`),
     index("stock_batches_expiry_idx").on(table.expiryDate), // 48h-before-expiry WhatsApp alert cron
   ]
 );

@@ -121,7 +121,8 @@ export async function POST(request: Request) {
 
       const recipeRows = await readStockRecipe(tx, branchId, menuItemIds);
       const required = directRequirements(branchId, recipeRows, lines.map(line => ({ menuItemId: line.menuItemId, quantity: String(line.qty) })));
-      const deductions = await deductStock(tx, branchId, required);
+      const orderId = randomUUID();
+      const deductions = await deductStock(tx, branchId, required, { type: "POS_ORDER", id: orderId, actorId: actor.id });
 
       const subtotal = lines.reduce((sum, line) => sum + Number(itemById.get(line.menuItemId)!.price) * line.qty, 0);
 
@@ -147,7 +148,6 @@ export async function POST(request: Request) {
       // paise-exact BigInt math src/lib/server/vat.ts uses for tax.
       const tenderCurrencyAmount = tenderCurrencyCode === "INR" ? totalAmount : (Number(totalAmount) / fxRateToInr).toFixed(2);
 
-      const orderId = randomUUID();
       const orderNumber = `ORD-${Date.now()}-${orderId.slice(0, 4)}`;
       const cogs = await computeOrderCogs(tx, branchId, lines);
       await tx.insert(posOrders).values({

@@ -2,6 +2,7 @@ import { index, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg
 import { branches } from "./platform";
 import { rawMaterials } from "./menu";
 import { users } from "./auth";
+import { internalRequisitionLines } from "./requisitions";
 
 // ---------------------------------------------------------------------------
 // WAREHOUSE — 2-level stock model (per the process-flow roadmap): one or
@@ -63,6 +64,11 @@ export const stockTransfers = pgTable(
     receivedById: text("received_by_id").references(() => users.id),
     dispatchedAt: timestamp("dispatched_at", { withTimezone: true }).notNull().defaultNow(),
     receivedAt: timestamp("received_at", { withTimezone: true }),
+    // GAP-014: optional link to the internal-requisition line this real
+    // dispatch fulfills — NULL for an ad-hoc transfer with no requisition
+    // (fully backward compatible). Never a second source of truth for
+    // qtyIssued; that is always derived by summing linked transfers.
+    requisitionLineId: text("requisition_line_id").references(() => internalRequisitionLines.id),
   },
   (table) => [
     index("stock_transfers_from_idx").on(table.fromWarehouseId),

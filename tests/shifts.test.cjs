@@ -212,8 +212,8 @@ test('three equal shifts (8h each) tile 24h cleanly', () => {
   assert.equal(result.length, 3);
 });
 
-test('currentIstTime formats as 24h HH:MM in Asia/Kolkata', () => {
+test('currentIstTime formats as 24h HH:MM in Tanzania EAT', () => {
   const { currentIstTime } = load();
-  const t = currentIstTime(new Date('2026-01-15T03:30:00Z')); // 09:00 IST
+  const t = currentIstTime(new Date('2026-01-15T06:00:00Z')); // 09:00 EAT
   assert.equal(t, '09:00');
 });

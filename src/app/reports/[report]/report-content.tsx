@@ -21,7 +21,7 @@ interface FoodBranch {
   excludedOrders: { orderId: string; reason: string }[];
 }
 interface Score { branchId: string; branchName: string; periodStart: string; periodEnd: string; rank: number; totalScore: string; onTimeCount: number; delayCount: number; notDoneCount: number; componentsUsed: string[] }
-const istDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+const istDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Dar_es_Salaam", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); // GAP-008 (Oct 31 2026): Tanzania EAT, was India IST
 const RevenueChart = RevenueTrendChart as React.ComponentType<{ data: { date: string; revenue: number }[] }>;
 
 export default function ReportDetailContent({ slug }: { slug: ReportSlug }) {

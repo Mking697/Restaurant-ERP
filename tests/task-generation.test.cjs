@@ -13,12 +13,12 @@ Module._load = function (request, parent, isMain) {
 const load = () => require('../src/lib/server/task-generation.ts');
 
 // ---------------------------------------------------------------------------
-// istDateOnly — IST (UTC+5:30, no DST) calendar date from a UTC instant.
+// istDateOnly — Tanzania EAT (UTC+3, no DST) calendar date from a UTC instant.
 // ---------------------------------------------------------------------------
-test('istDateOnly converts a UTC instant to its IST calendar date, including midnight rollover', () => {
+test('istDateOnly converts a UTC instant to its Tanzania EAT calendar date, including midnight rollover', () => {
   const { istDateOnly } = load();
-  assert.equal(istDateOnly(new Date('2026-01-01T18:35:00Z')), '2026-01-02'); // 00:05 IST next day
-  assert.equal(istDateOnly(new Date('2026-01-01T18:29:00Z')), '2026-01-01'); // 23:59 IST same day
+  assert.equal(istDateOnly(new Date('2026-01-01T21:05:00Z')), '2026-01-02'); // 00:05 EAT next day
+  assert.equal(istDateOnly(new Date('2026-01-01T20:59:00Z')), '2026-01-01'); // 23:59 EAT same day
   assert.equal(istDateOnly(new Date('2026-06-15T00:00:00Z')), '2026-06-15');
 });
 
@@ -117,12 +117,12 @@ test('pendingCycleIndexes caps a huge catch-up gap at maxCatchUp', () => {
 });
 
 // ---------------------------------------------------------------------------
-// dueAtForCycle — IST wall-clock shiftTime converted to the correct UTC instant.
+// dueAtForCycle — Tanzania EAT wall-clock shiftTime converted to the correct UTC instant.
 // ---------------------------------------------------------------------------
-test('dueAtForCycle converts an IST wall-clock shiftTime into the correct UTC instant', () => {
+test('dueAtForCycle converts a Tanzania EAT wall-clock shiftTime into the correct UTC instant', () => {
   const { dueAtForCycle } = load();
   const due = dueAtForCycle('2026-01-05', '09:30');
-  assert.equal(due.toISOString(), '2026-01-05T04:00:00.000Z'); // 09:30 IST = 04:00 UTC
+  assert.equal(due.toISOString(), '2026-01-05T06:30:00.000Z'); // 09:30 EAT = 06:30 UTC
 });
 
 // ---------------------------------------------------------------------------

@@ -41,11 +41,13 @@ export function offerMessage(params: { offerText: string; validUntil: string; br
 // ---------------------------------------------------------------------------
 
 function shortClock(date: Date): string {
-  // Fixed +05:30 wall-clock label, matching src/lib/server/task-generation.ts's
-  // own IST-anchored due-date arithmetic — this is the same business clock
-  // the scheduler itself uses, not a claim about the branch's real timezone.
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-  const shifted = new Date(date.getTime() + IST_OFFSET_MS);
+  // Fixed +03:00 Tanzania EAT wall-clock label, matching
+  // src/lib/server/task-generation.ts's own EAT-anchored due-date
+  // arithmetic (GAP-008, October 31, 2026 — was previously IST +05:30) —
+  // this is the same business clock the scheduler itself uses, not a
+  // claim about the branch's real timezone.
+  const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const shifted = new Date(date.getTime() + EAT_OFFSET_MS);
   const hh = String(shifted.getUTCHours()).padStart(2, "0");
   const mm = String(shifted.getUTCMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
@@ -67,11 +69,18 @@ export function dailySummaryMessage(params: {
   overdueTasks: number;
   pendingHandover: boolean;
   lowStockCount: number;
+  preparedLowStockCount?: number;
+  preparedHighStockCount?: number;
 }): string {
   const salesLine = params.completedSales === null ? "sales data not available" : `${params.completedSales} completed sale(s)`;
   const handoverLine = params.pendingHandover ? ", 1 shift handover pending acceptance" : "";
   const lowStockLine = params.lowStockCount > 0 ? `, ${params.lowStockCount} item(s) below minimum stock level` : "";
-  return `Good morning! Daily summary for ${params.branchName}: ${salesLine} today so far, ${params.overdueTasks} overdue task(s)${handoverLine}${lowStockLine}. / Aaj ka branch summary; kripya review karein. 🙏`;
+  // GAP-012: prepared (Semi-FG) low/high breaches, labeled separately from
+  // raw — never merged into one combined count, so a manager can tell
+  // which inventory kind needs attention.
+  const preparedLowLine = (params.preparedLowStockCount ?? 0) > 0 ? `, ${params.preparedLowStockCount} prepared item(s) below minimum` : "";
+  const preparedHighLine = (params.preparedHighStockCount ?? 0) > 0 ? `, ${params.preparedHighStockCount} prepared item(s) above maximum` : "";
+  return `Good morning! Daily summary for ${params.branchName}: ${salesLine} today so far, ${params.overdueTasks} overdue task(s)${handoverLine}${lowStockLine}${preparedLowLine}${preparedHighLine}. / Aaj ka branch summary; kripya review karein. 🙏`;
 }
 
 // ---------------------------------------------------------------------------

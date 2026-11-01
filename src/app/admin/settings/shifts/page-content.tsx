@@ -169,14 +169,14 @@ function ShiftReminder({ run, definition }: { run: ShiftRun; definition?: ShiftR
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   if (!definition) return <p className="text-sm text-muted-foreground">{t("End this shift manually on Cash Drop. Its original window is no longer in the active configuration, so no scheduled due time is shown.", "Cash Drop par shift manually end karo. Original window active configuration mein nahi hai, isliye due time nahi dikhaya gaya hai.")}</p>;
-  // Same IST wall-clock convention as the server; this is a reminder only.
+  // Same Tanzania EAT wall-clock convention as the server; this is a reminder only.
   const started = new Date(run.startedAt);
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(started);
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Dar_es_Salaam", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(started);
   const part = (type: string) => parts.find((value) => value.type === type)?.value;
-  let due = new Date(`${part("year")}-${part("month")}-${part("day")}T${definition.endTime}:00+05:30`).getTime();
+  let due = new Date(`${part("year")}-${part("month")}-${part("day")}T${definition.endTime}:00+03:00`).getTime();
   if (due <= started.getTime()) due += 24 * 60 * 60 * 1000;
   return <p role="status" className={now >= due ? "text-sm font-medium text-amber-700 dark:text-amber-400" : "text-sm text-muted-foreground"}>
-    {now >= due ? t("Scheduled shift end is due. End it manually on Cash Drop; time alone never closes a shift.", "Scheduled shift end due hai. Cash Drop par manually end karo; time se shift auto-close nahi hoti.") : t("Scheduled end reminder:", "Scheduled end reminder:")} {new Date(due).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST.
+    {now >= due ? t("Scheduled shift end is due. End it manually on Cash Drop; time alone never closes a shift.", "Scheduled shift end due hai. Cash Drop par manually end karo; time se shift auto-close nahi hoti.") : t("Scheduled end reminder:", "Scheduled end reminder:")} {new Date(due).toLocaleString("en-GB", { timeZone: "Africa/Dar_es_Salaam" })} EAT.
     {now < due && <> {t("End manually on Cash Drop when ready; this is not an automatic cutoff.", "Ready hone par Cash Drop par manually end karo; yeh automatic cutoff nahi hai.")}</>}
   </p>;
 }

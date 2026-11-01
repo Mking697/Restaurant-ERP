@@ -2,6 +2,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { menuItems } from "@/db/schema/menu";
 import { semiFgProductions, semiFgStock } from "@/db/schema/production";
+import { actualCuttingProductions } from "@/db/schema/cutting-production";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
@@ -20,7 +21,11 @@ export async function GET(request: Request) {
       .from(menuItems).leftJoin(semiFgStock, and(eq(semiFgStock.branchId, menuItems.branchId), eq(semiFgStock.menuItemId, menuItems.id)))
       .where(and(eq(menuItems.branchId, branchId), eq(menuItems.isSemiFg, true))).orderBy(asc(menuItems.name), asc(menuItems.id));
     const productions = await db.select().from(semiFgProductions).where(eq(semiFgProductions.branchId, branchId)).orderBy(desc(semiFgProductions.createdAt), desc(semiFgProductions.id)).limit(100);
-    return json({ stock, productions });
+    // GAP-009: Actual Cutting records are a separate audit trail, always
+    // returned alongside the existing Fixed-BOM productions above — both
+    // modes' history is visible in one place.
+    const cuttingProductions = await db.select().from(actualCuttingProductions).where(eq(actualCuttingProductions.branchId, branchId)).orderBy(desc(actualCuttingProductions.producedAt), desc(actualCuttingProductions.id)).limit(100);
+    return json({ stock, productions, cuttingProductions });
   });
 }
 

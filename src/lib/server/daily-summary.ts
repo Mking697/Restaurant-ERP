@@ -11,6 +11,7 @@ import { locked } from "./auth";
 import { istDateOnly } from "./task-generation";
 import { branchEscalationRecipients } from "./task-notifications";
 import { dailySummaryMessage } from "./whatsapp-triggers";
+import { countPreparedStockBreaches } from "./prepared-stock-thresholds";
 import { sendWhatsAppMessage } from "@/lib/chatxflow";
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,7 @@ export async function runDailySummary(now: Date = new Date()): Promise<DailySumm
       .from(inventoryStock)
       .where(and(eq(inventoryStock.branchId, branch.id), sql`${inventoryStock.minStockLevel} > 0`, lt(inventoryStock.qtyOnHand, inventoryStock.minStockLevel)));
     const lowStockCount = Number(lowStockRow?.count ?? 0);
+    const { preparedLowStockCount, preparedHighStockCount } = await countPreparedStockBreaches(db, branch.id);
 
     const recipients = await branchEscalationRecipients(db, branch.id);
     if (!recipients.length) continue;
@@ -114,6 +116,8 @@ export async function runDailySummary(now: Date = new Date()): Promise<DailySumm
         overdueTasks: overdueRows.length,
         pendingHandover: Boolean(pendingHandover),
         lowStockCount,
+        preparedLowStockCount,
+        preparedHighStockCount,
       });
       const result = await sendWhatsAppMessage(recipient.phone, message, {
         relatedEntityType: "DAILY_SUMMARY",

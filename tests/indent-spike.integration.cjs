@@ -24,12 +24,14 @@ const tokenHash = (t) => crypto.createHash('sha256').update(t).digest('hex');
 const ids = {
   branch: 'qa-spike-branch',
   manager: 'qa-spike-manager',
+  owner: 'qa-spike-owner',
   vendor: 'qa-spike-vendor',
   chicken: 'qa-spike-mat-chicken', // builds up 3 real historical samples, avg = 10
   rice: 'qa-spike-mat-rice', // never purchased: always <3 samples
 };
 const managerToken = crypto.randomBytes(32).toString('hex');
-let managerCookie;
+const ownerToken = crypto.randomBytes(32).toString('hex');
+let managerCookie, ownerCookie;
 
 async function req(method, path, bodyObj, cookie) {
   const res = await fetch(BASE + path, {
@@ -51,11 +53,14 @@ async function cleanup() {
   await pool.query(`delete from indent_lines where indent_id in (select id from indents where branch_id = $1)`, [ids.branch]);
   await pool.query(`delete from indents where branch_id = $1`, [ids.branch]);
   await pool.query(`delete from inventory_stock where branch_id = $1`, [ids.branch]);
+  await pool.query(`delete from batch_movements where batch_id in (select id from stock_batches where branch_id=$1 or raw_material_id=any($2))`, [ids.branch, [ids.chicken, ids.rice]]);
+  await pool.query(`delete from stock_batches where branch_id=$1 or raw_material_id=any($2)`, [ids.branch, [ids.chicken, ids.rice]]);
+  await pool.query(`delete from stock_movements where branch_id=$1 or raw_material_id=any($2)`, [ids.branch, [ids.chicken, ids.rice]]);
   await pool.query(`delete from vendor_rates where vendor_id = $1`, [ids.vendor]);
   await pool.query(`delete from vendors where id = $1`, [ids.vendor]);
   await pool.query(`delete from raw_materials where id = any($1)`, [[ids.chicken, ids.rice]]);
-  await pool.query(`delete from sessions where user_id = $1`, [ids.manager]);
-  await pool.query(`delete from users where id = $1`, [ids.manager]);
+  await pool.query(`delete from sessions where user_id = any($1)`, [[ids.manager, ids.owner]]);
+  await pool.query(`delete from users where id = any($1)`, [[ids.manager, ids.owner]]);
   await pool.query(`delete from branches where id = $1`, [ids.branch]);
 }
 
@@ -71,7 +76,7 @@ async function runFullCycle(qty, rate) {
   assert.equal(submit.status, 200, JSON.stringify(submit.json));
   let status = submit.json.indent.status;
   if (status === 'PENDING_APPROVAL') {
-    const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, managerCookie);
+    const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, ownerCookie);
     assert.equal(approve.status, 200, JSON.stringify(approve.json));
     status = approve.json.indent.status;
   }
@@ -93,11 +98,14 @@ async function runFullCycle(qty, rate) {
 async function main() {
   await cleanup();
   await pool.query(`insert into branches (id, name, code, lat, lng) values ($1,'QA Spike Branch','QASPIKE','0','0')`, [ids.branch]);
-  await pool.query(`insert into users (id, name, phone_e164, role, branch_id, status, module_access) values ($1,'QA Spike Manager','+255712000401','BRANCH_MANAGER',$2,'Active','{PURCHASE_INDENT,PURCHASE_ORDER,INVENTORY}')`, [ids.manager, ids.branch]);
+  await pool.query(`insert into users (id, name, phone_e164, role, branch_id, status, module_access) values ($1,'QA Spike Manager','+255****0401','BRANCH_MANAGER',$2,'Active','{PURCHASE_INDENT,PURCHASE_ORDER,INVENTORY}')`, [ids.manager, ids.branch]);
+  await pool.query(`insert into users (id, name, phone_e164, role, status) values ($1,'QA Spike Owner','+255****0403','SUPER_ADMIN','Active')`, [ids.owner]);
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(managerToken), ids.manager]);
+  await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(ownerToken), ids.owner]);
   managerCookie = `restaurant_session=${managerToken}`;
+  ownerCookie = `restaurant_session=${ownerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Spike Chicken','kg'),($2,'QA Spike Rice','kg')`, [ids.chicken, ids.rice]);
-  await pool.query(`insert into vendors (id, name, phone_e164) values ($1,'QA Spike Vendor','+255712000402')`, [ids.vendor]);
+  await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA Spike Vendor','+255****0402','APPROVED')`, [ids.vendor]);
 
   const results = [];
   const check = (label, cond, extra) => results.push({ label, pass: !!cond, extra });
@@ -162,7 +170,7 @@ async function main() {
   const rejectedIndent = await req('POST', '/api/purchase/indents', { branchId: ids.branch, lines: [{ rawMaterialId: ids.rice, qty: '999' }] }, managerCookie);
   const rejectedIndentId = rejectedIndent.json.indent.id;
   await req('POST', `/api/purchase/indents/${rejectedIndentId}/submit`, {}, managerCookie);
-  const rejected = await req('POST', `/api/purchase/indents/${rejectedIndentId}/reject`, {}, managerCookie);
+  const rejected = await req('POST', `/api/purchase/indents/${rejectedIndentId}/reject`, {}, ownerCookie);
   check('rejected-indent regression: reject still works', rejected.status === 200 && rejected.json.indent.status === 'REJECTED', rejected.json);
   const riceStillNoData = await req('POST', '/api/purchase/indents', { branchId: ids.branch, lines: [{ rawMaterialId: ids.rice, qty: '1' }] }, managerCookie);
   const riceStillNoDataSubmit = await req('POST', `/api/purchase/indents/${riceStillNoData.json.indent.id}/submit`, {}, managerCookie);

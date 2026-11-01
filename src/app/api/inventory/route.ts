@@ -7,6 +7,7 @@ import { branches } from "@/db/schema/platform";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, numeric, string } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
+import { creditBatch } from "@/lib/server/stock-batches";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const columns = { id: inventoryStock.id, branchId: inventoryStock.branchId, rawMaterialId: inventoryStock.rawMaterialId, name: rawMaterials.name, unit: rawMaterials.unit, category: rawMaterials.category, isHighValue: rawMaterials.isHighValue, qtyOnHand: inventoryStock.qtyOnHand, minStockLevel: inventoryStock.minStockLevel, maxStockLevel: inventoryStock.maxStockLevel, updatedAt: inventoryStock.updatedAt };
@@ -39,6 +40,11 @@ export async function POST(request: Request) { return api(async () => {
     }
     if ((await tx.select({ id: inventoryStock.id }).from(inventoryStock).where(and(eq(inventoryStock.branchId, branchId), eq(inventoryStock.rawMaterialId, rawMaterialId))).limit(1)).length) throw new HttpError(409, "Item already exists in this branch");
     const id = randomUUID(); await tx.insert(inventoryStock).values({ id, branchId, rawMaterialId, qtyOnHand, minStockLevel, maxStockLevel });
+    // GAP-006: opening stock predates batch/expiry tracking — credit one
+    // "unknown origin" batch (expiryDate: null) so stockBatches stays in
+    // sync with inventory_stock for this material, same invariant as every
+    // other RAW writer, without fabricating a date no one actually knows.
+    await creditBatch(tx, branchId, rawMaterialId, qtyOnHand, null, "", { actorId: actor.id, sourceType: "INVENTORY_OPENING", sourceId: id });
     const [row] = await tx.select(columns).from(inventoryStock).innerJoin(rawMaterials, eq(rawMaterials.id, inventoryStock.rawMaterialId)).where(eq(inventoryStock.id, id)); return row;
   }); return json({ item: inventory }, 201);
 }); }

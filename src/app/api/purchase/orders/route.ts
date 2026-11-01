@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { indents, indentLines, purchaseOrders, purchaseOrderLines } from "@/db/schema/purchase";
 import { branches } from "@/db/schema/platform";
@@ -8,7 +8,11 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, string } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { allowedFields, assertIndentApprovedForPo, assertPoMatchesIndent, generatePoNumber, parseGeneralPurchase, parsePoIndentId, parsePoLines, PO_STATUSES, parseStatusFilter } from "@/lib/server/purchase";
+import { assertVendorEligible } from "@/lib/server/vendor-approval";
+import { appliesGeneralPurchaseValueGate, assertGeneralPurchaseRequestConsumable, computeGeneralPurchaseValueTsh } from "@/lib/server/general-purchase-approval";
+import { readBusinessPolicy } from "@/lib/server/business-policy";
 import { ensureBranch, ensureRawMaterial, ensureVendor, loadIndent } from "../_shared";
+import { rawMaterials } from "@/db/schema/menu";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
     const result = await mutate(request, async (tx, actor) => {
       assertModule(actor, "PURCHASE_ORDER");
       const input = await body(request);
-      allowedFields(input, ["branchId", "vendorId", "isGeneralPurchase", "indentId", "lines"]);
+      allowedFields(input, ["branchId", "vendorId", "isGeneralPurchase", "indentId", "lines", "generalPurchaseRequestId"]);
       const branchId = branchScope(actor, string(input.branchId, "branchId"));
       if (!branchId) throw new HttpError(400, "Select a branch");
       await ensureBranch(tx, branchId);
@@ -87,11 +91,25 @@ export async function POST(request: Request) {
       }
 
       const lines = parsePoLines(input.lines, isGeneralPurchase);
+      let categories: string[] = [];
       if (!isGeneralPurchase) {
         const approvedLines = await tx.select({ rawMaterialId: indentLines.rawMaterialId, qty: indentLines.qty })
           .from(indentLines).where(eq(indentLines.indentId, indentIdInput!));
         assertPoMatchesIndent(lines, approvedLines);
         for (const line of lines) await ensureRawMaterial(tx, line.rawMaterialId!);
+        const rawIds = [...new Set(lines.map((l) => l.rawMaterialId!))];
+        const categoryRows = await tx.select({ category: rawMaterials.category }).from(rawMaterials).where(inArray(rawMaterials.id, rawIds));
+        categories = [...new Set(categoryRows.map((r) => r.category).filter((c) => c))];
+      }
+      await assertVendorEligible(tx, vendorId, branchId, categories);
+
+      if (isGeneralPurchase) {
+        const policy = await readBusinessPolicy();
+        const valueTsh = computeGeneralPurchaseValueTsh(lines.map((l) => ({ itemDescription: l.itemDescription, qty: l.qty, rate: l.rate })));
+        if (appliesGeneralPurchaseValueGate(valueTsh, policy.indentValueThresholdTsh)) {
+          const requestId = string(input.generalPurchaseRequestId, "generalPurchaseRequestId");
+          await assertGeneralPurchaseRequestConsumable(tx, requestId, branchId, vendorId, lines.map((l) => ({ itemDescription: l.itemDescription, qty: l.qty, rate: l.rate })), valueTsh);
+        }
       }
 
       const id = randomUUID();

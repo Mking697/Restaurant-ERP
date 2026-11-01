@@ -1,0 +1,2 @@
+ALTER TABLE "semi_fg_stock" ADD COLUMN "min_stock_level" numeric(12, 3) DEFAULT '0' NOT NULL;--> statement-breakpoint
+ALTER TABLE "semi_fg_stock" ADD COLUMN "max_stock_level" numeric(12, 3) DEFAULT '0' NOT NULL;

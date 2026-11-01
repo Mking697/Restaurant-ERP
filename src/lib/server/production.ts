@@ -7,6 +7,8 @@ import type { Executor } from "./auth";
 import { HttpError } from "./permissions";
 import { assertProductionItem, productionInput } from "./production-policy";
 import { decimal, directRequirements, MAX_QUANTITY, quantity, type Requirements } from "./production-quantity";
+import { postStockMovement } from "./stock-ledger";
+import { allocateConsume } from "./stock-batches";
 
 // All recipe writers, production and POS must acquire this BEFORE reading a
 // recipe. Row locks + guarded SQL additionally protect stock from other writers.
@@ -17,7 +19,7 @@ export async function readStockRecipe(tx: Executor, branchId: string, menuItemId
   return tx.select().from(bomRecipes).where(and(eq(bomRecipes.branchId, branchId), inArray(bomRecipes.menuItemId, menuItemIds)));
 }
 
-export async function deductStock(tx: Executor, branchId: string, required: Requirements) {
+export async function deductStock(tx: Executor, branchId: string, required: Requirements, source: { type: string; id: string; actorId: string }) {
   const rawIds = [...required.raw.keys()].sort(), semiIds = [...required.semiFg.keys()].sort();
   // Validate the direct Semi-FG component catalog. Never inspect its embedded
   // recipe or silently substitute raw materials when its stock is missing.
@@ -43,13 +45,36 @@ export async function deductStock(tx: Executor, branchId: string, required: Requ
   }
   for (const id of rawIds) {
     const amount = decimal(required.raw.get(id)!);
+    // GAP-006 HARD BLOCK: FEFO-allocate against real batches BEFORE
+    // touching the aggregate qtyOnHand. If the NON-EXPIRED batch total is
+    // insufficient, this throws 409 and the whole transaction rolls back —
+    // even when the blind aggregate qtyOnHand (checked above) looked
+    // sufficient, because some of it is sitting expired. allowExpired is
+    // deliberately false: this is real consumption feeding production/POS,
+    // never allowed to draw from expired stock.
+    await allocateConsume(tx, branchId, id, amount, { allowExpired: false, actorId: source.actorId, sourceType: source.type, sourceId: source.id });
     const changed = await tx.update(inventoryStock).set({ qtyOnHand: sql`${inventoryStock.qtyOnHand} - ${amount}::numeric`, updatedAt: new Date() }).where(and(eq(inventoryStock.id, rawById.get(id)!.id), eq(inventoryStock.branchId, branchId), gte(inventoryStock.qtyOnHand, amount))).returning({ id: inventoryStock.id });
     if (!changed.length) throw new HttpError(409, "Raw stock changed; retry");
+    // GAP-004 first slice: audited parallel ledger record of this real raw
+    // debit, alongside (not instead of) the qtyOnHand update above. See
+    // src/lib/server/stock-ledger.ts. Semi-FG debits below are NOT yet
+    // wired — flagged limitation, not silently claimed as complete.
+    await postStockMovement(tx, {
+      branchId, rawMaterialId: id, qtyDelta: -required.raw.get(id)!,
+      movementType: "PRODUCTION_CONSUME", sourceType: source.type, sourceId: source.id, actorId: source.actorId,
+    });
   }
   for (const id of semiIds) {
     const amount = decimal(required.semiFg.get(id)!);
     const changed = await tx.update(semiFgStock).set({ qtyOnHand: sql`${semiFgStock.qtyOnHand} - ${amount}::numeric`, updatedAt: new Date() }).where(and(eq(semiFgStock.id, semiById.get(id)!.id), eq(semiFgStock.branchId, branchId), gte(semiFgStock.qtyOnHand, amount))).returning({ id: semiFgStock.id });
     if (!changed.length) throw new HttpError(409, "Semi-FG stock changed; retry");
+    // GAP-004: audited parallel ledger record of this real Semi-FG debit
+    // (e.g. a dish recipe consuming a prepared item), alongside the
+    // qtyOnHand update above. See src/lib/server/stock-ledger.ts.
+    await postStockMovement(tx, {
+      branchId, menuItemId: id, qtyDelta: -required.semiFg.get(id)!,
+      movementType: "SEMI_FG_CONSUME", sourceType: source.type, sourceId: source.id, actorId: source.actorId,
+    });
   }
   return {
     inventoryDeducted: rawIds.map(rawMaterialId => ({ rawMaterialId, qtyDeducted: decimal(required.raw.get(rawMaterialId)!) })),
@@ -69,7 +94,7 @@ export async function produceSemiFg(tx: Executor, actorId: string, branchId: str
   assertProductionItem(item, branchId);
   const recipe = await readStockRecipe(tx, branchId, [item.id]);
   const required = directRequirements(branchId, recipe, [{ menuItemId: item.id, quantity: parsed.quantity }]);
-  const deductions = await deductStock(tx, branchId, required);
+  const deductions = await deductStock(tx, branchId, required, { type: "PRODUCTION", id: parsed.idempotencyKey, actorId });
   const rawIds = [...required.raw.keys()], semiIds = [...required.semiFg.keys()];
   const raws = rawIds.length ? await tx.select().from(rawMaterials).where(inArray(rawMaterials.id, rawIds)) : [];
   const semis = semiIds.length ? await tx.select().from(menuItems).where(inArray(menuItems.id, semiIds)) : [];
@@ -88,5 +113,11 @@ export async function produceSemiFg(tx: Executor, actorId: string, branchId: str
   const changed = await tx.update(semiFgStock).set({ qtyOnHand: sql`${semiFgStock.qtyOnHand} + ${parsed.quantity}::numeric`, updatedAt: new Date() }).where(and(eq(semiFgStock.branchId, branchId), eq(semiFgStock.menuItemId, item.id), lte(semiFgStock.qtyOnHand, decimal(MAX_QUANTITY - quantity(parsed.quantity))))).returning({ qtyOnHand: semiFgStock.qtyOnHand });
   if (!changed.length) throw new HttpError(409, "Semi-FG stock capacity exceeded");
   const [production] = await tx.insert(semiFgProductions).values({ id: randomUUID(), branchId, menuItemId: item.id, quantity: parsed.quantity, idempotencyKey: parsed.idempotencyKey, snapshot, producedById: actorId }).returning();
+  // GAP-004: audited parallel ledger record of this real Semi-FG credit,
+  // alongside the qtyOnHand update above. See src/lib/server/stock-ledger.ts.
+  await postStockMovement(tx, {
+    branchId, menuItemId: item.id, qtyDelta: quantity(parsed.quantity),
+    movementType: "PRODUCTION_OUTPUT", sourceType: "PRODUCTION", sourceId: parsed.idempotencyKey, actorId,
+  });
   return { production, replayed: false };
 }

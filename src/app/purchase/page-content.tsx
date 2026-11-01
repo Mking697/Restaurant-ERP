@@ -24,6 +24,9 @@ import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
 import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
+import { VendorApprovalPanel } from "@/components/vendor-approval-panel";
+import { GeneralPurchaseApprovalsPanel } from "@/components/general-purchase-approvals-panel";
+import { VendorReturnDispatchPanel } from "@/components/vendor-return-dispatch-panel";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -512,6 +515,8 @@ export default function PurchasePage() {
           <TabsTrigger value="pos">{uiText("Purchase Orders")}</TabsTrigger>
           <TabsTrigger value="grns">{uiText("GRN / Quality")}</TabsTrigger>
           <TabsTrigger value="vendor-returns">{uiText("Vendor returns", "Vendor returns")}</TabsTrigger>
+          <TabsTrigger value="vendors">{uiText("Vendors", "Vendors")}</TabsTrigger>
+          <TabsTrigger value="ho-approvals">{uiText("HO Approvals", "HO Approvals")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="indents">
@@ -551,13 +556,16 @@ export default function PurchasePage() {
                           <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => submitIndentForApproval(i.id)}>
                             {uiText(" Submit for Approval ")}</Button>
                         )}
-                        {i.status === "PENDING_APPROVAL" && (
+                        {i.status === "PENDING_APPROVAL" && actor.role === "SUPER_ADMIN" && (
                           <>
                             <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => approveIndent(i.id)}>
                               <Check className="size-3.5 text-success" /> {uiText(" Approve ")}</Button>
                             <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => rejectIndent(i.id)}>
                               <X className="size-3.5 text-destructive" /> {uiText(" Reject ")}</Button>
                           </>
+                        )}
+                        {i.status === "PENDING_APPROVAL" && actor.role !== "SUPER_ADMIN" && (
+                          <span className="text-xs text-muted-foreground">{uiText("Awaiting Owner review (GAP-016 mandatory HO approval)", "Owner review ka wait hai")}</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -613,13 +621,16 @@ export default function PurchasePage() {
                                 />
                               </label>
                             )}
-                            {p.materialReceivedAt ? (
+                            {p.status === "RECEIVED" ? (
                               <Badge variant="success">{uiText("3. Received ✓")}</Badge>
                             ) : (
-                              <Button size="sm" disabled={rowBusyId === p.id} onClick={() => markMaterialReceived(p)}>
-                                <PackageCheck className="size-3.5" /> {uiText(" Mark Material Received ")}</Button>
+                              <>
+                                {p.status === "PARTIALLY_RECEIVED" && <Badge variant="warning">{uiText("3. Partially Received")}</Badge>}
+                                <Button size="sm" disabled={rowBusyId === p.id} onClick={() => markMaterialReceived(p)}>
+                                  <PackageCheck className="size-3.5" /> {uiText(p.status === "PARTIALLY_RECEIVED" ? " Receive Remaining " : " Mark Material Received ")}</Button>
+                              </>
                             )}
-                            {p.materialReceivedAt && <InvoiceStep po={p} accountsAllowed={accountsAllowed} notify={notify} uiText={uiText} />}
+                            {p.status === "RECEIVED" && <InvoiceStep po={p} accountsAllowed={accountsAllowed} notify={notify} uiText={uiText} />}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -634,7 +645,9 @@ export default function PurchasePage() {
         <TabsContent value="grns">
           <GrnQualitySection refreshToken={grnRefresh} />
         </TabsContent>
-        <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /></TabsContent>
+        <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /><VendorReturnDispatchPanel /></TabsContent>
+        <TabsContent value="vendors"><VendorApprovalPanel /></TabsContent>
+        <TabsContent value="ho-approvals"><GeneralPurchaseApprovalsPanel /></TabsContent>
       </Tabs>
 
       <ToastHost />
@@ -668,6 +681,7 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
   const [data, setData] = React.useState<{ invoice: InvoiceApi | null; match: MatchApi | null }>({ invoice: null, match: null });
   const [form, setForm] = React.useState({ invoiceNumber: "", amount: "", taxAdjustmentInr: "", taxAdjustmentNote: "" });
   const [file, setFile] = React.useState<File | null>(null);
+  const [paymentForm, setPaymentForm] = React.useState({ paymentMethod: "BANK_TRANSFER", referenceNumber: "", paidAt: new Date().toISOString().slice(0, 10) });
   const [error, setError] = React.useState("");
 
   function load() {
@@ -709,7 +723,10 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
   async function markPaid() {
     setBusy(true); setError("");
     try {
-      await requestJson(`/api/purchase/orders/${po.id}/three-way/paid`, { method: "POST", body: JSON.stringify({}) });
+      await requestJson(`/api/purchase/orders/${po.id}/three-way/paid`, { method: "POST", body: JSON.stringify({
+        amountTsh: data.match?.invoiceAdjustedTotalInr, paymentMethod: paymentForm.paymentMethod,
+        referenceNumber: paymentForm.referenceNumber, paidAt: paymentForm.paidAt, idempotencyKey: `${po.id}-${paymentForm.paidAt}-${paymentForm.paymentMethod}-${paymentForm.referenceNumber}`,
+      }) });
       notify(uiText("Marked paid.", "Paid mark ho gaya."));
       load();
     } catch (err) { setError(errMsg(err, uiText("Could not mark paid.", "Paid mark nahi hua."))); }
@@ -745,7 +762,20 @@ function InvoiceStep({ po, accountsAllowed, notify, uiText }: { po: PurchaseOrde
           {!data.match.matched && <p className="text-xs text-destructive">{data.match.mismatchReason}</p>}
           <Badge variant="outline">{data.match.paymentStatus}</Badge>
           {accountsAllowed && data.match.matched && data.match.paymentStatus === "PENDING" && <Button disabled={busy} onClick={approvePayment}>{uiText("Approve payment", "Payment approve karo")}</Button>}
-          {accountsAllowed && data.match.paymentStatus === "APPROVED" && <Button disabled={busy} onClick={markPaid}>{uiText("Mark paid", "Paid mark karo")}</Button>}
+          {accountsAllowed && data.match.paymentStatus === "APPROVED" && <div className="space-y-2 rounded border p-2">
+            <p className="text-xs text-muted-foreground">{uiText(`Recording payment evidence for the full outstanding amount (TSh ${data.match.invoiceAdjustedTotalInr}) — partial payments are not approved yet.`, `Payment evidence record ho raha hai poori outstanding amount ke liye (TSh ${data.match.invoiceAdjustedTotalInr}).`)}</p>
+            <div className="flex flex-wrap gap-2">
+              <select className="rounded-md border border-input bg-card px-2 py-1 text-sm" value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value }))}>
+                <option value="BANK_TRANSFER">{uiText("Bank Transfer", "Bank Transfer")}</option>
+                <option value="CASH">{uiText("Cash", "Cash")}</option>
+                <option value="CHEQUE">{uiText("Cheque", "Cheque")}</option>
+                <option value="MOBILE_MONEY">{uiText("Mobile Money", "Mobile Money")}</option>
+              </select>
+              <input className="w-40 rounded-md border border-input bg-card px-2 py-1 text-sm" placeholder={uiText("Reference # (optional)", "Reference # (optional)")} value={paymentForm.referenceNumber} onChange={(e) => setPaymentForm((p) => ({ ...p, referenceNumber: e.target.value }))} />
+              <input type="date" className="rounded-md border border-input bg-card px-2 py-1 text-sm" value={paymentForm.paidAt} onChange={(e) => setPaymentForm((p) => ({ ...p, paidAt: e.target.value }))} />
+            </div>
+            <Button disabled={busy} onClick={markPaid}>{uiText("Mark paid", "Paid mark karo")}</Button>
+          </div>}
         </div>
       )}
     </DialogContent>
@@ -767,6 +797,7 @@ function GrnQualityWorkspace({ user, refreshToken, isCurrent }: { user: CurrentU
   const [selected, setSelected] = React.useState<GrnRow | null>(null);
   const [result, setResult] = React.useState<"PASS" | "PARTIAL" | "FAIL">("PASS");
   const [failures, setFailures] = React.useState<Record<string, string>>({});
+  const [batchDetails, setBatchDetails] = React.useState<Record<string, { batchNo?: string; expiryDate?: string; nonExpiring?: boolean; evidence?: string }>>({});
   const [note, setNote] = React.useState("");
   const [photoUrl, setPhotoUrl] = React.useState("");
   const [error, setError] = React.useState("");
@@ -778,19 +809,20 @@ function GrnQualityWorkspace({ user, refreshToken, isCurrent }: { user: CurrentU
   const busyRef = React.useRef(false);
   const generation = React.useRef(0);
   const readVersion = React.useRef(0);
-  type Decision = { result: "PASS" | "PARTIAL" | "FAIL"; lines: { id: string; qtyFailed: string }[]; note: string; photoUrl: string };
+  type Decision = { result: "PASS" | "PARTIAL" | "FAIL"; lines: { id: string; qtyFailed: string; batchNo?: string; expiryDate?: string; nonExpiring?: boolean; evidence?: string }[]; note: string; photoUrl: string };
   const intent = React.useRef<{ grn: GrnRow; body: Decision; serialized: string } | null>(null);
   const allowed = user.ready && user.authenticated && !user.error && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("PURCHASE_ORDER"));
   const inventoryAllowed = allowed && (user.role === "SUPER_ADMIN" || user.moduleAccess.includes("INVENTORY"));
   const canCheck = (grn: GrnRow) => current() && allowed && (grn.isGeneralPurchase || inventoryAllowed) && grn.qualityReady && !grn.reconciliationRequired && !grn.qualityRecorded && grn.qualityResult === "PENDING";
   const quantity = (value: string) => /^\d{1,12}(?:\.\d{1,3})?$/.test(value) ? BigInt(value.split(".")[0]) * BigInt(1000) + BigInt((value.split(".")[1] ?? "").padEnd(3, "0")) : null;
-  const decisionLines = selected?.lines.map(line => ({ id: line.id, qtyFailed: result === "PASS" ? "0" : result === "FAIL" ? line.qtyReceived : failures[line.id] ?? "0" })) ?? [];
+  const decisionLines = selected?.lines.map(line => ({ id: line.id, qtyFailed: result === "PASS" ? "0" : result === "FAIL" ? line.qtyReceived : failures[line.id] ?? "0", ...(!selected.isGeneralPurchase && result !== "FAIL" ? batchDetails[line.id] ?? {} : {}) })) ?? [];
   const quantitiesValid = !!selected && selected.lines.length > 0 && selected.lines.length <= 50 && new Set(selected.lines.map(line => line.id)).size === selected.lines.length && decisionLines.every((line, i) => {
     const failed = quantity(line.qtyFailed), received = quantity(selected.lines[i].qtyReceived);
     return failed !== null && received !== null && received > BigInt(0) && failed <= received;
   });
   const partialValid = result !== "PARTIAL" || (decisionLines.some(line => (quantity(line.qtyFailed) ?? BigInt(0)) > BigInt(0)) && decisionLines.some((line, i) => quantity(line.qtyFailed) !== quantity(selected!.lines[i].qtyReceived)));
-  const formValid = quantitiesValid && partialValid && note.trim().length <= 1000 && (result === "PASS" || note.trim().length >= 3) && photoUrl.trim().length <= 2000;
+  const batchValid = selected?.isGeneralPurchase || result === "FAIL" || decisionLines.every(line => !line.nonExpiring || (user.role === "SUPER_ADMIN" && !!line.evidence?.trim()));
+  const formValid = batchValid && quantitiesValid && partialValid && note.trim().length <= 1000 && (result === "PASS" || note.trim().length >= 3) && photoUrl.trim().length <= 2000;
   const editable = () => current() && !busyRef.current && !intent.current;
   React.useEffect(() => {
     alive.current = true;
@@ -808,7 +840,7 @@ function GrnQualityWorkspace({ user, refreshToken, isCurrent }: { user: CurrentU
   function openQuality(grn: GrnRow) {
     if (!editable() || !canCheck(grn)) return;
     generation.current++;
-    setSelected(grn); setResult("PASS"); setFailures({}); setNote(""); setPhotoUrl(""); setError("");
+    setSelected(grn); setResult("PASS"); setFailures({}); setBatchDetails({}); setNote(""); setPhotoUrl(""); setError("");
   }
   function closeQuality() {
     if (!editable()) return;
@@ -893,6 +925,12 @@ function GrnQualityWorkspace({ user, refreshToken, isCurrent }: { user: CurrentU
         {selected?.lines.map(line => <div key={line.id} className="min-w-0 space-y-2 rounded border p-3">
           <p className="break-words">{line.name || line.itemDescription} — {line.qtyReceived} {line.unit}</p>
           {result === "PARTIAL" ? <label className="block text-xs">{uiText("Failed quantity")} ({line.unit})<input type="number" min="0" max={line.qtyReceived} step="0.001" aria-label={`Failed quantity for ${line.id}`} value={failures[line.id] ?? "0"} onChange={e => { if (editable()) setFailures(prev => ({ ...prev, [line.id]: e.target.value })); }} className="w-full min-w-0 rounded border p-2" /></label> : <p className="text-xs">{uiText("Failed quantity")}: {result === "PASS" ? "0" : line.qtyReceived} {line.unit}</p>}
+          {!selected.isGeneralPurchase && result !== "FAIL" && <div className="space-y-2">
+            <label className="block text-xs">{uiText("Batch reference (real supplier lot)")}<input aria-label={`Batch reference for ${line.id}`} className="w-full rounded border p-2" value={batchDetails[line.id]?.batchNo ?? ""} onChange={e => { if (editable()) setBatchDetails(prev => ({ ...prev, [line.id]: { ...prev[line.id], batchNo: e.target.value } })); }} /></label>
+            <label className="block text-xs">{uiText("Original expiry date")}<input type="date" aria-label={`Expiry date for ${line.id}`} disabled={batchDetails[line.id]?.nonExpiring} className="w-full rounded border p-2" value={batchDetails[line.id]?.expiryDate ?? ""} onChange={e => { if (editable()) setBatchDetails(prev => ({ ...prev, [line.id]: { ...prev[line.id], expiryDate: e.target.value || undefined } })); }} /></label>
+            <p className="text-xs">{uiText("Unknown expiry is accepted only as HELD stock: consumption and dispatch are blocked until verified. No date never means infinite expiry.")}</p>
+            {user.role === "SUPER_ADMIN" && <><label className="text-xs"><input type="checkbox" aria-label={`Non-expiring for ${line.id}`} checked={batchDetails[line.id]?.nonExpiring ?? false} onChange={e => { if (editable()) setBatchDetails(prev => ({ ...prev, [line.id]: { ...prev[line.id], nonExpiring: e.target.checked || undefined, expiryDate: e.target.checked ? undefined : prev[line.id]?.expiryDate } })); }} /> {uiText("Owner verified non-expiring")}</label><label className="block text-xs">{uiText("Verification evidence (required for non-expiring)")}<input aria-label={`Batch evidence for ${line.id}`} className="w-full rounded border p-2" value={batchDetails[line.id]?.evidence ?? ""} onChange={e => { if (editable()) setBatchDetails(prev => ({ ...prev, [line.id]: { ...prev[line.id], evidence: e.target.value } })); }} /></label></>}
+          </div>}
         </div>)}
         <Field label={uiText("Quality note (required for FAIL/PARTIAL)")}><textarea aria-label="Quality note" maxLength={1000} value={note} onChange={e => { if (editable()) setNote(e.target.value); }} className="w-full min-w-0 rounded border p-2" /></Field>
         <Field label={uiText("Photo/reference (not an upload)")}><input aria-label="Photo/reference (not an upload)" maxLength={2000} value={photoUrl} onChange={e => { if (editable()) setPhotoUrl(e.target.value); }} className="w-full min-w-0 rounded border p-2" /></Field>

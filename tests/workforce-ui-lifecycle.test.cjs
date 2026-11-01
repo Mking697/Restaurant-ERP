@@ -58,7 +58,7 @@ test('an unmounted action or read cannot update a replacement scope',async()=>{
   const gate=deferred();const h=harness(()=>gate.promise);let resource=h.render(()=>h.hooks.useResource('/old'));h.unmount();gate.resolve({secret:'old branch'});await tick();resource=h.render(()=>h.hooks.useResource('/old'));assert.equal(resource.data,null);
   const actionGate=deferred();const a=harness(()=>{});const action=a.render(()=>a.hooks.useAction());const task=action.run(()=>actionGate.promise,'Stale success');a.unmount();actionGate.resolve();assert.equal(await task,false);
 });
-test('business date uses Asia/Kolkata rather than the browser local calendar',()=>{
+test('business date uses Tanzania EAT rather than the browser local calendar',()=>{
   class FixedDate extends Date {constructor(...args){super(...(args.length?args:['2026-10-31T19:30:00.000Z']));}getFullYear(){return this.getUTCFullYear();}getMonth(){return this.getUTCMonth();}getDate(){return this.getUTCDate();}}
-  const h=harness(()=>{},FixedDate);assert.equal(h.hooks.today(),'2026-11-01');assert.equal(h.hooks.monthNow(),'2026-11');
+  const h=harness(()=>{},FixedDate);assert.equal(h.hooks.today(),'2026-10-31');assert.equal(h.hooks.monthNow(),'2026-10');
 });

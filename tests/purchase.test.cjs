@@ -35,6 +35,30 @@ test('PO kind is a strict boolean and store purchases require an indent', () => 
   assert.throws(() => p.parsePoIndentId('approved-id', true), e => e.status === 400);
 });
 
+test('GAP-005: receive-line overrides capture real shortage, never exceed ordered, reject unknown/duplicate lines', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  const poLines = [{ rawMaterialId: 'flour', itemDescription: '', qty: '20' }, { rawMaterialId: null, itemDescription: 'Repair', qty: '1' }];
+  // Omitted entirely -> old default behavior (every line defaults to ordered == received).
+  assert.deepEqual([...p.parseReceiveLines(undefined, poLines).entries()], []);
+  // A real shortage: 15 counted instead of the 20 ordered.
+  assert.deepEqual([...p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '15' }], poLines).entries()], [['flour', '15']]);
+  // itemDescription-keyed (general-purchase) line works the same way.
+  assert.deepEqual([...p.parseReceiveLines([{ itemDescription: 'Repair', qtyReceived: '1' }], poLines).entries()], [['desc:Repair', '1']]);
+  // Cannot receive more than was ordered (no multi-delivery support yet).
+  assert.throws(() => p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '20.001' }], poLines), e => e.status === 400);
+  // Negative quantity rejected.
+  assert.throws(() => p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '-1' }], poLines), e => e.status === 400);
+  // Zero is a legitimate total-shortage receipt.
+  assert.deepEqual([...p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '0' }], poLines).entries()], [['flour', '0']]);
+  // A line that doesn't match any PO line is rejected.
+  assert.throws(() => p.parseReceiveLines([{ rawMaterialId: 'unknown-material', qtyReceived: '1' }], poLines), e => e.status === 400);
+  // Duplicate entries for the same PO line are rejected.
+  assert.throws(() => p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '1' }, { rawMaterialId: 'flour', qtyReceived: '2' }], poLines), e => e.status === 400);
+  // Unknown fields and a non-array value are rejected.
+  assert.throws(() => p.parseReceiveLines([{ rawMaterialId: 'flour', qtyReceived: '1', extra: 'x' }], poLines), e => e.status === 400);
+  assert.throws(() => p.parseReceiveLines('not-an-array', poLines), e => e.status === 400);
+});
+
 test('store PO matches every approved material quantity using exact decimal aggregates', () => {
   const p = require('../src/lib/server/purchase.ts');
   const approved = [{ rawMaterialId: 'a', qty: '0.1' }, { rawMaterialId: 'a', qty: '0.2' }, { rawMaterialId: 'b', qty: '5.000' }];
@@ -172,4 +196,22 @@ test('allowedFields fails closed on unknown keys, same convention as every other
   const p = require('../src/lib/server/purchase.ts');
   assert.throws(() => p.allowedFields({ branchId: 'b', extra: 1 }, ['branchId']), e => e.status === 400);
   p.allowedFields({ branchId: 'b' }, ['branchId']);
+});
+
+test('appliesValueThresholdGate: disabled when no threshold configured', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '1000000.00', allRatesKnown: true }, null), false);
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '1000000.00', allRatesKnown: true }, ''), false);
+});
+
+test('appliesValueThresholdGate: an unknown (unpriced) estimate always triggers the gate when a threshold is set', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '0.00', allRatesKnown: false }, '500000.00'), true);
+});
+
+test('appliesValueThresholdGate: exact boundary is inclusive (at/above triggers, strictly below does not)', () => {
+  const p = require('../src/lib/server/purchase.ts');
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '500000.00', allRatesKnown: true }, '500000.00'), true);
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '500000.01', allRatesKnown: true }, '500000.00'), true);
+  assert.equal(p.appliesValueThresholdGate({ valueTsh: '499999.99', allRatesKnown: true }, '500000.00'), false);
 });
