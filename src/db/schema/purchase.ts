@@ -293,3 +293,47 @@ export const threeWayMatchGrns = pgTable(
     uniqueIndex("three_way_match_grns_match_grn_unique").on(table.matchId, table.grnId),
   ]
 );
+
+// ---------------------------------------------------------------------------
+// GAP-016 (November 2026). General-purchase mandatory HO approval gate.
+//
+// General purchases skip the indent entirely (no raw material, no vendor
+// rate lock), so there was no place for the Owner's value-threshold
+// mandatory-approval policy (src/lib/server/business-policy.ts) to apply —
+// a user could flag isGeneralPurchase=true and bypass it completely. This
+// table is that missing gate, deliberately NOT reusing the indents table
+// (a general purchase has no raw material / no rolling-average spike
+// concept to evaluate).
+//
+// Flow: POST /api/purchase/general-purchase-requests (any PURCHASE_ORDER
+// actor) computes the stated value (qty x rate, both supplied by the
+// requester, no vendor-rate lookup needed) against the SAME Owner-configured
+// threshold indents use. Below threshold (or no threshold configured) =
+// auto-APPROVED immediately, zero added friction, matching the indent
+// free-path. At/above threshold = PENDING_APPROVAL, Owner-only review
+// (POST .../[id]/approve — assertOwner, same single-actor authority as
+// every other mandatory-HO decision this session). POST
+// /api/purchase/orders (general-purchase path) then REQUIRES a matching
+// APPROVED, not-yet-consumed request whenever the SAME threshold check on
+// the PO's own lines would apply — marks it CONSUMED on success so one
+// approval can never authorize two different purchases (one-time use,
+// same discipline as GAP-014's requisitionLineId linkage).
+// ---------------------------------------------------------------------------
+export const generalPurchaseRequestStatusEnum = pgEnum("general_purchase_request_status", ["PENDING_APPROVAL", "APPROVED", "REJECTED", "CONSUMED"]);
+
+export const generalPurchaseRequests = pgTable(
+  "general_purchase_requests",
+  {
+    id: text("id").primaryKey(),
+    branchId: text("branch_id").notNull().references(() => branches.id),
+    requestedById: text("requested_by_id").notNull().references(() => users.id),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id),
+    linesJson: jsonb("lines_json").notNull(), // [{ itemDescription, qty, rate }] — the exact lines this approval covers
+    valueTsh: numeric("value_tsh", { precision: 14, scale: 2 }).notNull(),
+    status: generalPurchaseRequestStatusEnum("status").notNull().default("PENDING_APPROVAL"),
+    approvedById: text("approved_by_id").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("general_purchase_requests_branch_id_idx").on(table.branchId)]
+);

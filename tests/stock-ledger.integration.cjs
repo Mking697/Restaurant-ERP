@@ -30,6 +30,7 @@ const id = () => crypto.randomUUID();
 const ids = {
   branch: 'qa-ledger-branch',
   manager: 'qa-ledger-manager',
+  owner: 'qa-ledger-owner',
   cashier: 'qa-ledger-cashier',
   vendor: 'qa-ledger-vendor',
   flour: 'qa-ledger-mat-flour', // ENTIRE history goes through wired writers -> must reconcile exactly
@@ -39,7 +40,8 @@ const ids = {
 };
 const managerToken = crypto.randomBytes(32).toString('hex');
 const cashierToken = crypto.randomBytes(32).toString('hex');
-let managerCookie, cashierCookie;
+const ownerToken = crypto.randomBytes(32).toString('hex');
+let managerCookie, cashierCookie, ownerCookie;
 
 async function req(method, path, bodyObj, cookie) {
   const res = await fetch(BASE + path, {
@@ -71,8 +73,8 @@ async function cleanup() {
   await pool.query(`delete from vendor_rates where vendor_id = $1`, [ids.vendor]);
   await pool.query(`delete from vendors where id = $1`, [ids.vendor]);
   await pool.query(`delete from raw_materials where id = any($1)`, [[ids.flour, ids.salt]]);
-  await pool.query(`delete from sessions where user_id = any($1)`, [[ids.manager, ids.cashier]]);
-  await pool.query(`delete from users where id = any($1)`, [[ids.manager, ids.cashier]]);
+  await pool.query(`delete from sessions where user_id = any($1)`, [[ids.manager, ids.cashier, ids.owner]]);
+  await pool.query(`delete from users where id = any($1)`, [[ids.manager, ids.cashier, ids.owner]]);
   await pool.query(`delete from branches where id = $1`, [ids.branch]);
 }
 
@@ -96,7 +98,7 @@ async function runFullGrnCycle(qty, rate) {
   assert.equal(submit.status, 200, JSON.stringify(submit.json));
   let status = submit.json.indent.status;
   if (status === 'PENDING_APPROVAL') {
-    const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, managerCookie);
+    const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, ownerCookie);
     assert.equal(approve.status, 200, JSON.stringify(approve.json));
     status = approve.json.indent.status;
   }
@@ -121,10 +123,13 @@ async function main() {
   await pool.query(`insert into branches (id, name, code, lat, lng) values ($1,'QA Ledger Branch','QALEDGER','0','0')`, [ids.branch]);
   await pool.query(`insert into users (id, name, phone_e164, role, branch_id, status, module_access) values ($1,'QA Ledger Manager','+255****0601','BRANCH_MANAGER',$2,'Active','{PURCHASE_INDENT,PURCHASE_ORDER,INVENTORY,MENU_BOM}')`, [ids.manager, ids.branch]);
   await pool.query(`insert into users (id, name, phone_e164, role, branch_id, status, module_access) values ($1,'QA Ledger Cashier','+255****0602','BRANCH_MANAGER',$2,'Active','{POS_CASHIER}')`, [ids.cashier, ids.branch]);
+  await pool.query(`insert into users (id, name, phone_e164, role, status) values ($1,'QA Ledger Owner','+255****0604','SUPER_ADMIN','Active')`, [ids.owner]);
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(managerToken), ids.manager]);
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(cashierToken), ids.cashier]);
+  await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(ownerToken), ids.owner]);
   managerCookie = `restaurant_session=${managerToken}`;
   cashierCookie = `restaurant_session=${cashierToken}`;
+  ownerCookie = `restaurant_session=${ownerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA Ledger Flour','kg'),($2,'QA Ledger Salt','kg')`, [ids.flour, ids.salt]);
   await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA Ledger Vendor','+255****0603','APPROVED')`, [ids.vendor]);
   // Salt's opening balance is seeded DIRECTLY (bypassing the ledger) — same as

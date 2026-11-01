@@ -663,13 +663,39 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-016 - Mandatory HO approval for branch external purchases
 
-Status: PENDING
+Status: DONE for general-purchase bypass closure + self/unauthorized-approval prevention (November 1, 2026)
 Coverage: PARTIAL | Phase: P3 | Depends on: GAP-001, GAP-014, GAP-015
 Source: S3 external PO pending HO approval; E01.
 
 Acceptance: distinguish branch external requests from internal kitchen requisitions/general purchases and enforce the client-approved HO gate before purchase/receipt. Existing low-spike indent auto-approval must not bypass a mandatory HO policy. Record approver/rejection/revision and prevent self/unauthorized approval according to policy, including direct-PO bypass and retry tests.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Owner decisions (confirmed via clarify, November 1, 2026)
+
+1. This pass's priority: close the general-purchase bypass (a user could flag `isGeneralPurchase=true` and skip the Owner's value-threshold policy entirely) AND fix self/unauthorized approval (any `PURCHASE_INDENT`-grant branch actor — including the one who raised the request — could approve their own PENDING_APPROVAL indent).
+2. HO approval for a threshold-triggered item (indent or general purchase) is Owner-only — same single-actor authority as every other mandatory approval this session.
+3. General purchases get their own lightweight pending-approval record (not a reuse of the indents table, which has no concept for free-text general-purchase lines).
+
+#### Implementation (November 1, 2026)
+
+**Self/unauthorized-approval prevention (indents):** `src/app/api/purchase/indents/[id]/approve/route.ts` and `/reject/route.ts` changed from `assertModule(actor, "PURCHASE_INDENT")` to `assertOwner(actor)`. Safe because a `PENDING_APPROVAL` indent only exists by construction when the Owner's own mandatory gate (spike or value threshold, `submit/route.ts`) forced it there — the free, no-review path already auto-approves every below-threshold indent, so nothing that used to auto-approve now needs an extra click. UI (`purchase/page-content.tsx`): the Approve/Reject buttons are now Owner-gated client-side too (cosmetic only — the real gate is server-side).
+
+**General-purchase bypass closure:** new table `generalPurchaseRequests` (migration `0032_classy_taskmaster.sql`, additive) + `src/lib/server/general-purchase-approval.ts`. `POST /api/purchase/general-purchase-requests` computes the stated value (qty × rate, both supplied by the requester — no vendor-rate lookup needed, unlike an indent) against the SAME Owner-configured `indentValueThresholdTsh`; below threshold (or none configured) auto-APPROVEs immediately — zero added friction, matching the indent free path; at/above threshold creates a `PENDING_APPROVAL` row. `POST /api/purchase/orders` (general-purchase path) now ALSO runs this same threshold check on its own lines and, when gated, REQUIRES a `generalPurchaseRequestId` referencing an APPROVED, not-yet-consumed request whose branch/vendor/lines/value match EXACTLY (no bait-and-switch after approval) — consumes it (status -> `CONSUMED`) on success so one approval can never authorize a second purchase. `POST .../[id]/approve` and `/reject` are Owner-only (`assertOwner`). Money math is exact bigint arithmetic (qty scale-3 × rate scale-2, rounded once at the end), never floating point.
+
+UI: `src/components/general-purchase-approvals-panel.tsx` (new) — a branch submits lines for review here first; an Owner approves/rejects; the real Purchase Order is still created on the existing "Purchase Orders" tab, now also needing this request's id once APPROVED. Wired into a new "HO Approvals" tab on `purchase/page-content.tsx`. This pass did NOT deep-integrate the request-id field into the existing PO-creation dialog's UI (it would need to compute the value client-side and show a pending/approved state inline) — the server enforces regardless; a general purchase at/above threshold without the id simply gets a clear 409 today. Left as a follow-up UI-polish item, not a correctness gap.
+
+Tests: `tsc`/`npm test` (491/491)/`npm run build` all clean. New `tests/mandatory-ho-approval.integration.cjs` — **14/14 passed**, covering: a below-threshold general purchase still succeeds directly (zero friction preserved); an at/above-threshold general purchase with no request is rejected (closing the bypass); submitting it for review creates a `PENDING_APPROVAL` record; the SAME branch actor who submitted it cannot approve it (self-approval prevention, 403); the PO still cannot be created while pending; the Owner approves it; the matching PO can then be created; the SAME approved request cannot authorize a SECOND PO (one-time consumption, 409); a request whose lines/value no longer match the PO being created is rejected (409, no bait-and-switch); and separately, a non-Owner cannot approve a PENDING_APPROVAL indent (403) while the Owner can (200). Backward-compat: re-ran `tests/business-policy.integration.cjs` (14/14, unaffected — it never touches general purchases or indent-approve) and 4 pre-existing tests that call indent approve/reject with a non-Owner branch-manager cookie (`purchase.integration.cjs` 50/50, `indent-spike.integration.cjs` 10/10, `multi-grn-receive.integration.cjs` 11/11, `stock-ledger.integration.cjs`) after updating those approve/reject call sites to use an Owner session (their correct new behavior, not a regression — `batches-fefo.integration.cjs`'s existing "manager" fixture was already SUPER_ADMIN, so it needed no change). `purchase-ui.test.cjs`/`grn-quality-ui.test.cjs` harnesses gained stubs for the new `general-purchase-approvals-panel` import and a `useSelectedBranchId` mock.
+
+Separately discovered, NOT caused by this pass and NOT fixed in it (flagged honestly, out of GAP-016's scope): while fixing `indent-spike.integration.cjs`'s cleanup-ordering (added missing `stock_batches`/`stock_movements` deletes before the `raw_materials` delete — a real bug, now fixed), running `stock-ledger.integration.cjs` surfaced a separate pre-existing issue: its Semi-FG production step now fails with "Insufficient NON-EXPIRED verified batch stock" — the GRN-PASS credit in that test's fixture isn't creating a matching `stock_batches` row the way GAP-006's FEFO consumption gate expects. Unrelated to vendor/HO approval; left for a future pass.
+Release: N/A — local, uncommitted source only; ask before committing/deploying. `restaurant_erp_local` has not had migrations `0025`-`0032` applied (only disposable QA databases were used this pass); production Neon is untouched.
+
+#### Remaining work before this GAP can be marked fully DONE (all scopes)
+
+- Category-based mandatory-HO trigger (only a TSh value threshold and a quantity-spike check exist; no category-based trigger).
+- HO approval-workflow enforcement at receiving time is still NOT separately checked (only at indent-submit / general-purchase-submit / PO-creation time) — if an indent's or request's terms could somehow change after approval but before receipt, that path isn't independently re-validated this pass (PO creation itself is still gated, which is the main bypass this pass closed).
+- The general-purchase-request flow is not yet deep-integrated into the existing PO-creation dialog's UI (see note above) — functional via the new "HO Approvals" tab, but not a single seamless flow yet.
+- No UI click-through verification in a live browser yet — same honest caveat standing for every new panel this session.
+
+#### Current-project integration blueprint (fulfilled above for the core flow; remaining items listed above)
 
 - Current-project reuse: Existing `src/app/api/purchase/indents/[id]/submit/route.ts`, `src/app/api/purchase/indents/[id]/approve/route.ts`, `src/app/api/purchase/orders/route.ts`, `src/app/api/purchase/orders/[id]/receive/route.ts` and `src/lib/server/purchase.ts` spike evaluation reuse karein.
 - Proposed data/server change: PROPOSED: explicit procurement purpose, versioned HO approval tied to approved branch/vendor/lines/amount or approved bounds. Same policy guard runs at submission, approval, PO creation and receiving; changed terms invalidate prior approval. Spike calculation is advisory when HO approval is mandatory.

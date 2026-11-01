@@ -23,10 +23,11 @@ async function pageHarness(options = {}) {
   const dependencies = {
     '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
     '@/components/vendor-approval-panel': { VendorApprovalPanel: 'VendorApprovalPanel' },
+    '@/components/general-purchase-approvals-panel': { GeneralPurchaseApprovalsPanel: 'GeneralPurchaseApprovalsPanel' },
     react: fakeReact,
     'react/jsx-runtime': require('react/jsx-runtime'),
     '@/lib/ui-copy': { useUiCopy: () => en => en },
-    '@/lib/current-branch': { useBranches: () => ({ branches: [{ id: 'a', code: 'A', name: 'Branch A' }, { id: 'b', code: 'B', name: 'Branch B' }] }) },
+    '@/lib/current-branch': { useBranches: () => ({ branches: [{ id: 'a', code: 'A', name: 'Branch A' }, { id: 'b', code: 'B', name: 'Branch B' }] }), useSelectedBranchId: () => 'a' },
     '@/lib/current-user': { useCurrentUser: () => user, RequestJsonError: Error, requestJson: async (url, init) => {
       if (options.request) { const value = await options.request(url, init); if (value !== undefined) return value; }
       if (init?.method === 'POST') { posts.push(JSON.parse(init.body)); return { purchaseOrder: { poNumber: 'PO-QA' } }; }

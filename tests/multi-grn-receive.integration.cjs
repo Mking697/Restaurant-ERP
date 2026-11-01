@@ -19,9 +19,10 @@ const pool = new Pool({ host: process.env.PGHOST, port: Number(process.env.PGPOR
 const BASE = target.origin;
 const tokenHash = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
-const ids = { branch: 'qa-mg-branch', manager: 'qa-mg-manager', vendor: 'qa-mg-vendor', rice: 'qa-mg-mat-rice' };
+const ids = { branch: 'qa-mg-branch', manager: 'qa-mg-manager', owner: 'qa-mg-owner', vendor: 'qa-mg-vendor', rice: 'qa-mg-mat-rice' };
 const managerToken = crypto.randomBytes(32).toString('hex');
-let managerCookie;
+const ownerToken = crypto.randomBytes(32).toString('hex');
+let managerCookie, ownerCookie;
 
 async function req(method, path, bodyObj, cookie) {
   const res = await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}), origin: BASE }, body: bodyObj !== undefined ? JSON.stringify(bodyObj) : undefined });
@@ -58,8 +59,8 @@ async function cleanup() {
   await pool.query(`delete from vendor_rates where vendor_id = $1`, [ids.vendor]);
   await pool.query(`delete from vendors where id = $1`, [ids.vendor]);
   await pool.query(`delete from raw_materials where id = $1`, [ids.rice]);
-  await pool.query(`delete from sessions where user_id = $1`, [ids.manager]);
-  await pool.query(`delete from users where id = $1`, [ids.manager]);
+  await pool.query(`delete from sessions where user_id = any($1)`, [[ids.manager, ids.owner]]);
+  await pool.query(`delete from users where id = any($1)`, [[ids.manager, ids.owner]]);
   await pool.query(`delete from branches where id = $1`, [ids.branch]);
 }
 
@@ -67,8 +68,11 @@ async function main() {
   await cleanup();
   await pool.query(`insert into branches (id, name, code, lat, lng) values ($1,'QA MultiGRN Branch','QAMG','0','0')`, [ids.branch]);
   await pool.query(`insert into users (id, name, phone_e164, role, branch_id, status, module_access) values ($1,'QA MG Manager','+255****0901','BRANCH_MANAGER',$2,'Active','{PURCHASE_INDENT,PURCHASE_ORDER,INVENTORY,ACCOUNTS_EXPENSES}')`, [ids.manager, ids.branch]);
+  await pool.query(`insert into users (id, name, phone_e164, role, status) values ($1,'QA MG Owner','+255****0903','SUPER_ADMIN','Active')`, [ids.owner]);
   await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(managerToken), ids.manager]);
+  await pool.query(`insert into sessions (token_hash, user_id, token_version, expires_at) values ($1,$2,'0', now() + interval '1 hour')`, [tokenHash(ownerToken), ids.owner]);
   managerCookie = `restaurant_session=${managerToken}`;
+  ownerCookie = `restaurant_session=${ownerToken}`;
   await pool.query(`insert into raw_materials (id, name, unit) values ($1,'QA MG Rice','kg')`, [ids.rice]);
   await pool.query(`insert into vendors (id, name, phone_e164, status) values ($1,'QA MG Vendor','+255****0902','APPROVED')`, [ids.vendor]);
 
@@ -80,7 +84,7 @@ async function main() {
   const indentId = create.json.indent.id;
   const submit = await req('POST', `/api/purchase/indents/${indentId}/submit`, {}, managerCookie);
   let status = submit.json.indent.status;
-  if (status === 'PENDING_APPROVAL') { const a = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, managerCookie); status = a.json.indent.status; }
+  if (status === 'PENDING_APPROVAL') { const a = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, ownerCookie); status = a.json.indent.status; }
   assert.equal(status, 'APPROVED');
   const po = await req('POST', '/api/purchase/orders', { branchId: ids.branch, vendorId: ids.vendor, isGeneralPurchase: false, indentId, lines: [{ rawMaterialId: ids.rice, qty: '100', rate: '10' }] }, managerCookie);
   assert.equal(po.status, 201, JSON.stringify(po.json));

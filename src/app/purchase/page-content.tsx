@@ -25,6 +25,7 @@ import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from 
 import { useBranches } from "@/lib/current-branch";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
 import { VendorApprovalPanel } from "@/components/vendor-approval-panel";
+import { GeneralPurchaseApprovalsPanel } from "@/components/general-purchase-approvals-panel";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -514,6 +515,7 @@ export default function PurchasePage() {
           <TabsTrigger value="grns">{uiText("GRN / Quality")}</TabsTrigger>
           <TabsTrigger value="vendor-returns">{uiText("Vendor returns", "Vendor returns")}</TabsTrigger>
           <TabsTrigger value="vendors">{uiText("Vendors", "Vendors")}</TabsTrigger>
+          <TabsTrigger value="ho-approvals">{uiText("HO Approvals", "HO Approvals")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="indents">
@@ -553,13 +555,16 @@ export default function PurchasePage() {
                           <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => submitIndentForApproval(i.id)}>
                             {uiText(" Submit for Approval ")}</Button>
                         )}
-                        {i.status === "PENDING_APPROVAL" && (
+                        {i.status === "PENDING_APPROVAL" && actor.role === "SUPER_ADMIN" && (
                           <>
                             <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => approveIndent(i.id)}>
                               <Check className="size-3.5 text-success" /> {uiText(" Approve ")}</Button>
                             <Button size="sm" variant="outline" disabled={rowBusyId === i.id} onClick={() => rejectIndent(i.id)}>
                               <X className="size-3.5 text-destructive" /> {uiText(" Reject ")}</Button>
                           </>
+                        )}
+                        {i.status === "PENDING_APPROVAL" && actor.role !== "SUPER_ADMIN" && (
+                          <span className="text-xs text-muted-foreground">{uiText("Awaiting Owner review (GAP-016 mandatory HO approval)", "Owner review ka wait hai")}</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -641,6 +646,7 @@ export default function PurchasePage() {
         </TabsContent>
         <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /></TabsContent>
         <TabsContent value="vendors"><VendorApprovalPanel /></TabsContent>
+        <TabsContent value="ho-approvals"><GeneralPurchaseApprovalsPanel /></TabsContent>
       </Tabs>
 
       <ToastHost />

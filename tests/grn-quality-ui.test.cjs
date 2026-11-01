@@ -23,8 +23,9 @@ async function harness(options = {}) {
   const deps = {
     '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
     '@/components/vendor-approval-panel': { VendorApprovalPanel: 'VendorApprovalPanel' },
+    '@/components/general-purchase-approvals-panel': { GeneralPurchaseApprovalsPanel: 'GeneralPurchaseApprovalsPanel' },
     react: hooks, 'react/jsx-runtime': require('react/jsx-runtime'), '@/lib/ui-copy': { useUiCopy: () => en => en },
-    '@/lib/current-branch': { useBranches: () => ({ branches: [] }) },
+    '@/lib/current-branch': { useBranches: () => ({ branches: [] }), useSelectedBranchId: () => 'a' },
     '@/lib/current-user': { RequestJsonError, useCurrentUser: () => user, requestJson: async (url, init) => {
       if (init?.method === 'POST') { const body = JSON.parse(init.body); posts.push({ url, body }); if (post) return post(url, body); const row = rows.find(r => url.includes(r.id)); const saved = { ...row, qualityResult: body.result, qualityNote: body.note || '', qualityPhotoUrl: body.photoUrl || '', qualityRecorded: true, inventoryPosted: !row.isGeneralPurchase && body.result !== 'FAIL', qualityRecordedAt: '2026-10-29', status: body.result === 'FAIL' ? 'QUALITY_HOLD' : 'APPROVED', lines: row.lines.map(l => ({ ...l, qtyFailed: body.lines.find(x => x.id === l.id).qtyFailed, qtyAccepted: String(Number(l.qtyReceived) - Number(body.lines.find(x => x.id === l.id).qtyFailed)) })) }; rows = rows.map(r => r.id === saved.id ? saved : r); return { grn: saved, replayed: false }; }
       reads.push(url);

@@ -9,6 +9,8 @@ import { api, body, json, string } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { allowedFields, assertIndentApprovedForPo, assertPoMatchesIndent, generatePoNumber, parseGeneralPurchase, parsePoIndentId, parsePoLines, PO_STATUSES, parseStatusFilter } from "@/lib/server/purchase";
 import { assertVendorEligible } from "@/lib/server/vendor-approval";
+import { appliesGeneralPurchaseValueGate, assertGeneralPurchaseRequestConsumable, computeGeneralPurchaseValueTsh } from "@/lib/server/general-purchase-approval";
+import { readBusinessPolicy } from "@/lib/server/business-policy";
 import { ensureBranch, ensureRawMaterial, ensureVendor, loadIndent } from "../_shared";
 import { rawMaterials } from "@/db/schema/menu";
 
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
     const result = await mutate(request, async (tx, actor) => {
       assertModule(actor, "PURCHASE_ORDER");
       const input = await body(request);
-      allowedFields(input, ["branchId", "vendorId", "isGeneralPurchase", "indentId", "lines"]);
+      allowedFields(input, ["branchId", "vendorId", "isGeneralPurchase", "indentId", "lines", "generalPurchaseRequestId"]);
       const branchId = branchScope(actor, string(input.branchId, "branchId"));
       if (!branchId) throw new HttpError(400, "Select a branch");
       await ensureBranch(tx, branchId);
@@ -100,6 +102,15 @@ export async function POST(request: Request) {
         categories = [...new Set(categoryRows.map((r) => r.category).filter((c) => c))];
       }
       await assertVendorEligible(tx, vendorId, branchId, categories);
+
+      if (isGeneralPurchase) {
+        const policy = await readBusinessPolicy();
+        const valueTsh = computeGeneralPurchaseValueTsh(lines.map((l) => ({ itemDescription: l.itemDescription, qty: l.qty, rate: l.rate })));
+        if (appliesGeneralPurchaseValueGate(valueTsh, policy.indentValueThresholdTsh)) {
+          const requestId = string(input.generalPurchaseRequestId, "generalPurchaseRequestId");
+          await assertGeneralPurchaseRequestConsumable(tx, requestId, branchId, vendorId, lines.map((l) => ({ itemDescription: l.itemDescription, qty: l.qty, rate: l.rate })), valueTsh);
+        }
+      }
 
       const id = randomUUID();
       const poNumber = generatePoNumber();

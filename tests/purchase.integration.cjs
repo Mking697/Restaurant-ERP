@@ -114,14 +114,14 @@ async function main() {
   const submitAgain = await req('POST', `/api/purchase/indents/${indentId}/submit`, {}, managerCookie);
   check('re-submitting non-DRAFT indent -> 409', submitAgain.status === 409, submitAgain.json);
 
-  const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, managerCookie);
-  check('approve PENDING_APPROVAL->APPROVED 200', approve.status === 200 && approve.json.indent.status === 'APPROVED', approve.json);
+  const approve = await req('POST', `/api/purchase/indents/${indentId}/approve`, {}, ownerCookie);
+  check('approve PENDING_APPROVAL->APPROVED 200 (GAP-016: Owner-only)', approve.status === 200 && approve.json.indent.status === 'APPROVED', approve.json);
 
   // Separate indent, taken straight to REJECTED, to prove PO creation is denied against it.
   const createIndent2 = await req('POST', '/api/purchase/indents', { branchId: ids.branchA, lines: [{ rawMaterialId: ids.chicken, qty: '3' }] }, managerCookie);
   const indentId2 = createIndent2.json.indent.id;
   await req('POST', `/api/purchase/indents/${indentId2}/submit`, {}, managerCookie);
-  const reject = await req('POST', `/api/purchase/indents/${indentId2}/reject`, {}, managerCookie);
+  const reject = await req('POST', `/api/purchase/indents/${indentId2}/reject`, {}, ownerCookie);
   check('reject PENDING_APPROVAL->REJECTED 200', reject.status === 200 && reject.json.indent.status === 'REJECTED', reject.json);
 
   // --- PO creation: from APPROVED indent vs REJECTED indent (must deny) ---
@@ -152,7 +152,7 @@ async function main() {
     const created = await req('POST', '/api/purchase/indents', { branchId: ids.branchA, lines: [{ rawMaterialId: ids.chicken, qty: '10' }, { rawMaterialId: ids.rice, qty: '5' }] }, managerCookie);
     const regressionId = created.json.indent.id;
     await req('POST', `/api/purchase/indents/${regressionId}/submit`, {}, managerCookie);
-    await req('POST', `/api/purchase/indents/${regressionId}/approve`, {}, managerCookie);
+    await req('POST', `/api/purchase/indents/${regressionId}/approve`, {}, ownerCookie);
     const before = await snapshot(regressionId);
     const result = await req('POST', '/api/purchase/orders', { branchId: ids.branchA, vendorId: ids.vendor, isGeneralPurchase: false, indentId: regressionId, lines: validLines, ...override }, managerCookie);
     const after = await snapshot(regressionId);
@@ -190,7 +190,7 @@ async function main() {
   const decimalIndent = await req('POST', '/api/purchase/indents', { branchId: ids.branchA, lines: [{ rawMaterialId: ids.chicken, qty: '0.1' }, { rawMaterialId: ids.chicken, qty: '0.2' }, { rawMaterialId: ids.rice, qty: '5' }] }, managerCookie);
   const decimalId = decimalIndent.json.indent.id;
   await req('POST', `/api/purchase/indents/${decimalId}/submit`, {}, managerCookie);
-  await req('POST', `/api/purchase/indents/${decimalId}/approve`, {}, managerCookie);
+  await req('POST', `/api/purchase/indents/${decimalId}/approve`, {}, ownerCookie);
   const decimalPayload = { branchId: ids.branchA, vendorId: ids.vendor, isGeneralPurchase: false, indentId: decimalId, lines: [{ rawMaterialId: ids.chicken, qty: '0.300', rate: '300' }, { rawMaterialId: ids.rice, qty: '5.000', rate: '60' }] };
   const raced = await Promise.all([req('POST', '/api/purchase/orders', decimalPayload, managerCookie), req('POST', '/api/purchase/orders', decimalPayload, managerCookie)]);
   const raceRead = await pool.query('select p.id,p.status,(select count(*)::int from purchase_order_lines l where l.po_id=p.id) as lines from purchase_orders p where indent_id=$1', [decimalId]);
@@ -201,7 +201,7 @@ async function main() {
   const rollbackIndent = await req('POST', '/api/purchase/indents', { branchId: ids.branchA, lines: [{ rawMaterialId: ids.chicken, qty: '1' }] }, managerCookie);
   const rollbackId = rollbackIndent.json.indent.id;
   await req('POST', `/api/purchase/indents/${rollbackId}/submit`, {}, managerCookie);
-  await req('POST', `/api/purchase/indents/${rollbackId}/approve`, {}, managerCookie);
+  await req('POST', `/api/purchase/indents/${rollbackId}/approve`, {}, ownerCookie);
   await pool.query(`create function qa_purchase_fail_line() returns trigger language plpgsql as $$ begin if exists(select 1 from purchase_orders where id=NEW.po_id and branch_id='qa-pur-branch-a') then raise exception 'QA forced line failure'; end if; return NEW; end $$`);
   await pool.query('create trigger qa_purchase_fail_line before insert on purchase_order_lines for each row execute function qa_purchase_fail_line()');
   try {
