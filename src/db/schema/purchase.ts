@@ -193,6 +193,12 @@ export const materialReturns = pgTable(
     settledAt: timestamp("settled_at", { withTimezone: true }),
     settledById: text("settled_by_id").references(() => users.id),
     settledNote: text("settled_note").notNull().default(""),
+    // GAP-018: cancels the REMAINING undispatched quantity only — never
+    // touches stock already dispatched (see materialReturnDispatches
+    // below). Owner-only, once-only, same convention as settledAt.
+    remainingCancelledAt: timestamp("remaining_cancelled_at", { withTimezone: true }),
+    remainingCancelledById: text("remaining_cancelled_by_id").references(() => users.id),
+    remainingCancelledNote: text("remaining_cancelled_note").notNull().default(""),
   },
   (table) => [index("material_returns_branch_id_idx").on(table.branchId)]
 );
@@ -377,4 +383,46 @@ export const vendorPayments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("vendor_payments_match_id_idx").on(table.matchId), index("vendor_payments_branch_id_idx").on(table.branchId)]
+);
+
+// ---------------------------------------------------------------------------
+// GAP-018 (November 2026). Physical purchase-return lifecycle — the
+// missing PHYSICAL dispatch/vendor-acknowledgment layer on top of the
+// EXISTING materialReturns claim (which is, and remains, money-side only:
+// an expected refund/credit claim auto-created on a GRN quality
+// FAIL/PARTIAL). Owner decision: scoped to this EXISTING claim type only —
+// a return of ALREADY-ACCEPTED/good stock is explicitly out of scope this
+// pass (would need its own new claim type/design).
+//
+// "Avoid double-deduction" is already satisfied by construction: a failed
+// GRN line's qty NEVER gets posted to inventoryStock in the first place
+// (see grnLines.qtyFailed's own comment) — there is no usable-stock
+// quantity to deduct a second time for THIS claim type. Physical dispatch
+// here is purely evidentiary (quarantine -> actually sent back to the
+// vendor), never a stock-ledger write.
+//
+// One or more dispatch rows per claim (partial dispatch across several
+// trips is allowed) — sum(qtyDispatched) can never exceed
+// materialReturns.qtyReturned. Owner-only cancellation of the REMAINING
+// undispatched quantity (materialReturns.remainingCancelledAt above) never
+// touches an already-created dispatch row.
+// ---------------------------------------------------------------------------
+export const materialReturnDispatches = pgTable(
+  "material_return_dispatches",
+  {
+    id: text("id").primaryKey(),
+    materialReturnId: text("material_return_id").notNull().references(() => materialReturns.id),
+    branchId: text("branch_id").notNull().references(() => branches.id),
+    qtyDispatched: numeric("qty_dispatched", { precision: 12, scale: 3 }).notNull(),
+    reasonNote: text("reason_note").notNull(),
+    evidencePhotoUrl: text("evidence_photo_url").notNull().default(""), // optional, free-text URL (same legacy convention as vendorInvoices.photoUrl/grns.qualityPhotoUrl)
+    dispatchedById: text("dispatched_by_id").notNull().references(() => users.id),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }).notNull().defaultNow(),
+    // Vendor acknowledgment of receipt — recorded by staff attesting a
+    // real signed slip/confirmation exists, not a vendor-side system
+    // action (the vendor is never a user of this system). Once-only.
+    vendorAcknowledgedAt: timestamp("vendor_acknowledged_at", { withTimezone: true }),
+    vendorAcknowledgedById: text("vendor_acknowledged_by_id").references(() => users.id),
+  },
+  (table) => [index("material_return_dispatches_claim_id_idx").on(table.materialReturnId), index("material_return_dispatches_branch_id_idx").on(table.branchId)]
 );

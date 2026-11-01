@@ -26,6 +26,7 @@ import { useBranches } from "@/lib/current-branch";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
 import { VendorApprovalPanel } from "@/components/vendor-approval-panel";
 import { GeneralPurchaseApprovalsPanel } from "@/components/general-purchase-approvals-panel";
+import { VendorReturnDispatchPanel } from "@/components/vendor-return-dispatch-panel";
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -644,7 +645,7 @@ export default function PurchasePage() {
         <TabsContent value="grns">
           <GrnQualitySection refreshToken={grnRefresh} />
         </TabsContent>
-        <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /></TabsContent>
+        <TabsContent value="vendor-returns"><VendorReturnsPanel mode="purchase" /><VendorReturnDispatchPanel /></TabsContent>
         <TabsContent value="vendors"><VendorApprovalPanel /></TabsContent>
         <TabsContent value="ho-approvals"><GeneralPurchaseApprovalsPanel /></TabsContent>
       </Tabs>

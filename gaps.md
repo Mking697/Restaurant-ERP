@@ -745,13 +745,35 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-018 - Physical purchase-return lifecycle
 
-Status: PENDING
+Status: DONE for the EXISTING FAIL/PARTIAL-quality claim type (November 1, 2026)
 Coverage: PARTIAL | Phase: P3 | Depends on: GAP-004, GAP-005, GAP-015
 Source: S1 Purchase Returns; E03.
 
 Acceptance: rejected or otherwise authorized returned stock is identified/quarantined, dispatched with quantity/reason/evidence, acknowledged by vendor and linked to expected refund/credit/settlement. Specify whether failed goods ever entered usable stock and avoid double-deduction. Test partial return, duplicate dispatch/settlement, approved cancellation and authorization; existing expected-claim rows alone are not proof of physical return.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Owner decisions (confirmed via clarify, November 1, 2026)
+
+1. Scope is the EXISTING FAIL/PARTIAL-quality claim type only (rejected-at-receiving stock, which never entered usable inventory in the first place — see `grnLines.qtyFailed`'s own design note). A return of ALREADY-ACCEPTED/good stock is explicitly out of scope this pass — it would need its own new claim type/design.
+2. Dispatch is recorded by the PURCHASE_ORDER grant (same actor who registers the claim); cancellation of the remaining undispatched quantity is Owner-only.
+3. A reason note is required on every dispatch; an evidence photo is optional free-text URL (same convention as `grns.qualityPhotoUrl`).
+
+#### Implementation (November 1, 2026)
+
+New `materialReturnDispatches` table (migration `0034_even_jack_power.sql`, additive) layered on top of the EXISTING `materialReturns` money-claim row — this pass never touches `materialReturns`' settlement fields. `src/lib/server/vendor-return-dispatch.ts`: `recordReturnDispatch` (partial dispatch across several trips allowed; `sum(qtyDispatched)` can never exceed `materialReturns.qtyReturned`, enforced with exact bigint math), `acknowledgeReturnDispatch` (once-only, PURCHASE_ORDER grant — staff attesting a real signed slip/confirmation from the vendor, since the vendor is never a system user), `cancelRemainingReturnDispatch` (Owner-only, once-only; new `materialReturns.remainingCancelledAt/ById/Note` columns record the cancellation of the REMAINING undispatched quantity and NEVER touch an already-created dispatch row; rejected with 409 if the claim is already fully dispatched — nothing left to cancel).
+
+"Avoid double-deduction" is satisfied by construction, not by new code: a failed GRN line's qty was NEVER posted to `inventoryStock` in the first place, so there is no usable-stock quantity for this claim type to deduct a second time — dispatch here is purely evidentiary (quarantine -> physically sent back), never a stock-ledger write.
+
+New routes: `POST/GET /api/purchase/material-returns/[id]/dispatches`, `POST /api/purchase/material-return-dispatches/[id]/acknowledge`, `POST /api/purchase/material-returns/[id]/cancel-remaining`. UI: new `src/components/vendor-return-dispatch-panel.tsx`, rendered alongside the existing `VendorReturnsPanel` on Purchase's "Vendor Returns" tab — per-claim dispatch form (qty/reason/evidence URL), per-dispatch acknowledgment button, Owner-only "Cancel remaining" button, remaining-undispatched-quantity readout.
+
+Tests: `tsc`/`npm test` (491/491)/`npm run build` all clean. New `tests/vendor-return-dispatch.integration.cjs` — **15/15 passed** through a real end-to-end flow (Indent→PO→GRN→quality PARTIAL→claim registered→dispatch), covering: over-dispatch rejected (409); two partial dispatches summing exactly to the claimed quantity both succeed; a third dispatch once fully dispatched is rejected (409); vendor acknowledgment succeeds once, a second acknowledgment on the same dispatch is rejected (409, once-only); cancel-remaining on a fully-dispatched claim is rejected (409, nothing left); a non-Owner cannot cancel-remaining (403); the Owner cancels the remaining quantity on a partially-dispatched claim (200) and the already-dispatched row is proven untouched by a real-DB read; a further dispatch after cancellation is rejected (409); cancelling an already-cancelled claim is rejected (409, once-only). Backward-compat: re-ran `tests/purchase-phase1.integration.cjs` (27/27, unchanged) to confirm the existing claim-registration/settlement flow is untouched.
+Release: N/A — local, uncommitted source only; ask before committing/deploying. `restaurant_erp_local` has not had migrations `0025`-`0034` applied (only disposable QA databases were used this pass); production Neon is untouched.
+
+#### Remaining work before this GAP can be marked fully DONE (all scopes)
+
+- A return of ALREADY-ACCEPTED/good stock (not a quality-rejection claim) is explicitly out of scope — would need its own new claim type and, unlike this pass, a real stock-ledger deduction (the acceptance's "avoid double-deduction" language anticipates that future case; this pass's claim type has nothing to deduct).
+- No UI click-through verification in a live browser yet — same honest caveat standing for every new panel this session.
+
+#### Current-project integration blueprint (fulfilled above for the core flow; the out-of-scope item above remains)
 
 - Current-project reuse: Existing `src/lib/server/grn-quality.ts` (`recordGrnQuality`), `src/lib/server/vendor-returns.ts` (`recordVendorReturns`, `settleVendorReturn`), `src/db/schema/purchase.ts` (`materialReturns`) and `src/components/vendor-returns-panel.tsx` reuse karein.
 - Proposed data/server change: PROPOSED: return header/lines plus append-only quarantine/dispatch/vendor-ack/cancel events linked to original GRN line, claim and real stock provenance. Approved accepted-stock returns get a ledger deduction; failed goods never credited to usable stock are not deducted from usable stock again.

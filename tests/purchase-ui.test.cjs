@@ -24,6 +24,7 @@ async function pageHarness(options = {}) {
     '@/components/vendor-returns-panel': { VendorReturnsPanel: 'VendorReturnsPanel' },
     '@/components/vendor-approval-panel': { VendorApprovalPanel: 'VendorApprovalPanel' },
     '@/components/general-purchase-approvals-panel': { GeneralPurchaseApprovalsPanel: 'GeneralPurchaseApprovalsPanel' },
+    '@/components/vendor-return-dispatch-panel': { VendorReturnDispatchPanel: 'VendorReturnDispatchPanel' },
     react: fakeReact,
     'react/jsx-runtime': require('react/jsx-runtime'),
     '@/lib/ui-copy': { useUiCopy: () => en => en },

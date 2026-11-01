@@ -239,6 +239,13 @@
       "when": 1793555222491,
       "tag": "0033_short_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793557161097,
+      "tag": "0034_even_jack_power",
+      "breakpoints": true
     }
   ]
 }
