@@ -60,4 +60,3 @@ export async function allocateConsume(tx: Executor, branchId: string, rawMateria
 export async function allocateExpiredConsume(tx: Executor, branchId: string, rawMaterialId: string, qty: string, source: BatchSource) {
   return allocateLocatedConsume(tx, { branchId }, rawMaterialId, qty, { ...source, allowExpired: true, expiredOnly: true });
 }
-

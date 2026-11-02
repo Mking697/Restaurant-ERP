@@ -87,5 +87,3 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return json(result, 201);
   });
 }
-
-
