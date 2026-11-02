@@ -4,6 +4,7 @@ import * as React from "react";
 import { BatchPanel } from "./batch-panel";
 import { StockCountPanel } from "./stock-count-panel";
 import { RequisitionPanel } from "./requisition-panel";
+import { ReorderSuggestionsPanel } from "./reorder-suggestions-panel";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export default function InventoryPage() {
       </TableBody></Table>}{!loading && !error && !visibleRows.length && <p>{uiText("No inventory in this scope.")}</p>}</CardContent></Card>
       <BatchPanel branchId={selected} refreshToken={batchRefresh} />
       <StockCountPanel branchId={selected} refreshToken={batchRefresh} />
-      {selected !== "all" && <RequisitionPanel branchId={selected} />}
+      {selected !== "all" && <><ReorderSuggestionsPanel key={selected} branchId={selected} /><RequisitionPanel branchId={selected} /></>}
       <Dialog open={open && current() && loadedScope === scopeKey} onOpenChange={value => { if (!busy) setOpen(value); }}><DialogContent><DialogHeader><DialogTitle>{uiText("Add Inventory Item")}</DialogTitle><DialogDescription>{uiText("Creates stock for one branch. Existing catalog names reuse the same material and unit; this does not create a purchase indent.")}</DialogDescription></DialogHeader>
         <form onSubmit={save}><fieldset disabled={busy} className="space-y-3">
           {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}

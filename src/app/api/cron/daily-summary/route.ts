@@ -1,5 +1,6 @@
 import { validCronSecret } from "@/lib/server/cron-auth";
 import { runDailySummary } from "@/lib/server/daily-summary";
+import { runScheduledEodReports } from "@/lib/server/eod-scheduler";
 import { json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -13,8 +14,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   if (!validCronSecret(request)) return json({ error: "Unauthorized" }, 401);
   try {
-    const result = await runDailySummary(new Date());
-    return json(result, 200);
+    const now = new Date();
+    const summary = await runDailySummary(now);
+    const eodReports = await runScheduledEodReports(now);
+    return json({ summary, eodReports }, 200);
   } catch {
     // Never return database details, SQL, or secret material.
     return json({ error: "Database or server unavailable" }, 503);

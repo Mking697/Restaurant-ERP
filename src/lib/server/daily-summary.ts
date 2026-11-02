@@ -8,7 +8,7 @@ import { posOrders } from "@/db/schema/pos";
 import { shiftHandovers } from "@/db/schema/shifts";
 import { taskInstances } from "@/db/schema/tasks";
 import { locked } from "./auth";
-import { istDateOnly } from "./task-generation";
+import { businessDateString, businessDayRange } from "./business-calendar";
 import { branchEscalationRecipients } from "./task-notifications";
 import { dailySummaryMessage } from "./whatsapp-triggers";
 import { countPreparedStockBreaches } from "./prepared-stock-thresholds";
@@ -27,14 +27,9 @@ import { sendWhatsAppMessage } from "@/lib/chatxflow";
 // generateRecurringOccurrences / claimDueTaskReminders).
 // ---------------------------------------------------------------------------
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-
 function istDayBoundsUtc(now: Date): { startUtc: Date; endUtc: Date; dateStr: string } {
-  const dateStr = istDateOnly(now);
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const startUtc = new Date(Date.UTC(y, m - 1, d) - IST_OFFSET_MS);
-  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
-  return { startUtc, endUtc, dateStr };
+  const { start, end } = businessDayRange(now);
+  return { startUtc: start, endUtc: end, dateStr: businessDateString(now) };
 }
 
 export interface DailySummaryResult {

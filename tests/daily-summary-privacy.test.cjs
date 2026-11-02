@@ -77,7 +77,7 @@ function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'B
   };
   function load(name) {
     if (name in dependencies) return dependencies[name];
-    assert.ok(['./daily-summary', './task-notifications', './whatsapp-triggers'].includes(name), `Unexpected dependency: ${name}`);
+    assert.ok(['./daily-summary', './task-notifications', './whatsapp-triggers', './business-calendar'].includes(name), `Unexpected dependency: ${name}`);
     if (cache[name]) return cache[name];
     const mod = { exports: {} }; cache[name] = mod.exports;
     const filename = path.join(__dirname, '../src/lib/server', name + '.ts');

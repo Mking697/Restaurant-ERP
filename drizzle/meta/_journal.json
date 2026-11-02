@@ -253,6 +253,20 @@
       "when": 1793558994366,
       "tag": "0035_cold_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793565725322,
+      "tag": "0036_regular_rhino",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793590366418,
+      "tag": "0037_far_nick_fury",
+      "breakpoints": true
     }
   ]
 }

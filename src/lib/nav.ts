@@ -2,6 +2,7 @@ export const NAV_ITEMS = [
   { href: "/admin/settings/restaurant", label: "Restaurant Settings", icon: "Building2", module: "USER_ADMIN" },
   { href: "/dashboard", label: "Owner Dashboard", icon: "LayoutDashboard", module: "DASHBOARD_OWNER" },
   { href: "/reports", label: "Reports", icon: "FileBarChart", module: "REPORTS" },
+  { href: "/ho-stock-review", label: "HO Stock Review", icon: "FileBarChart", module: "HO_STOCK_REVIEW" },
   { href: "/performance", label: "MIS Leaderboard", icon: "Trophy", module: "MIS_PERFORMANCE" },
   { href: "/tasks", label: "Tasks & Checklists", icon: "ListChecks", module: "TASKS_DELEGATION" },
   { href: "/menu", label: "Menu & BOM", icon: "ChefHat", module: "MENU_BOM" },
