@@ -20,6 +20,15 @@
 // vs. wrong behavior" distinction this GAP's acceptance criteria draws).
 export const BUSINESS_TIMEZONE = "Africa/Dar_es_Salaam";
 const BUSINESS_OFFSET_MS = 3 * 60 * 60 * 1000; // EAT: fixed UTC+3, Tanzania never observes DST
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parsedCalendarDate(value: string) {
+  if (!CALENDAR_DATE.test(value)) throw new Error("Report date must be a valid YYYY-MM-DD calendar date");
+  const [y, m, d] = value.split("-").map(Number);
+  const probe = new Date(Date.UTC(y, m - 1, d));
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== d) throw new Error("Report date must be a valid YYYY-MM-DD calendar date");
+  return { y, m, d };
+}
 
 export function businessDateParts(now: Date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: BUSINESS_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -47,6 +56,23 @@ export function businessDayRange(now: Date = new Date()) {
   const { y, m, d } = businessDateParts(now);
   const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - BUSINESS_OFFSET_MS);
   return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+export function businessDateRange(date: string) {
+  const { y, m, d } = parsedCalendarDate(date);
+  const start = new Date(Date.UTC(y, m - 1, d) - BUSINESS_OFFSET_MS);
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+export function previousBusinessDate(now: Date = new Date()): string {
+  const { start } = businessDayRange(now);
+  return businessDateString(new Date(start.getTime() - 1));
+}
+
+export function validateReportDate(date: string, now: Date = new Date()): string {
+  parsedCalendarDate(date);
+  if (date > businessDateString(now)) throw new Error("Cannot generate an end-of-day report for a future date");
+  return date;
 }
 
 // [start, end) UTC instants spanning the Tanzania EAT calendar month containing `now`.

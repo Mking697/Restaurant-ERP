@@ -8,9 +8,13 @@ const Module = require('node:module');
 
 function withMockedRoute(fn) {
   const originalLoad = Module._load;
+  const schedulerCalls = [];
   Module._load = function (request, parent, isMain) {
     if (request === '@/lib/server/daily-summary') {
       return { runDailySummary: async () => ({ branches: 2, claimed: 2, alreadySent: 0, notified: 1 }) };
+    }
+    if (request === '@/lib/server/eod-scheduler') {
+      return { runScheduledEodReports: async (now) => { schedulerCalls.push(now); return { generated: 1, skipped: 1, failed: [] }; } };
     }
     if (request.startsWith('@/')) return originalLoad.call(this, path.join(__dirname, '../src', request.slice(2)), parent, isMain);
     return originalLoad.call(this, request, parent, isMain);
@@ -19,7 +23,7 @@ function withMockedRoute(fn) {
     if (key.includes(`${path.sep}src${path.sep}app${path.sep}api${path.sep}cron${path.sep}daily-summary${path.sep}route`) ||
         key.includes(`${path.sep}src${path.sep}lib${path.sep}server${path.sep}cron-auth`)) delete require.cache[key];
   }
-  try { return fn(); } finally { Module._load = originalLoad; }
+  try { return fn(schedulerCalls); } finally { Module._load = originalLoad; }
 }
 
 function req(secret, method = 'POST') {
@@ -66,14 +70,16 @@ test('daily-summary route never accepts a session cookie in place of the bearer 
   });
 });
 
-test('daily-summary route runs the summary and returns its exact counts on a correct secret', async () => {
-  await withMockedRoute(async () => {
+test('daily-summary route runs summary then scheduled EOD generation and returns both exact results', async () => {
+  await withMockedRoute(async (schedulerCalls) => {
     const previous = process.env.CRON_SECRET; process.env.CRON_SECRET = 'daily-secret-123';
     try {
       const route = require('../src/app/api/cron/daily-summary/route.ts');
       const res = await route.POST(req('daily-secret-123'));
       assert.equal(res.status, 200);
-      assert.deepEqual(await res.json(), { branches: 2, claimed: 2, alreadySent: 0, notified: 1 });
+      assert.deepEqual(await res.json(), { summary: { branches: 2, claimed: 2, alreadySent: 0, notified: 1 }, eodReports: { generated: 1, skipped: 1, failed: [] } });
+      assert.equal(schedulerCalls.length, 1);
+      assert.ok(schedulerCalls[0] instanceof Date);
       assert.equal(route.GET, route.POST);
     } finally { if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous; }
   });

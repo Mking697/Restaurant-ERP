@@ -14,6 +14,16 @@ export function branchScope(user: Identity, requested?: string | null): string |
   if (requested && requested !== user.branchId) throw new HttpError(403, "Branch access denied");
   return user.branchId;
 }
+export function assertHoReviewAccess(user: Pick<Identity, "role" | "branchId" | "moduleAccess">) {
+  if (user.role === "SUPER_ADMIN") return;
+  if (user.role !== "CENTRAL_STORE_MGR" || user.branchId) throw new HttpError(403, "HQ stock review role required");
+  if (!user.moduleAccess.includes("HO_STOCK_REVIEW")) throw new HttpError(403, "HO stock review access required");
+}
+export function hoReviewScope(user: Pick<Identity, "role" | "branchId" | "moduleAccess">, requested: string): string {
+  assertHoReviewAccess(user);
+  if (!requested) throw new HttpError(400, "Select a branch");
+  return requested;
+}
 export function validateGrants(value: unknown): ModuleKey[] {
   if (!Array.isArray(value) || value.some(k => typeof k !== "string" || !(MODULE_KEYS as readonly string[]).includes(k))) throw new HttpError(400, "Invalid moduleAccess");
   return [...new Set(value)] as ModuleKey[];

@@ -15,6 +15,7 @@ import { postStockMovement } from "./stock-ledger";
 import { creditBatch } from "./stock-batches";
 import { parseBatchInput } from "./batch-policy";
 import { parseQualityInput, persistedQuantity, qualityDecision, qualityReceiptId, qualityReceiptState, QUALITY_ACTION, sameQualityRequest, qualityOriginId, validQualityOrigin } from "./grn-quality-policy";
+import { ensureGrnHoReviewSubject } from "./ho-stock-review";
 
 export async function readGrns(tx: Executor, actor: Identity, query: { branchId?: string | null; status?: typeof grns.$inferSelect.status; id?: string } = {}) {
   assertModule(actor, "PURCHASE_ORDER");
@@ -78,6 +79,7 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
     }
     const [saved] = await readGrns(tx, actor, { id });
     if (!saved?.qualityRecorded) throw new HttpError(409, "Quality readback inconsistent; reconciliation required");
+    await ensureGrnHoReviewSubject(tx, id, actor.id);
     return { grn: saved, replayed: true };
   }
   const [origin] = await tx.select().from(auditLog).where(eq(auditLog.id, qualityOriginId(id))).limit(1);
@@ -127,6 +129,7 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
   await tx.update(grns).set({ qualityResult: request.result, status: request.result === "FAIL" ? "QUALITY_HOLD" : "APPROVED", qualityNote: request.note, qualityPhotoUrl: request.photoUrl }).where(eq(grns.id, id));
   await tx.insert(auditLog).values({ id: qualityReceiptId(id), userId: actor.id, action: QUALITY_ACTION, entityType: "GRN", entityId: id, metadataJson: { version: 1, branchId: grn.branchId, request, credits: decision.credits, ...(request.result !== "PASS" ? { vendorReturnsVersion: 1 } : {}) } });
   if (request.result !== "PASS") await recordVendorReturns(tx, actor, id, {});
+  await ensureGrnHoReviewSubject(tx, id, actor.id);
   const [saved] = await readGrns(tx, actor, { id });
   if (!saved?.qualityRecorded) throw new HttpError(409, "Quality readback inconsistent; transaction rolled back");
   return { grn: saved, replayed: false };

@@ -3,6 +3,7 @@ import * as React from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { ExportButton } from "@/components/export-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -22,6 +23,7 @@ interface FoodBranch {
 }
 interface Score { branchId: string; branchName: string; periodStart: string; periodEnd: string; rank: number; totalScore: string; onTimeCount: number; delayCount: number; notDoneCount: number; componentsUsed: string[] }
 const istDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Dar_es_Salaam", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); // GAP-008 (Oct 31 2026): Tanzania EAT, was India IST
+const latestCompletedEodDate = () => istDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
 const RevenueChart = RevenueTrendChart as React.ComponentType<{ data: { date: string; revenue: number }[] }>;
 
 export default function ReportDetailContent({ slug }: { slug: ReportSlug }) {
@@ -39,17 +41,18 @@ function ReportView({ slug, branch }: { slug: ReportSlug; branch: string }) {
   const def = REPORT_DEFS.find((r) => r.slug === slug)!;
   const [month, setMonth] = React.useState(() => istDate(new Date()).slice(0, 7));
   const [days, setDays] = React.useState("14");
-  const [from, setFrom] = React.useState(() => istDate(new Date(Date.now() - 30 * 86400000)));
+  const [from, setFrom] = React.useState(() => slug === "eod-stock" ? latestCompletedEodDate() : istDate(new Date(Date.now() - 30 * 86400000)));
   const [to, setTo] = React.useState(() => istDate(new Date()));
-  const period = ["food-cost", "aggregator-recon"].includes(slug) ? month : slug === "sales-trend" ? days : `${from}:${to}`;
+  const period = ["food-cost", "aggregator-recon"].includes(slug) ? month : slug === "sales-trend" ? days : slug === "eod-stock" ? from : `${from}:${to}`;
   return <AppShell activeHref="/reports">
     <PageHeader title={t(def.title)} description={t("Real database rows. Unavailable metrics show — with a reason; recipe costs use current vendor rates, not historical posted COGS.")} />
     <div className="mb-4 flex flex-wrap gap-3">
       {["food-cost", "aggregator-recon"].includes(slug) ? <label className="text-sm">{t("Month (IST)")}<input className="mt-1 block rounded border bg-background px-3 py-2" aria-label="Month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
       : slug === "sales-trend" ? <label className="text-sm">{t("Days (1–90)")}<input className="mt-1 block rounded border bg-background px-3 py-2" aria-label="Days" type="number" min="1" max="90" value={days} onChange={(e) => setDays(e.target.value)} /></label>
+      : slug === "eod-stock" ? <label className="text-sm">{t("Report date (EAT)")}<input className="mt-1 block rounded border bg-background px-3 py-2" aria-label="Report date" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
       : <><label className="text-sm">{t("From (IST)")}<input className="mt-1 block rounded border bg-background px-3 py-2" aria-label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label className="text-sm">{t("To (IST, inclusive)")}<input className="mt-1 block rounded border bg-background px-3 py-2" aria-label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label></>}
     </div>
-    <LoadedReport key={period} {...{ slug, branch, month, days, from, to }} />
+    {slug === "eod-stock" ? <EodStockReportBlock key={`${branch}:${from}`} branch={branch} reportDate={from} /> : <LoadedReport key={period} {...{ slug, branch, month, days, from, to }} />}
   </AppShell>;
 }
 function LoadedReport({ slug, branch, month, days, from, to }: { slug: ReportSlug; branch: string; month: string; days: string; from: string; to: string }) {
@@ -120,4 +123,87 @@ function RowsTable({ rows }: { rows: Row[] }) {
   const t = useUiCopy();
   const columns = Object.keys(rows[0] ?? {});
   return <Table><TableHeader><TableRow>{columns.map((key) => <TableHead key={key}>{t(key.replace(/([a-z])([A-Z])/g, "$1 $2"))}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.map((row, i) => <TableRow key={i}>{columns.map((key) => <TableCell key={key}>{row[key] === null || row[key] === undefined ? "—" : String(row[key])}</TableCell>)}</TableRow>)}</TableBody></Table>;
+}
+
+interface EodRawRow { rawMaterialId: string; name: string; unit: string; openingQty: string | null; receiptsQty: string; issuedQty: string; wastageQty: string; adjustQty: string; closingQty: string | null; currentQtyOnHand: string; reconciled: boolean; balanceUnavailableReason: string | null; minStockLevel: string; maxStockLevel: string; stockStatus: string; approvedRequisitionOutstandingQty: string; transferInTransitQty: string; externalPoOutstandingQty: string; qualityPendingQty: string; totalInboundQty: string; reorderStatus: string; }
+interface EodPreparedRow { menuItemId: string; name: string; unit: string; closingQty: string | null; minStockLevel: string; maxStockLevel: string; status: string; unavailableReason: string | null; }
+interface EodSnapshot { branchId: string; reportDate: string; cutoffAt: string; capturedAt: string; inboundCapturedAt: string; rawMaterials: EodRawRow[]; preparedRows: EodPreparedRow[]; preparedLowStockCount: number; preparedHighStockCount: number; preparedUnconfiguredCount: number; preparedUnavailableCount: number; expiredBatchCount: number; expiringSoonBatchCount: number; unknownExpiryBatchCount: number; thresholdHistoryLimitation: string; }
+interface EodReportRow { id: string; snapshotJson: EodSnapshot; generatedAt: string; regeneratedAt: string | null; revision: number; generationSource: string; capturedAt: string; }
+
+// GAP-020. Single (branch, reportDate) end-of-day RAW stock report —
+// ledger-cutoff reconstruction, Prepared/expiry count-only, latest-wins
+// versioning (regenerating overwrites; the superseded snapshot is kept in
+// auditLog, not shown here).
+function EodStockReportBlock({ branch, reportDate }: { branch: string; reportDate: string }) {
+  const t = useUiCopy();
+  const [report, setReport] = React.useState<EodReportRow | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [submittingHo, setSubmittingHo] = React.useState(false);
+  const [hoMessage, setHoMessage] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const requestKey = React.useRef<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    if (branch === "all" || branch === "__no_branch__") { setReport(null); return; }
+    setLoading(true);
+    try { const res = await requestJson<{ report: EodReportRow | null }>(`/api/reports/eod-stock?branchId=${encodeURIComponent(branch)}&reportDate=${encodeURIComponent(reportDate)}`); setReport(res.report); }
+    finally { setLoading(false); }
+  }, [branch, reportDate]);
+  React.useEffect(() => { void load().catch((e: unknown) => setError(e instanceof Error ? e.message : "Could not load report")); }, [load]);
+
+  async function generate(regenerate: boolean) {
+    if (busy) return;
+    setBusy(true); setError("");
+    if (!requestKey.current) requestKey.current = crypto.randomUUID();
+    try { await requestJson(`/api/reports/eod-stock`, { method: "POST", body: JSON.stringify({ branchId: branch, reportDate, requestKey: requestKey.current, regenerate }) }); await load(); requestKey.current = null; }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not generate report."); }
+    finally { setBusy(false); }
+  }
+
+  async function submitToHo() {
+    if (!report || submittingHo) return;
+    setSubmittingHo(true); setError(""); setHoMessage("");
+    try {
+      const result = await requestJson<{ subject: { sourceRevision: number }; replayed: boolean }>(`/api/reports/eod-stock/${encodeURIComponent(report.id)}/submit-ho`, { method: "POST", body: JSON.stringify({ revision: report.revision }) });
+      setHoMessage(result.replayed ? t("This exact revision was already submitted to HO.") : t("This exact revision was submitted to HO."));
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not confirm HO submission."); }
+    finally { setSubmittingHo(false); }
+  }
+
+  if (branch === "all" || branch === "__no_branch__") return <p className="text-sm text-muted-foreground">{t("Select one branch to generate its end-of-day report.", "Ek branch chunein EOD report banane ke liye.")}</p>;
+
+  const snapshot = report?.snapshotJson ?? null;
+  const summaryExport: Row = { ReportDate: snapshot?.reportDate ?? null, Revision: report?.revision ?? null, Source: report?.generationSource ?? null, CutoffAtEAT: snapshot?.cutoffAt ?? null, CapturedAtEAT: snapshot?.capturedAt ?? null, InboundCapturedAtEAT: snapshot?.inboundCapturedAt ?? null, PreparedLow: snapshot?.preparedLowStockCount ?? null, PreparedHigh: snapshot?.preparedHighStockCount ?? null, PreparedUnconfigured: snapshot?.preparedUnconfiguredCount ?? null, PreparedUnavailable: snapshot?.preparedUnavailableCount ?? null, ExpiredBatches: snapshot?.expiredBatchCount ?? null, ExpiringSoonBatches: snapshot?.expiringSoonBatchCount ?? null, UnknownExpiryBatches: snapshot?.unknownExpiryBatchCount ?? null };
+  const rawExportRows: Row[] = (snapshot?.rawMaterials ?? []).map((r) => ({ ...summaryExport, SummaryOnly: false, Material: r.name, Unit: r.unit, Opening: r.openingQty, Receipts: r.receiptsQty, Issued: r.issuedQty, Wastage: r.wastageQty, Adjust: r.adjustQty, Closing: r.closingQty, CurrentQtyOnHand: r.currentQtyOnHand, Reconciled: r.reconciled, BalanceUnavailableReason: r.balanceUnavailableReason, Min: r.minStockLevel, Max: r.maxStockLevel, StockStatus: r.stockStatus, ApprovedRequisitionOutstanding: r.approvedRequisitionOutstandingQty, TransferInTransit: r.transferInTransitQty, ExternalPoOutstanding: r.externalPoOutstandingQty, QualityPending: r.qualityPendingQty, TotalInbound: r.totalInboundQty, ReorderStatus: r.reorderStatus }));
+  const exportRows: Row[] = snapshot ? (rawExportRows.length ? rawExportRows : [{ ...summaryExport, SummaryOnly: true }]) : [];
+
+  return <>
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      {!report && <Button type="button" disabled={busy || loading || submittingHo} onClick={() => generate(false)}>{t("Generate report", "Report generate karein")}</Button>}
+      {report && <Button type="button" disabled={busy || loading || submittingHo} onClick={() => generate(true)}>{t("Regenerate report", "Report regenerate karein")}</Button>}
+      {report && <Button type="button" disabled={submittingHo || busy || loading} variant="outline" onClick={submitToHo}>{submittingHo ? t("Submitting to HO…") : t("Submit this revision to HO")}</Button>}
+      {exportRows.length > 0 && <ExportButton filename={`eod-stock-${branch}-${reportDate}-r${report?.revision ?? 1}`} rows={exportRows} />}
+      {report && <span className="text-xs text-muted-foreground">r{report.revision} · {report.generationSource} · captured {new Date(report.capturedAt).toLocaleString("en-TZ", { timeZone: "Africa/Dar_es_Salaam" })}</span>}
+    </div>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {hoMessage && <p role="status" className="text-sm">{hoMessage}</p>}
+    {loading && <p role="status">{t("Loading report…")}</p>}
+    {!loading && !report && !error && <p className="text-sm text-muted-foreground">{t("No report generated yet for this branch/date.", "Is branch/date ke liye abhi koi report nahi bani.")}</p>}
+    {snapshot && <>
+      <div className="mb-4 flex flex-wrap gap-4 text-sm">
+        <span>{t("Prepared low-stock:", "Prepared low-stock:")} {snapshot.preparedLowStockCount ?? "—"}</span>
+        <span>{t("Prepared high-stock:", "Prepared high-stock:")} {snapshot.preparedHighStockCount ?? "—"}</span>
+        <span>{t("Expired batches:", "Expired batches:")} {snapshot.expiredBatchCount ?? "—"}</span>
+        <span>{t("Expiring within 7 days:", "Agle 7 din mein expiry:")} {snapshot.expiringSoonBatchCount ?? "—"}</span>
+        <span>{t("Unknown expiry (held):", "Expiry maloom nahi (held):")} {snapshot.unknownExpiryBatchCount ?? "—"}</span>
+        <span>{t("Prepared unconfigured:")} {snapshot.preparedUnconfiguredCount}</span>
+        <span>{t("Prepared unavailable:")} {snapshot.preparedUnavailableCount}</span>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">Cutoff: {new Date(snapshot.cutoffAt).toLocaleString("en-TZ", { timeZone: "Africa/Dar_es_Salaam" })}. Inbound captured: {new Date(snapshot.inboundCapturedAt).toLocaleString("en-TZ", { timeZone: "Africa/Dar_es_Salaam" })}. {snapshot.thresholdHistoryLimitation}</p>
+      {snapshot.rawMaterials.some((r) => !r.reconciled) && <p role="alert" className="mb-4 text-sm text-destructive">{t("Reconciliation required: one or more materials did not tie out — see Reconciled=false rows.", "Reconciliation required: kuch materials tie out nahi hue \u2014 Reconciled=false rows dekhein.")}</p>}
+      {snapshot.rawMaterials.length ? <Card><CardContent className="pt-5"><RowsTable rows={exportRows} /></CardContent></Card> : <p className="text-sm text-muted-foreground">{t("No raw-material stock rows for this branch.", "Is branch ke liye koi raw-material stock row nahi hai.")}</p>}
+      <Card className="mt-4"><CardHeader><CardTitle>{t("Prepared stock at cutoff")}</CardTitle></CardHeader><CardContent>{snapshot.preparedRows.length ? <RowsTable rows={snapshot.preparedRows.map((r) => ({ Item: r.name, Unit: r.unit, Closing: r.closingQty, Min: r.minStockLevel, Max: r.maxStockLevel, Status: r.status, UnavailableReason: r.unavailableReason }))} /> : <p className="text-sm text-muted-foreground">No prepared rows.</p>}</CardContent></Card>
+    </>}
+  </>;
 }

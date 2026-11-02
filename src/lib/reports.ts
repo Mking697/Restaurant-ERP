@@ -5,13 +5,14 @@ export const REPORT_DEFS = [
   { slug: "inventory-variance", title: "Inventory Variance", description: "Night variance (theoretical vs physical), pilferage flags." },
   { slug: "cash-reconciliation", title: "Cash Reconciliation", description: "Blind cash drop shortage/excess by cashier and branch." },
   { slug: "aggregator-recon", title: "Swiggy/Zomato Reconciliation", description: "Order value vs net payout, commission & ads spend." },
+  { slug: "eod-stock", title: "End-of-Day Stock & Reorder", description: "Historical RAW movement, Prepared/expiry counts, and captured inbound/reorder status by branch and EAT business date." },
 ] as const;
 
 export type ReportSlug = (typeof REPORT_DEFS)[number]["slug"];
 // Reports never implicitly grants underlying operational module reads.
 export function reportReadModule(slug: ReportSlug) {
   if (slug === "mis-scorecard") return "MIS_PERFORMANCE" as const;
-  if (slug === "inventory-variance") return "INVENTORY" as const;
+  if (slug === "inventory-variance" || slug === "eod-stock") return "INVENTORY" as const;
   if (slug === "aggregator-recon") return "AGGREGATOR_RECON" as const;
   return "REPORTS" as const;
 }

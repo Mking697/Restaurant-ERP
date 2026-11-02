@@ -23,6 +23,7 @@ export const MODULE_KEYS = [
   "AGGREGATOR_RECON", // Swiggy/Zomato reconciliation
   "MIS_PERFORMANCE", // MIS score leaderboard
   "REPORTS", // reports module
+  "HO_STOCK_REVIEW", // HO receipt/shortage/EOD submission review queue
   "WHATSAPP_LOGS", // WhatsApp message log / audit viewer
   "VENDOR_REFUNDS", // read-only vendor return/refund claims; never money receipt or settlement
   "ACCOUNTS_EXPENSES", // branch categorized operating expenses and P&L

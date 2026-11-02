@@ -44,3 +44,26 @@ test('BUSINESS_TIMEZONE is the Tanzania identifier, not the old India one', () =
   const bc = require('../src/lib/server/business-calendar.ts');
   assert.equal(bc.BUSINESS_TIMEZONE, 'Africa/Dar_es_Salaam');
 });
+
+test('businessDateRange validates a calendar date and returns its exact EAT UTC cutoff', () => {
+  const bc = require('../src/lib/server/business-calendar.ts');
+  const { start, end } = bc.businessDateRange('2026-02-28');
+  assert.equal(start.toISOString(), '2026-02-27T21:00:00.000Z');
+  assert.equal(end.toISOString(), '2026-02-28T21:00:00.000Z');
+  assert.throws(() => bc.businessDateRange('2026-02-30'), /valid YYYY-MM-DD/);
+  assert.throws(() => bc.businessDateRange('2026-2-8'), /valid YYYY-MM-DD/);
+});
+
+test('previousBusinessDate returns the latest completed EAT date across midnight and month boundaries', () => {
+  const bc = require('../src/lib/server/business-calendar.ts');
+  assert.equal(bc.previousBusinessDate(new Date('2026-03-01T20:59:59Z')), '2026-02-28');
+  assert.equal(bc.previousBusinessDate(new Date('2026-03-01T21:00:00Z')), '2026-03-01');
+});
+
+test('validateReportDate rejects malformed and future EAT dates', () => {
+  const bc = require('../src/lib/server/business-calendar.ts');
+  const now = new Date('2026-03-01T22:00:00Z');
+  assert.equal(bc.validateReportDate('2026-03-02', now), '2026-03-02');
+  assert.throws(() => bc.validateReportDate('2026-03-03', now), /future date/);
+  assert.throws(() => bc.validateReportDate('not-a-date', now), /valid YYYY-MM-DD/);
+});

@@ -27,7 +27,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
 }
 function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
-  "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/performance": "MIS Ranking",
+  "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/ho-stock-review": "HO Stock Review", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer",
   "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
   "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/admin/settings/business-policy": "Business Policy Settings", "/guide": "Guide Book",

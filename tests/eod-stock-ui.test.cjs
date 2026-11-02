@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
+const source=()=>fs.readFileSync('src/app/reports/[report]/report-content.tsx','utf8');
+test('EOD report UI defaults to latest completed EAT day and uses stable per-click request keys',()=>{const s=source();assert.match(s,/previousBusinessDate|latestCompleted/);assert.match(s,/crypto\.randomUUID\(\)/);assert.match(s,/generate\(false\)/);assert.match(s,/generate\(true\)/);});
+test('EOD report UI exposes revision source cutoff inbound reorder prepared and expiry details in CSV',()=>{const s=source();for(const term of ['revision','generationSource','cutoffAt','inboundCapturedAt','stockStatus','reorderStatus','totalInboundQty','preparedRows','preparedUnavailableCount','thresholdHistoryLimitation'])assert.ok(s.includes(term),term);assert.match(s,/eod-stock-.*-r/);assert.match(s,/SummaryOnly/,'CSV keeps a summary row even when the report has no RAW materials');});
