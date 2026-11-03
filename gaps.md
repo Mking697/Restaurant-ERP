@@ -822,59 +822,6 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 - Concrete proof scenario: Concurrent issue requests never reuse number or overconsume claim value. Applying the same vendor credit via both settlement and invoice allocation rejects; canceled document keeps its number and audit trail.
 - Business improvement: Client ka formal Debit Note document aur vendor-credit reconciliation complete hoga, bina existing claim amount ko double-count kiye.
 
-### GAP-021 - Min/max reorder suggestions and approved requisition creation
-
-Status: VERIFIED_LOCAL (production released November 2, 2026) — RAW-material replenishment implemented, exercised on disposable PostgreSQL/production-built HTTP/real browser buttons, and released to production; it remains active because automatic Prepared-stock replenishment is explicitly not claimed.
-Coverage: PARTIAL | Phase: P3 | Depends on: GAP-012, GAP-014, GAP-015, GAP-016
-Source: S3 reorder based on min/max; S2 reorder status; E06, E09.
-
-Acceptance: suggestions use agreed units, usable stock, pending receipts/transfers, max target and approved rounding; route to internal requisition or external procurement as appropriate. Triggering again does not create duplicate indents. Keep human/HO approval unless client explicitly authorizes automation; no automatic bank payment or PO placement is inferred.
-
-#### Implemented and verified locally — November 2, 2026
-
-- Approved routing: proven usable central RAW stock first becomes a **SUBMITTED, unapproved** internal requisition; any remainder becomes a **DRAFT, unsubmitted** external indent. Existing Owner/vendor/threshold/PO/payment controls remain separate. Conversion never approves, dispatches, places a PO or pays.
-- `src/lib/server/replenishment.ts` and `reorder-policy.ts` derive exact three-decimal positions from expiry-eligible branch batches, approved requisition remainder, dispatched transfers (not the same linked requisition twice), per-open-PO ordered-minus-received quantities, quality-pending receipts, and unapproved request reservations. Historical completed PO receipts cannot erase a different open PO's supply; duplicate material lines are aggregated per PO before receipt subtraction. Suggestion-created live external drafts and submitted pending internal requests reserve demand until their real lifecycle releases/replaces it.
-- Branch and central lot totals must reconcile with their respective saved balances. UNKNOWN/expired lots are held, not usable; expiry uses Tanzania EAT. Missing central configuration or unreconciled balances disable conversion with a reason instead of inventing zero availability. Central commitments across branches are deducted before routing.
-- Suggestions trigger only when the inventory position is below configured minimum, then target maximum (not a max-fill request for healthy stock). Both min/max are fingerprinted. kg/ltr retain three decimals; pcs/count total need rounds upward, internal availability rounds downward to whole pieces, and the external remainder remains whole pieces. Conversion reloads the supply position under the existing authenticated global transaction lock; changed positions return 409. A conversion epoch permits a genuine later cycle to return to the same numeric position without reusing an old converted suggestion.
-- Migration `drizzle/0037_far_nick_fury.sql`, schema `src/db/schema/stock-review.ts`, preview/readback/convert handlers under `src/app/api/inventory/reorder-suggestions/`, and `src/app/inventory/reorder-suggestions-panel.tsx` persist preview identities, actor/time, exact replay key and linked requests. Authorization runs before key replay and keys bind to the original actor. Unknown-outcome UI freezes a new intent, checks the exact saved suggestion or explicitly replays the original key. Branch-keyed remount prevents a late old-branch response from becoming the new branch's suggestions.
-- Proof: `tests/gap021-022.integration.cjs` passed **50/50** against a freshly migrated disposable PostgreSQL 17 instance and the actual production-built server. Coverage includes cross-branch replay denial, actor binding, per-PO historical/duplicate-line math, held lots, reconciliation, pending reservations, genuine second cycle, whole-piece allocation, same-key concurrent conversion, two branches racing for central capacity, stale 409, and a forced downstream insert failure proving full rollback. `tests/gap021-022.test.cjs` passed **7/7**; `tests/stock-review-ui.test.cjs` passed **4/4**. Actual browser preview/conversion/readback verified 2 pcs internal + 2 pcs external draft, one committed conversion after a deliberately lost response, and no fresh duplicate suggestion. DB readback confirmed the saved quantities/statuses.
-- Boundaries: this suggestion engine targets RAW materials; existing prepared min/max alerts and manual mixed RAW/PREPARED requisitions remain their own GAP-012/014 flows, not newly claimed automatic prepared replenishment. No provider send or automatic approval/PO/payment occurred. Release evidence: feature commit `4547c18` was merged to production `main` revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel deployment is Ready and live Neon migration `0037_far_nick_fury` plus `reorder_suggestions` readback were verified. Status remains active VERIFIED_LOCAL despite the production release because the excluded Prepared-stock automation is not claimed.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing threshold conventions in `src/db/schema/inventory.ts`, prepared stock in `src/db/schema/production.ts`, procurement helpers in `src/lib/server/purchase.ts` and enhanced internal requisition/transfer contracts reuse karein.
-- Proposed data/server change: PROPOSED: exact inventory-position calculator using usable stock, reservations/commitments, approved inbound supply and max target; distinguish inbound transit from the same approved fulfillment to avoid counting supply twice. Suggestion-to-request unique identity records reviewed conversion and resulting internal/external request.
-- Proposed API/UI fit: Inventory/Reports 'Reorder Suggestions' preview lets authorized user review quantity/source and convert to GAP-014 internal request or external indent with GAP-015/016 gates. Proposed preview/create handlers keep approval mandatory unless explicit automation approval exists.
-- Compatibility / rollout: Unconfigured thresholds or invalid unit conversion return reasons, not arbitrary order quantities. Recompute at conversion under lock/version guard; repeated cron/preview cannot create another pending request for the same suggestion/supply position.
-- Concrete proof scenario: Existing approved inbound supply reduces need once even when it is also in transit; repeated conversion returns the original request. Changed availability forces refreshed suggestion, not an outdated over-order.
-- Business improvement: Min/max badges se actionable reviewed replenishment hoga, bina duplicate indents aur unnecessary overstock ke.
-
-### GAP-022 - HO acknowledgment of branch receipt and stock close
-
-Status: VERIFIED_LOCAL (production released November 2, 2026) — exact-revision HO queue and acknowledgment/escalation implemented, verified and released to production; the item remains active pending formal tracker closure.
-Coverage: PARTIAL | Phase: P3 | Depends on: GAP-005, GAP-007, GAP-014, GAP-020
-Source: S3 confirm GRN/report to HO; E02, E06.
-
-Acceptance: authorized HO users receive a review queue/report for branch receipt/quality/shortage and stock-close submissions, can acknowledge/escalate with actor/date, and see unresolved exceptions. Cross-branch access is intentional and audited. A branch-visible GRN record or a best-effort message alone is not HO acknowledgment.
-
-#### Implemented and verified locally — November 2, 2026
-
-- Only Owner (`SUPER_ADMIN`, implicit) and **branchless `CENTRAL_STORE_MGR` explicitly granted `HO_STOCK_REVIEW`** can review across branches. A branch manager, branch-bound central user or another role cannot gain global authority by ticking the module. Queue reads and review actions are audited; the live identity is re-read after the global write lock. Both new actions and exact-key replay pass authorization first, and replay binds subject/action/reason/original actor.
-- Quality-finalized GRNs automatically create one immutable GRN review subject with quality/shortage/line evidence, including idempotent quality replay. EOD requires **Submit this revision to HO** in Reports; the request includes the exact positive integer client revision. Missing/malformed revisions return 400 and a regenerated-in-place mismatch returns 409, never silently submitting newer unseen evidence. A later explicitly submitted revision creates a separate unresolved subject.
-- `/ho-stock-review` loads one selected branch with an unresolved filter applied in SQL before the 300-subject bound, so newer acknowledged records cannot hide an older unresolved exception. The UI discloses the bound and reloading after resolution advances the queue. Acknowledge records actor/time; Escalate requires a reason and stays unresolved until a later acknowledgment. Append-only events retain escalation history. An unknown write freezes reason/action/branch/filter until exact saved-event readback or an explicit byte-identical replay; synchronous conflicting clicks cannot create a second intent.
-- Paths: `src/lib/server/ho-stock-review.ts`, `ho-stock-review-policy.ts`, `permissions.ts`; `src/app/api/ho-stock-review/`; `src/app/api/reports/eod-stock/[id]/submit-ho/route.ts`; `src/app/ho-stock-review/`; Reports UI; migration/schema shared with GAP-021. This is an in-app review queue, not an automatic WhatsApp acknowledgment or a procurement approval.
-- Proof: shared **50/50** real HTTP/PostgreSQL checks include exact revision payload/mismatch, independent report subjects, unauthorized and different-actor key replay, same-key concurrent acknowledgment, escalation unresolved then ACK, real GRN quality-finalization autoqueue/shortage, and quality replay. Production-built browser buttons separately proved stale EOD r1 rejection after r2 regeneration, explicit r3 submission, frozen unknown escalation with saved-queue readback, and later ACK removing only the exact GRN from the unresolved queue. DB readback retained both ESCALATE and ACKNOWLEDGE with actor/reason. GAP-020's existing real HTTP/DB regression remained **34/34**. Full gate results and local boundaries: `docs/gap021-022-verification.md`.
-- Release evidence: feature commit `4547c18` was merged to production `main` revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel deployment `dpl_7Vc1q4BAfWbEk4e1KESy7PGpdJJD` is Ready. Live Neon readback confirms migration `0037_far_nick_fury` and `ho_stock_review_subjects`. Production smoke checks verified public/auth-protected behavior without creating synthetic business events. Keep this ID active VERIFIED_LOCAL until its tracker coverage/limitations are formally closed.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/lib/server/grn-quality.ts` (`readGrns`), inventory variance/report reads and `src/lib/server/permissions.ts` (`branchScope`, `assertModule`) reuse karein.
-- Proposed data/server change: PROPOSED: versioned review subject for GRN/shortage/stock-close and append-only acknowledgment/escalation with actor/time/reason and unique subject-revision identity. New revisions/exceptions are independently unresolved, not hidden by an old acknowledgment.
-- Proposed API/UI fit: Purchase/Inventory/Reports me scoped HO Review queue with acknowledge/escalate actions and outstanding exception filters. Define specific HO reviewer role/grants; current branchScope cross-branch access is Owner-only, so granting a normal module must not silently create global authority.
-- Compatibility / rollout: Notification can point to a review subject after commit but cannot count as receiver acknowledgment. Existing branch records remain visible as before; new HO actions respect approved concept/database ownership and auditable bridge if needed.
-- Concrete proof scenario: Same receipt revision acknowledged twice -> one event. Later shortage correction appears pending again; another branch's manager cannot acknowledge by replacing the subject ID.
-- Business improvement: 'Report to HO' ka actual received/reviewed/escalated status milega, sirf message-sent assumption nahi.
-
 ### GAP-023 - Distinct Fast Food and Conventional operating workflows
 
 Status: PENDING
@@ -1221,6 +1168,75 @@ Verified completed blocks move here with the evidence template; do not copy
 them while leaving an active duplicate. Previously shipped foundation
 remains documented in section 2 and historical `CLAUDE.md` records, not
 falsely relabeled as newly completed GAP items.
+
+### GAP-022 - HO acknowledgment of branch receipt and stock close
+
+Status: DONE (production released November 2, 2026)
+Coverage: COMPLETE | Phase: P3 | Depends on: GAP-005, GAP-007, GAP-014, GAP-020
+Source: S3 confirm GRN/report to HO; E02, E06.
+
+Acceptance: authorized HO users receive a review queue/report for branch receipt/quality/shortage and stock-close submissions, can acknowledge/escalate with actor/date, and see unresolved exceptions. Cross-branch access is intentional and audited. A branch-visible GRN record or a best-effort message alone is not HO acknowledgment.
+
+#### Implementation and verification — November 2, 2026
+
+- Only Owner (`SUPER_ADMIN`, implicit) and **branchless `CENTRAL_STORE_MGR` explicitly granted `HO_STOCK_REVIEW`** can review across branches. A branch manager, branch-bound central user or another role cannot gain global authority by ticking the module. Queue reads and review actions are audited; the live identity is re-read after the global write lock. Both new actions and exact-key replay pass authorization first, and replay binds subject/action/reason/original actor.
+- Quality-finalized GRNs automatically create one immutable GRN review subject with quality/shortage/line evidence, including idempotent quality replay. EOD requires **Submit this revision to HO** in Reports; the request includes the exact positive integer client revision. Missing/malformed revisions return 400 and a regenerated-in-place mismatch returns 409, never silently submitting newer unseen evidence. A later explicitly submitted revision creates a separate unresolved subject.
+- `/ho-stock-review` loads one selected branch with an unresolved filter applied in SQL before the 300-subject bound, so newer acknowledged records cannot hide an older unresolved exception. The UI discloses the bound and reloading after resolution advances the queue. Acknowledge records actor/time; Escalate requires a reason and stays unresolved until a later acknowledgment. Append-only events retain escalation history. An unknown write freezes reason/action/branch/filter until exact saved-event readback or an explicit byte-identical replay; synchronous conflicting clicks cannot create a second intent.
+- Paths: `src/lib/server/ho-stock-review.ts`, `ho-stock-review-policy.ts`, `permissions.ts`; `src/app/api/ho-stock-review/`; `src/app/api/reports/eod-stock/[id]/submit-ho/route.ts`; `src/app/ho-stock-review/`; Reports UI; migration/schema shared with GAP-021. This is an in-app review queue, not an automatic WhatsApp acknowledgment or a procurement approval.
+- Proof: shared **50/50** real HTTP/PostgreSQL checks include exact revision payload/mismatch, independent report subjects, unauthorized and different-actor key replay, same-key concurrent acknowledgment, escalation unresolved then ACK, real GRN quality-finalization autoqueue/shortage, and quality replay. Production-built browser buttons separately proved stale EOD r1 rejection after r2 regeneration, explicit r3 submission, frozen unknown escalation with saved-queue readback, and later ACK removing only the exact GRN from the unresolved queue. DB readback retained both ESCALATE and ACKNOWLEDGE with actor/reason. GAP-020's existing real HTTP/DB regression remained **34/34**. Full gate results and local boundaries: `docs/gap021-022-verification.md`.
+- Release evidence: feature commit `4547c18` was merged to production `main` revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel deployment `dpl_7Vc1q4BAfWbEk4e1KESy7PGpdJJD` is Ready. Live Neon readback confirms migration `0037_far_nick_fury` and `ho_stock_review_subjects`. Production smoke checks verified public/auth-protected behavior without creating synthetic business events. The authorized release and production readback complete this GAP; provider messaging and procurement approval remain separate workflows and are not claimed by HO acknowledgment.
+
+#### Implemented current-project integration
+
+- Current-project reuse: Existing `src/lib/server/grn-quality.ts` (`readGrns`), inventory variance/report reads and `src/lib/server/permissions.ts` (`branchScope`, `assertModule`) reuse karein.
+- Implemented data/server change: versioned review subject for GRN/shortage/stock-close and append-only acknowledgment/escalation with actor/time/reason and unique subject-revision identity. New revisions/exceptions are independently unresolved, not hidden by an old acknowledgment.
+- Implemented API/UI fit: Purchase/Inventory/Reports me scoped HO Review queue with acknowledge/escalate actions and outstanding exception filters. Define specific HO reviewer role/grants; current branchScope cross-branch access is Owner-only, so granting a normal module must not silently create global authority.
+- Compatibility / rollout: Notification can point to a review subject after commit but cannot count as receiver acknowledgment. Existing branch records remain visible as before; new HO actions respect approved concept/database ownership and auditable bridge if needed.
+- Concrete proof scenario: Same receipt revision acknowledged twice -> one event. Later shortage correction appears pending again; another branch's manager cannot acknowledge by replacing the subject ID.
+- Business improvement: 'Report to HO' ka actual received/reviewed/escalated status milega, sirf message-sent assumption nahi.
+
+Completion evidence (GAP-022 - HO stock review):
+
+- Completed and released November 2, 2026.
+- Git/release: feature commit `4547c18`; production feature revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel release and protected-route smoke verified.
+- Production database: migration `0037_far_nick_fury` is recorded in the 38-row Neon migration ledger; live readback confirms `ho_stock_review_subjects`.
+- Acceptance result: authorized cross-branch HO queue, finalized-GRN autoqueue, exact EOD revision submission, append-only acknowledgment/escalation, unresolved exception behavior, actor/time/reason audit, authorization-before-replay and retry-safe actions are proven.
+- Boundary: an in-app acknowledgment is not automatic WhatsApp delivery, procurement approval or stock mutation.
+
+### GAP-021 - Min/max reorder suggestions and approved requisition creation
+
+Status: DONE (owner-approved RAW-material scope; production released November 2, 2026)
+Coverage: COMPLETE (approved RAW scope) | Phase: P3 | Depends on: GAP-012, GAP-014, GAP-015, GAP-016
+Source: S3 reorder based on min/max; S2 reorder status; E06, E09.
+
+Acceptance: suggestions use agreed units, usable stock, pending receipts/transfers, max target and approved rounding; route to internal requisition or external procurement as appropriate. Triggering again does not create duplicate indents. Keep human/HO approval unless client explicitly authorizes automation; no automatic bank payment or PO placement is inferred.
+
+#### Implementation and verification — November 2, 2026
+
+- Approved routing: proven usable central RAW stock first becomes a **SUBMITTED, unapproved** internal requisition; any remainder becomes a **DRAFT, unsubmitted** external indent. Existing Owner/vendor/threshold/PO/payment controls remain separate. Conversion never approves, dispatches, places a PO or pays.
+- `src/lib/server/replenishment.ts` and `reorder-policy.ts` derive exact three-decimal positions from expiry-eligible branch batches, approved requisition remainder, dispatched transfers (not the same linked requisition twice), per-open-PO ordered-minus-received quantities, quality-pending receipts, and unapproved request reservations. Historical completed PO receipts cannot erase a different open PO's supply; duplicate material lines are aggregated per PO before receipt subtraction. Suggestion-created live external drafts and submitted pending internal requests reserve demand until their real lifecycle releases/replaces it.
+- Branch and central lot totals must reconcile with their respective saved balances. UNKNOWN/expired lots are held, not usable; expiry uses Tanzania EAT. Missing central configuration or unreconciled balances disable conversion with a reason instead of inventing zero availability. Central commitments across branches are deducted before routing.
+- Suggestions trigger only when the inventory position is below configured minimum, then target maximum (not a max-fill request for healthy stock). Both min/max are fingerprinted. kg/ltr retain three decimals; pcs/count total need rounds upward, internal availability rounds downward to whole pieces, and the external remainder remains whole pieces. Conversion reloads the supply position under the existing authenticated global transaction lock; changed positions return 409. A conversion epoch permits a genuine later cycle to return to the same numeric position without reusing an old converted suggestion.
+- Migration `drizzle/0037_far_nick_fury.sql`, schema `src/db/schema/stock-review.ts`, preview/readback/convert handlers under `src/app/api/inventory/reorder-suggestions/`, and `src/app/inventory/reorder-suggestions-panel.tsx` persist preview identities, actor/time, exact replay key and linked requests. Authorization runs before key replay and keys bind to the original actor. Unknown-outcome UI freezes a new intent, checks the exact saved suggestion or explicitly replays the original key. Branch-keyed remount prevents a late old-branch response from becoming the new branch's suggestions.
+- Proof: `tests/gap021-022.integration.cjs` passed **50/50** against a freshly migrated disposable PostgreSQL 17 instance and the actual production-built server. Coverage includes cross-branch replay denial, actor binding, per-PO historical/duplicate-line math, held lots, reconciliation, pending reservations, genuine second cycle, whole-piece allocation, same-key concurrent conversion, two branches racing for central capacity, stale 409, and a forced downstream insert failure proving full rollback. `tests/gap021-022.test.cjs` passed **7/7**; `tests/stock-review-ui.test.cjs` passed **4/4**. Actual browser preview/conversion/readback verified 2 pcs internal + 2 pcs external draft, one committed conversion after a deliberately lost response, and no fresh duplicate suggestion. DB readback confirmed the saved quantities/statuses.
+- Boundaries: this suggestion engine targets RAW materials; existing prepared min/max alerts and manual mixed RAW/PREPARED requisitions remain their own GAP-012/014 flows, not newly claimed automatic prepared replenishment. No provider send or automatic approval/PO/payment occurred. Release evidence: feature commit `4547c18` was merged to production `main` revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel deployment is Ready and live Neon migration `0037_far_nick_fury` plus `reorder_suggestions` readback were verified. Prepared-stock automatic replenishment was outside the owner-approved scope and is not claimed; it remains a separate future decision rather than an unfinished part of this RAW-material closure.
+
+#### Implemented current-project integration
+
+- Current-project reuse: Existing threshold conventions in `src/db/schema/inventory.ts`, prepared stock in `src/db/schema/production.ts`, procurement helpers in `src/lib/server/purchase.ts` and enhanced internal requisition/transfer contracts reuse karein.
+- Implemented data/server change: exact inventory-position calculator using usable stock, reservations/commitments, approved inbound supply and max target; distinguish inbound transit from the same approved fulfillment to avoid counting supply twice. Suggestion-to-request unique identity records reviewed conversion and resulting internal/external request.
+- Implemented API/UI fit: Inventory/Reports 'Reorder Suggestions' preview lets authorized user review quantity/source and convert to GAP-014 internal request or external indent with GAP-015/016 gates. Proposed preview/create handlers keep approval mandatory unless explicit automation approval exists.
+- Compatibility / rollout: Unconfigured thresholds or invalid unit conversion return reasons, not arbitrary order quantities. Recompute at conversion under lock/version guard; repeated cron/preview cannot create another pending request for the same suggestion/supply position.
+- Concrete proof scenario: Existing approved inbound supply reduces need once even when it is also in transit; repeated conversion returns the original request. Changed availability forces refreshed suggestion, not an outdated over-order.
+- Business improvement: Min/max badges se actionable reviewed replenishment hoga, bina duplicate indents aur unnecessary overstock ke.
+
+Completion evidence (GAP-021 - RAW min/max replenishment):
+
+- Completed for the explicitly approved RAW-material scope and released November 2, 2026.
+- Git/release: feature commit `4547c18`; production feature revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; current production alias remains `https://restaurant-erp-tau.vercel.app`.
+- Production database: migration `0037_far_nick_fury` is recorded in the 38-row Neon migration ledger; live readback confirms `reorder_suggestions`.
+- Acceptance result: usable stock, pending supply, max target, approved rounding, internal-first routing, external draft remainder, human approval, duplicate prevention, authorization, concurrency and exact replay are proven. Conversion never approves, dispatches, creates a PO or pays.
+- Limitation: automatic Prepared-stock replenishment is not claimed because the owner-approved implementation scope was RAW materials only.
 
 ### GAP-020 - Full end-of-day stock and reorder-status reporting
 
