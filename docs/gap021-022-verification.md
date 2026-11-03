@@ -1,6 +1,6 @@
-# GAP-021 / GAP-022 local verification
+# GAP-021 / GAP-022 verification and production release
 
-Date: 2 November 2026. Status: **VERIFIED_LOCAL**, not production DONE.
+Date: 2 November 2026. Status: **VERIFIED_LOCAL with production release completed**, active pending formal tracker closure.
 
 ## Delivered behavior
 
@@ -67,7 +67,8 @@ Local scratch logs: `gap2122-production-http.log`, `gap2122-production-http-repe
 ## Scope, release and tracker boundaries
 
 - Suggestions target RAW materials only. Existing prepared min/max and manual mixed requisitions remain their own flows; automatic prepared replenishment is not claimed.
-- `gaps.md` retains GAP-021 and GAP-022 in the active register as VERIFIED_LOCAL. The SOP explicitly distinguishes this from released functionality.
-- Updating the protected `CLAUDE.md` checkpoint was **denied by the tool/user protection**. It was not retried or bypassed; its existing changes were preserved. A separately authorized checkpoint update is still required. This document and `gaps.md` carry the current evidence in the meantime.
-- No commit, push, deployment, production smoke, persistent/production migration, provider message or automatic purchase/payment occurred.
-- Cleanup verified: the exact QA server stopped gracefully; port 3119 has no listener; the `restaurant-gap2122-final-qa` disposable container/database is absent; its separate upgrade-proof database was removed; isolated `.next-gap2122-final` and `.next-gap2122-build` output and the disposable session-cookie fixture were deleted. `next-env.d.ts` and `tsconfig.json` have zero diff against HEAD; TypeScript passed again after cleanup. Pre-existing listeners/containers on ports 5436 and 5438 were not modified.
+- `gaps.md` keeps GAP-021 and GAP-022 active as VERIFIED_LOCAL, with production release evidence recorded, until their coverage/limitations are formally closed. GAP-020 is separately DONE and moved to the Done register.
+- Authorized release completed on November 2, 2026: feature commit `4547c18` was merged to production `main` revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; Vercel deployment `dpl_7Vc1q4BAfWbEk4e1KESy7PGpdJJD` reached Ready at `https://restaurant-erp-tau.vercel.app`.
+- Production Neon project `wild-glade-34334923`, branch `br-plain-poetry-a1151jyf`, has 38 migrations. Readback confirms `0036_regular_rhino`, `0037_far_nick_fury`, `eod_stock_reports`, `reorder_suggestions` and `ho_stock_review_subjects`. A pre-release rollback snapshot was created before migration; no rollback was required.
+- Production smoke checks verified setup/login plus protected Inventory and HO routes without inserting synthetic production business records. No provider message, automatic purchase approval, PO placement or payment occurred.
+- Cleanup verified: the exact QA server stopped gracefully; port 3119 has no listener; the `restaurant-gap2122-final-qa` disposable container/database is absent; its separate upgrade-proof database was removed; isolated `.next-gap2122-final` and `.next-gap2122-build` output and the disposable session-cookie fixture were deleted. Pre-existing listeners/containers on ports 5436 and 5438 were not modified.
