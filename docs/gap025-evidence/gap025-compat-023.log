@@ -1,0 +1,282 @@
+PASS connected database identity
+PASS app/DB binding: fixture session HTTP
+PASS app recognizes exact seeded fixture owner
+PASS app/DB binding: fixture branch HTTP
+PASS app reads exact seeded fixture branch
+PASS app reads unpredictable fixture branch code
+PASS SQL omitted concept defaults FAST_FOOD
+PASS owner creates default branch HTTP
+PASS API omitted concept defaults FAST_FOOD
+PASS manager cannot create concept branch HTTP
+PASS manager cannot change operating concept HTTP
+PASS denied concept change preserved value
+PASS invalid concept rejected HTTP
+PASS owner changes concept HTTP
+PASS owner concept persisted
+PASS create denial null HTTP
+PASS create denial null: full SQL state unchanged
+PASS POS list denial null HTTP
+PASS create denial outsider HTTP
+PASS create denial outsider: full SQL state unchanged
+PASS POS list denial outsider HTTP
+PASS create denial noModule HTTP
+PASS create denial noModule: full SQL state unchanged
+PASS POS list denial noModule HTTP
+PASS conventional table required HTTP
+PASS missing conventional table rollback: full SQL state unchanged
+PASS idempotency key required HTTP
+PASS missing key rollback: full SQL state unchanged
+PASS foreign menu rejected HTTP
+PASS cross-branch menu rollback: full SQL state unchanged
+PASS create cannot set visibility HTTP
+PASS visibility injection rollback: full SQL state unchanged
+PASS concurrent fast create fresh/replay HTTP statuses
+PASS concurrent fast create exactly one replay
+PASS concurrent fast create same order identity
+PASS concurrent fast create same committed result
+PASS fast food DINE_IN is PAID
+PASS fast food flow
+PASS fast food receipt amount
+PASS fast food: station/type split
+PASS fast food: production ticket has no money fields
+PASS fast food stock/settlement timestamps
+PASS fast food deducted stock
+PASS fast food aggregate deduction exactly once
+PASS fast food lot deduction exactly once
+PASS concurrent fast create one persisted sale
+PASS no customer means no provider send
+PASS fast exact replay HTTP
+PASS fast replay identity
+PASS fast replay flag
+PASS fast create exact replay: full SQL state unchanged
+PASS fast payload key conflict HTTP
+PASS fast changed same key: full SQL state unchanged
+PASS conventional TAKEAWAY payment-first HTTP
+PASS TAKEAWAY PAID
+PASS TAKEAWAY receipt present
+PASS conventional SWIGGY payment-first HTTP
+PASS SWIGGY PAID
+PASS SWIGGY receipt present
+PASS conventional ZOMATO payment-first HTTP
+PASS ZOMATO PAID
+PASS ZOMATO receipt present
+PASS takeaway requires tender HTTP
+PASS missing payment tender: full SQL state unchanged
+PASS paid order add rejected HTTP
+PASS paid order cannot add: full SQL state unchanged
+PASS insufficient stock create fails HTTP
+PASS insufficient stock create rollback: full SQL state unchanged
+PASS insufficient stock payment-first fails HTTP
+PASS insufficient stock payment-first rollback: full SQL state unchanged
+PASS insufficient stock healthy open fixture HTTP
+PASS insufficient stock add fails HTTP
+PASS insufficient stock added-line rollback: full SQL state unchanged
+PASS only expired lots create fails HTTP
+PASS only expired lots create rollback: full SQL state unchanged
+PASS only expired lots payment-first fails HTTP
+PASS only expired lots payment-first rollback: full SQL state unchanged
+PASS only expired lots healthy open fixture HTTP
+PASS only expired lots add fails HTTP
+PASS only expired lots added-line rollback: full SQL state unchanged
+PASS cashier creates future private order HTTP
+PASS cashier adds before visibility change HTTP
+PASS cashier cannot make order private HTTP
+PASS owner hides order HTTP
+PASS hidden order SQL readback
+PASS cashier list hides private order HTTP
+PASS hidden order ID absent for original cashier
+PASS owner list retains private order HTTP
+PASS owner sees hidden order marker
+PASS original cashier hidden CREATE replay HTTP
+PASS hidden CREATE replay disclosure blocked: full SQL state unchanged
+PASS original cashier hidden ADD replay HTTP
+PASS hidden ADD replay disclosure blocked: full SQL state unchanged
+PASS original cashier hidden ADD mutation HTTP
+PASS hidden fresh ADD blocked: full SQL state unchanged
+PASS original cashier hidden SETTLE mutation HTTP
+PASS hidden fresh SETTLE blocked: full SQL state unchanged
+PASS owner can add hidden order HTTP
+PASS owner can settle hidden order HTTP
+PASS owner hidden settlement paid
+PASS owner hidden settlement full bill
+PASS hidden settlement persisted PAID
+PASS owner hidden settlement replay HTTP
+PASS owner hidden replay flag
+PASS owner hidden same receipt
+PASS owner hidden exact settlement replay: full SQL state unchanged
+PASS original cashier cannot replay hidden owner action /settle HTTP
+PASS hidden saved owner response blocked /settle: full SQL state unchanged
+PASS original cashier cannot replay hidden owner action /lines HTTP
+PASS hidden saved owner response blocked /lines: full SQL state unchanged
+PASS hidden paid CREATE replay remains 404 HTTP
+PASS hidden paid original create replay blocked: full SQL state unchanged
+PASS concurrent conventional create fresh/replay HTTP statuses
+PASS concurrent conventional create exactly one replay
+PASS concurrent conventional create same order identity
+PASS concurrent conventional create same committed result
+PASS conventional dine-in OPEN
+PASS production-first flow
+PASS OPEN has no receipt
+PASS mixed production dispatch: station/type split
+PASS mixed production dispatch: production ticket has no money fields
+PASS mixed production dispatch: production ticket has no money fields
+PASS KOT routes only food
+PASS BOT routes only drink
+PASS one OPEN create effects
+PASS OPEN tender not collected
+PASS OPEN no settled timestamp
+PASS order snapshots conventional concept
+PASS stock posted at dispatch
+PASS opening shift stored
+PASS dispatch captures complete COGS
+PASS dispatch COGS 50 food + 10 bar
+PASS dispatch aggregate deduction g23-9dc962ef-ecab-4207-a9bc-f0492f6239d4
+PASS dispatch physical lot deduction g23-9dc962ef-ecab-4207-a9bc-f0492f6239d4
+PASS dispatch aggregate deduction g23-a4fbafbd-0a62-4bfe-86b8-862f8b0c4453
+PASS dispatch physical lot deduction g23-a4fbafbd-0a62-4bfe-86b8-862f8b0c4453
+PASS OPEN exact create replay HTTP
+PASS OPEN create replay flag
+PASS OPEN create replay ID
+PASS exact OPEN create replay: full SQL state unchanged
+PASS create replay denial null HTTP
+PASS create replay authorization null: full SQL state unchanged
+PASS create replay denial outsider HTTP
+PASS create replay authorization outsider: full SQL state unchanged
+PASS create replay denial noModule HTTP
+PASS create replay authorization noModule: full SQL state unchanged
+PASS create replay denial peer HTTP
+PASS create replay authorization peer: full SQL state unchanged
+PASS create key conflict HTTP
+PASS same CREATE key altered payload: full SQL state unchanged
+PASS second OPEN order HTTP
+PASS cashier lists overnight OPEN tables HTTP
+PASS yesterday OPEN remains actionable in GET list
+PASS prior-month OPEN remains actionable in GET list
+PASS GET exposes snapshot concept for old OPEN
+PASS concurrent added-line dispatch fresh/replay HTTP statuses
+PASS concurrent added-line dispatch exactly one replay
+PASS concurrent added-line dispatch same order identity
+PASS concurrent added-line dispatch same committed result
+PASS add only creates new kitchen ticket: station/type split
+PASS add only creates new kitchen ticket: production ticket has no money fields
+PASS one add effects
+PASS new line subtotal once
+PASS add captures only new dispatch COGS
+PASS added food aggregate deducted once
+PASS added food lots deducted once
+PASS ledger includes original and added consumption
+PASS add exact replay HTTP
+PASS add replay flag
+PASS exact add replay: full SQL state unchanged
+PASS same ADD key cannot target another order HTTP
+PASS wrong order add-key replay: full SQL state unchanged
+PASS changed ADD payload rejected HTTP
+PASS changed add key payload: full SQL state unchanged
+PASS add replay denied null HTTP
+PASS add replay authorization null: full SQL state unchanged
+PASS add replay denied outsider HTTP
+PASS add replay authorization outsider: full SQL state unchanged
+PASS add replay denied noModule HTTP
+PASS add replay authorization noModule: full SQL state unchanged
+PASS add replay denied peer HTTP
+PASS add replay authorization peer: full SQL state unchanged
+PASS before settlement profit-loss HTTP
+PASS before settlement P&L excludes unpaid OPEN revenue
+PASS before settlement P&L uses captured paid/legacy COGS
+PASS before settlement POS summary HTTP
+PASS before settlement POS summary excludes unpaid OPEN
+PASS before settlement operational list retains unpaid tables
+PASS before settlement legacy COMPLETED order included
+PASS before settlement yesterday OPEN retained
+PASS before settlement older OPEN concept snapshot exposed
+PASS owner switches branch with OPEN tables HTTP
+PASS snapshot preserves add after concept switch HTTP
+PASS existing order concept remains conventional
+PASS new order follows changed concept HTTP
+PASS new order after switch PAID
+PASS end opening shift HTTP
+PASS opening shift excludes unpaid table collection
+PASS pending handover settlement denied HTTP
+PASS settlement blocked pending handover: full SQL state unchanged
+PASS accept new shift handover HTTP
+PASS fresh settlement denied null HTTP
+PASS fresh settlement authorization null: full SQL state unchanged
+PASS fresh settlement denied outsider HTTP
+PASS fresh settlement authorization outsider: full SQL state unchanged
+PASS fresh settlement denied noModule HTTP
+PASS fresh settlement authorization noModule: full SQL state unchanged
+PASS concurrent settlement fresh/replay HTTP statuses
+PASS concurrent settlement exactly one replay
+PASS concurrent settlement same order identity
+PASS concurrent settlement same committed result
+PASS settled status
+PASS one receipt full bill
+PASS settlement no raw deductions
+PASS settlement no semi-FG deductions
+PASS settlement leaves stock/lots unchanged
+PASS settlement leaves movement ledger unchanged
+PASS one receipt and settlement attempt
+PASS COGS preserved despite rate/BOM change
+PASS COGS completeness preserved
+PASS collection reassigned to settling shift
+PASS settlement timestamp recorded
+PASS original dispatch timestamp preserved
+PASS post-settle exact replay HTTP
+PASS settle replay flag
+PASS same receipt number
+PASS settlement exact replay: full SQL state unchanged
+PASS SETTLE key cannot target second table HTTP
+PASS wrong order settlement replay: full SQL state unchanged
+PASS changed tender same key conflict HTTP
+PASS changed settlement payload: full SQL state unchanged
+PASS already paid fresh key rejected HTTP
+PASS new settlement key after payment: full SQL state unchanged
+PASS paid cannot add fresh lines HTTP
+PASS fresh add after payment: full SQL state unchanged
+PASS post-paid replay denied null/settle HTTP
+PASS post-paid replay authorization null/settle: full SQL state unchanged
+PASS post-paid replay denied null/lines HTTP
+PASS post-paid replay authorization null/lines: full SQL state unchanged
+PASS post-paid replay denied outsider/settle HTTP
+PASS post-paid replay authorization outsider/settle: full SQL state unchanged
+PASS post-paid replay denied outsider/lines HTTP
+PASS post-paid replay authorization outsider/lines: full SQL state unchanged
+PASS post-paid replay denied noModule/settle HTTP
+PASS post-paid replay authorization noModule/settle: full SQL state unchanged
+PASS post-paid replay denied noModule/lines HTTP
+PASS post-paid replay authorization noModule/lines: full SQL state unchanged
+PASS post-paid replay denied peer/settle HTTP
+PASS post-paid replay authorization peer/settle: full SQL state unchanged
+PASS post-paid replay denied peer/lines HTTP
+PASS post-paid replay authorization peer/lines: full SQL state unchanged
+PASS original CREATE after payment HTTP
+PASS CREATE historical response retained
+PASS CREATE replay flag after payment
+PASS post-paid CREATE replay: full SQL state unchanged
+PASS original ADD after payment HTTP
+PASS ADD historical response retained
+PASS ADD replay flag after payment
+PASS post-paid ADD replay: full SQL state unchanged
+PASS after settlement profit-loss HTTP
+PASS after settlement P&L excludes unpaid OPEN revenue
+PASS after settlement P&L uses captured paid/legacy COGS
+PASS after settlement POS summary HTTP
+PASS after settlement POS summary excludes unpaid OPEN
+PASS after settlement operational list retains unpaid tables
+PASS after settlement legacy COMPLETED order included
+PASS after settlement yesterday OPEN retained
+PASS after settlement older OPEN concept snapshot exposed
+PASS today list includes paid order opened prior month
+PASS prior-month report after settlement HTTP
+PASS prior opening month does not recognize today collection
+PASS end settling shift HTTP
+PASS settling shift collects table payment exactly once
+PASS settling shift has zero shortage
+PASS all fixtures omit customer phones
+{"passed":275,"result":"PASS"}
+PASS app/DB binding: fixture session HTTP
+PASS app recognizes exact seeded fixture owner
+PASS app/DB binding: fixture branch HTTP
+PASS app reads exact seeded fixture branch
+PASS app reads unpredictable fixture branch code
+PASS scoped FK-aware fixture cleanup

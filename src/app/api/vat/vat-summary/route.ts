@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
     const orderIds = orders.map((o) => o.id);
     const lineRows = await db
-      .select({ orderId: posOrderLines.orderId, qty: posOrderLines.qty, price: posOrderLines.price, menuItemId: posOrderLines.menuItemId, vatRatePercent: posOrderLines.vatRatePercent })
+      .select({ orderId: posOrderLines.orderId, qty: posOrderLines.qty, price: posOrderLines.price, menuItemId: posOrderLines.menuItemId, vatRatePercent: posOrderLines.vatRatePercent, productCodeSnapshot: posOrderLines.productCodeSnapshot })
       .from(posOrderLines)
       .where(inArray(posOrderLines.orderId, orderIds));
     const menuItemIds = [...new Set(lineRows.map((l) => l.menuItemId))];
@@ -63,7 +63,8 @@ export async function GET(request: Request) {
       const branchIdForLine = branchByOrderId.get(line.orderId)!;
       const branchOverride = branchVatOverrideById.get(branchIdForLine) ?? null;
       return {
-        productCode: item?.productCode ?? "",
+        // NULL is uncaptured legacy; a captured empty code must remain blank.
+        productCode: line.productCodeSnapshot ?? item?.productCode ?? "",
         ratePercent: line.vatRatePercent ?? branchOverride ?? item?.vatRatePercent ?? "0.00",
         qty: line.qty,
         lineTotalDecimal: (Number(line.price) * line.qty).toFixed(2),

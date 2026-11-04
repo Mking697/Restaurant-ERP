@@ -826,11 +826,15 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-025 - Proforma and final invoice identity/linkage
 
-Status: PENDING
+Status: IN_PROGRESS
 Coverage: PARTIAL | Phase: P4 | Depends on: GAP-023, GAP-024
 Source: S1 invoice generation/link receipt to invoice; S2 proforma then payment; E07, E11.
 
-Planning checkpoint — November 4, 2026: GAP-023/024 dependencies are production-released. Inspected current receipt/tax/ticket/branding seams and recorded the proposed immutable-document/numbering/cutover slice in `docs/gap025-plan.md`. Implementation remains PENDING until the owner confirms that plan and the numbering/seller-identity boundaries; no fiscal compliance, historical backfill or new tax policy is assumed.
+Release authorization and reopened acceptance: owner subsequently explicitly selected GAP-025 commit/push, production migration and deployment in the release clarification. Independent review then found full-page-unmount uncertainty loss and partial-setup fixture-cleanup defects. Fix and re-review both and rerun current-artifact gates before release; this later authorization supersedes the original local-only boundary, not the safety requirements.
+
+Historical pre-review local verification: 635/635 unit tests, 178 real HTTP/PostgreSQL checks, 275 GAP-023 and 648 GAP-024 compatibility checks, TypeScript/build, browser exact replay and invoice-only print passed. Database readback confirms no additional payment/stock/revenue effects. QA sessions revoked and server/container stopped. Evidence and limits: `docs/gap025-verification.md`. Still active pending separately authorized release; no physical-printer delivery or TRA/EFD compliance claim.
+
+Implementation approved — November 4, 2026: owner confirmed the five-point internal proforma/final-document plan with "haa Contineu kro". Implementation and isolated local verification are authorized under `docs/gap025-contract.md`; numbering is branch-labelled PF/INV + EAT year + permanent sequence. Existing payment/stock/tax policy stays unchanged. No TRA/EFD compliance claim, historical backfill, commit/push or production migration/deployment is authorized for this gap.
 
 Acceptance: distinguish pre-order/proforma, official invoice and KOT identities and numbering; finalization captures approved totals/tax and links the source order. A proforma is not posted as a completed sale. Reprints preserve issued values and tax identity; legacy completed orders migrate without duplicates. Resolve historical tax-snapshot behavior for the new invoice lifecycle rather than reconstructing issued amounts from current settings.
 

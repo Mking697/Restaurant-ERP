@@ -1,0 +1,5 @@
+PASS exact disposable QA browser sessions revoked; database readback zero
+PASS QA HTTP server stopped; connection rejected
+restaurant-gap025-qa
+restaurant-gap025-qa|Exited (0) Less than a second ago|
+PASS isolated QA browser restaurant_session cookie deleted; exact-name/url readback absent

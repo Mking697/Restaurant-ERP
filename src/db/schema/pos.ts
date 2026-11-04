@@ -102,6 +102,9 @@ export const posOrderLines = pgTable(
     menuItemId: text("menu_item_id")
       .notNull()
       .references(() => menuItems.id),
+    // NULL denotes unknown legacy data; a blank code is a captured blank.
+    nameSnapshot: text("name_snapshot"),
+    productCodeSnapshot: text("product_code_snapshot"),
     qty: integer("qty").notNull(),
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     // Null only for legacy rows created before per-line tax snapshots existed;

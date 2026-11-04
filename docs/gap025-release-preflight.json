@@ -1,0 +1,35 @@
+{
+  "approvedTarget": {
+    "project": "wild-glade-34334923",
+    "branch": "br-plain-poetry-a1151jyf",
+    "database": "neondb"
+  },
+  "historicalCount": 40,
+  "prefixMd5": "62bad5f1d943af056597c416860be360",
+  "candidate": {
+    "tag": "0040_gap025_pos_documents",
+    "when": 1793790465948,
+    "hash": "3d03457c0d1b1a2ed48dec6a45b735ef53953b5057f368188ca67b68c84ef8ca"
+  },
+  "reviewSizes": {
+    "backend": 110860,
+    "frontend": 83490
+  },
+  "staticScanFindings": [],
+  "productionReadback": {
+    "databaseMatch": true,
+    "historicalCount": 40,
+    "prefixMd5": "62bad5f1d943af056597c416860be360",
+    "completeLedgerDigest": "bbf631936adaf6a6bfb66899a18111e2",
+    "watermark": "1793763179822",
+    "newTablesAbsent": true,
+    "snapshotColumnsAbsent": true,
+    "branches": 6,
+    "missingSellerPrerequisites": 0,
+    "orders": 0,
+    "lines": 0,
+    "receipts": 0,
+    "drafts": 0
+  },
+  "authorization": "Owner explicitly selected commit/push, production migration and deployment in the release clarification. Apply only after independent review passes."
+}

@@ -1,0 +1,189 @@
+▲ Next.js 16.4.3 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.ts took 84ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 65s
+  Running TypeScript ...
+✓ Finished filesystem cache database compaction in 17.5s
+  Finished TypeScript in 44s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/10) ...
+  Generating static pages using 7 workers (2/10)
+  Generating static pages using 7 workers (4/10)
+  Generating static pages using 7 workers (7/10)
+✓ Generating static pages using 7 workers (10/10) in 1987ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /accounts
+├ ƒ /admin/branches
+├ ƒ /admin/settings/business-policy
+├ ƒ /admin/settings/restaurant
+├ ƒ /admin/settings/shifts
+├ ƒ /admin/settings/whatsapp
+├ ƒ /admin/users
+├ ƒ /api/accounts/aggregator-orders
+├ ƒ /api/accounts/balance-sheet
+├ ƒ /api/accounts/expenses
+├ ƒ /api/accounts/expenses/[id]/void
+├ ƒ /api/accounts/petty-cash
+├ ƒ /api/accounts/profit-loss
+├ ƒ /api/accounts/vendor-refunds
+├ ƒ /api/admin/settings/business-policy
+├ ƒ /api/admin/settings/restaurant
+├ ƒ /api/admin/settings/whatsapp
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/bom-recipes
+├ ƒ /api/bom-recipes/[id]
+├ ƒ /api/bom-recipes/explode
+├ ƒ /api/branch-shifts
+├ ƒ /api/branches
+├ ƒ /api/branches/[id]
+├ ƒ /api/branches/[id]/deletion-check
+├ ƒ /api/branches/clone
+├ ƒ /api/branding
+├ ƒ /api/branding/logo
+├ ƒ /api/cron/daily-summary
+├ ƒ /api/cron/tasks
+├ ƒ /api/currency-rates
+├ ƒ /api/dashboard/kpis
+├ ƒ /api/ho-stock-review
+├ ƒ /api/ho-stock-review/[id]/action
+├ ƒ /api/ho-stock-review/branches
+├ ƒ /api/inventory
+├ ƒ /api/inventory/batches
+├ ƒ /api/inventory/batches/[id]/verify
+├ ƒ /api/inventory/batches/reconcile
+├ ƒ /api/inventory/counts
+├ ƒ /api/inventory/counts/[id]
+├ ƒ /api/inventory/counts/[id]/approve
+├ ƒ /api/inventory/counts/[id]/reject
+├ ƒ /api/inventory/counts/[id]/submit
+├ ƒ /api/inventory/receive
+├ ƒ /api/inventory/reorder-suggestions/[id]
+├ ƒ /api/inventory/reorder-suggestions/[id]/convert
+├ ƒ /api/inventory/reorder-suggestions/preview
+├ ƒ /api/inventory/variance
+├ ƒ /api/inventory/wastage
+├ ƒ /api/menu-items
+├ ƒ /api/menu-items/[id]/thresholds
+├ ƒ /api/menu-items/[id]/yield-standard
+├ ƒ /api/menu-items/prepared-stock-status
+├ ƒ /api/menu-items/yield-deviations
+├ ƒ /api/menu-items/yield-deviations/[id]/review
+├ ƒ /api/mis/compute
+├ ƒ /api/mis/scores
+├ ƒ /api/pos/documents
+├ ƒ /api/pos/documents/[id]
+├ ƒ /api/pos/documents/proforma
+├ ƒ /api/pos/drafts
+├ ƒ /api/pos/drafts/[id]
+├ ƒ /api/pos/drafts/[id]/cancel
+├ ƒ /api/pos/drafts/[id]/dispatch
+├ ƒ /api/pos/kitchen
+├ ƒ /api/pos/lifecycle
+├ ƒ /api/pos/orders
+├ ƒ /api/pos/orders/[id]/lifecycle
+├ ƒ /api/pos/orders/[id]/lines
+├ ƒ /api/pos/orders/[id]/settle
+├ ƒ /api/pos/orders/[id]/visibility
+├ ƒ /api/pos/tickets/[id]
+├ ƒ /api/pos/tickets/[id]/action
+├ ƒ /api/purchase/debit-notes/[id]/cancel
+├ ƒ /api/purchase/general-purchase-requests
+├ ƒ /api/purchase/general-purchase-requests/[id]/approve
+├ ƒ /api/purchase/general-purchase-requests/[id]/reject
+├ ƒ /api/purchase/grns
+├ ƒ /api/purchase/grns/[id]
+├ ƒ /api/purchase/grns/[id]/quality
+├ ƒ /api/purchase/grns/[id]/returns
+├ ƒ /api/purchase/indents
+├ ƒ /api/purchase/indents/[id]/approve
+├ ƒ /api/purchase/indents/[id]/reject
+├ ƒ /api/purchase/indents/[id]/submit
+├ ƒ /api/purchase/material-return-dispatches/[id]/acknowledge
+├ ƒ /api/purchase/material-returns
+├ ƒ /api/purchase/material-returns/[id]/cancel-remaining
+├ ƒ /api/purchase/material-returns/[id]/debit-notes
+├ ƒ /api/purchase/material-returns/[id]/dispatches
+├ ƒ /api/purchase/material-returns/[id]/settle
+├ ƒ /api/purchase/orders
+├ ƒ /api/purchase/orders/[id]/bill
+├ ƒ /api/purchase/orders/[id]/bill/upload
+├ ƒ /api/purchase/orders/[id]/invoice
+├ ƒ /api/purchase/orders/[id]/receive
+├ ƒ /api/purchase/orders/[id]/three-way/approve
+├ ƒ /api/purchase/orders/[id]/three-way/paid
+├ ƒ /api/purchase/orders/approved-indents
+├ ƒ /api/purchase/orders/approved-indents/[id]
+├ ƒ /api/purchase/vendors
+├ ƒ /api/purchase/vendors/[id]/approve
+├ ƒ /api/purchase/vendors/[id]/suspend
+├ ƒ /api/raw-materials
+├ ƒ /api/reports/cash-reconciliation
+├ ƒ /api/reports/eod-stock
+├ ƒ /api/reports/eod-stock/[id]/submit-ho
+├ ƒ /api/reports/food-cost
+├ ƒ /api/reports/sales-trend
+├ ƒ /api/requisitions
+├ ƒ /api/requisitions/[id]
+├ ƒ /api/requisitions/[id]/approve
+├ ƒ /api/requisitions/lines/[id]/cancel
+├ ƒ /api/semi-fg-transfers
+├ ƒ /api/semi-fg-transfers/[id]/receive
+├ ƒ /api/semi-fg/cutting
+├ ƒ /api/semi-fg/production
+├ ƒ /api/setup
+├ ƒ /api/shift-handovers/[id]/accept
+├ ƒ /api/shift-runs
+├ ƒ /api/shift-runs/[id]/end
+├ ƒ /api/stock-transfers
+├ ƒ /api/stock-transfers/[id]/receive
+├ ƒ /api/tasks/assignees
+├ ƒ /api/tasks/delegate
+├ ƒ /api/tasks/instances
+├ ƒ /api/tasks/instances/[id]/complete
+├ ƒ /api/tasks/instances/[id]/evidence
+├ ƒ /api/tasks/recurring
+├ ƒ /api/tasks/recurring/[id]
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/vat/vat-summary
+├ ƒ /api/warehouses
+├ ƒ /api/warehouses/[id]/stock-in
+├ ƒ /api/whatsapp/offer-alert
+├ ƒ /api/workforce/attendance
+├ ƒ /api/workforce/employees
+├ ƒ /api/workforce/employees/[id]
+├ ƒ /api/workforce/leaves
+├ ƒ /api/workforce/leaves/[id]/review
+├ ƒ /api/workforce/payroll
+├ ƒ /api/workforce/payroll/finalize
+├ ƒ /cash-drop
+├ ƒ /dashboard
+├ ƒ /gst-export
+├ ƒ /guide
+├ ƒ /ho-stock-review
+├ ƒ /inventory
+├ ƒ /kitchen
+├ ƒ /login
+├ ƒ /menu
+├ ƒ /performance
+├ ƒ /pos
+├ ƒ /purchase
+├ ƒ /reports
+├ ƒ /reports/[report]
+├ ƒ /setup
+├ ƒ /tasks
+├ ƒ /warehouse
+└ ƒ /workforce
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand

@@ -1,0 +1,26 @@
+PASS isolated GAP025 baseline: 40 exact committed SQL hashes; historical timestamp overrides reproduced; production watermark retained.
+PASS guarded database identity
+PASS 40-migration released baseline
+PASS production watermark copied
+PASS one additive journal entry only
+PASS committed prefix unchanged
+PASS exact applied canonical SQL prefix
+PASS one migration applied
+PASS released ledger byte-for-byte preserved
+PASS all canonical hashes match
+PASS candidate watermark matches journal
+PASS legacy money/state/rate/receipt unchanged
+PASS new legacy names/codes remain NULL
+PASS no historical document backfill
+PASS new request journal empty
+PASS migration does not reserve issued numbers
+PASS upgrade replay is a no-op
+PASS exact migration fixture roots absent
+PASS fresh proof target absent
+PASS fresh entire chain length
+PASS fresh exact canonical hashes
+PASS fresh timestamps match journal
+PASS fresh no generated historical documents
+PASS fresh replay is a no-op
+PASS fresh proof database removed
+{"result":"PASS","checks":25,"canonicalCandidateHash":"3d03457c0d1b1a2ed48dec6a45b735ef53953b5057f368188ca67b68c84ef8ca","candidate":"0040_gap025_pos_documents"}

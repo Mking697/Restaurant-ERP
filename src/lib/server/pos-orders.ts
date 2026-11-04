@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { issueFinalPosDocument } from "./pos-documents";
 import { and, eq, inArray } from "drizzle-orm";
 import { currencyRates } from "../../db/schema/currency";
 import { menuItems } from "../../db/schema/menu";
@@ -107,7 +108,7 @@ async function currency(tx: Executor, codeValue: unknown, totalAmount: string) {
 async function insertLinesAndTickets(tx: Executor, orderId: string, branchId: string, lines: InputLine[], itemById: Map<string, Item>, vatOverride: string | null) {
   const rows = lines.map(line => {
     const item = itemById.get(line.menuItemId)!;
-    return { id: randomUUID(), orderId, menuItemId: line.menuItemId, qty: line.qty, price: item.price, vatRatePercent: vatOverride ?? item.vatRatePercent };
+    return { id: randomUUID(), orderId, menuItemId: line.menuItemId, nameSnapshot: item.name, productCodeSnapshot: item.productCode, qty: line.qty, price: item.price, vatRatePercent: vatOverride ?? item.vatRatePercent };
   });
   await tx.insert(posOrderLines).values(rows);
   const plans = productionTickets(rows.map(row => ({ orderLineId: row.id, menuItemId: row.menuItemId, name: itemById.get(row.menuItemId)!.name, qty: row.qty, productionStation: itemById.get(row.menuItemId)!.productionStation })));
@@ -128,7 +129,7 @@ function receipt(lines: { menuItemId: string; name: string; qty: number; price: 
   return { lines: receiptLines, subtotal, taxAmount, totalAmount, vat, currency: tenderCurrencyCode === "INR" ? null : { tenderCurrencyCode, fxRateToInr, tenderCurrencyAmount } };
 }
 
-export async function createPosOrder(tx: Executor, actor: Identity, branchId: string, input: Record<string, unknown>) {
+export async function createPosOrder(tx: Executor, actor: Identity, branchId: string, input: Record<string, unknown>, documentContext?: { draftId: string; draftRevision: number }) {
   assertModule(actor, "POS_CASHIER");
   branchScope(actor, branchId);
   assertAllowedFields(input, ["branchId", "channel", "tableNo", "counterNo", "customerPhone", "customerName", "tenderType", "tenderCurrencyCode", "lines", "idempotencyKey"]);
@@ -167,7 +168,8 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
     await tx.insert(posReceipts).values({ id: randomUUID(), orderId, branchId, receiptNumber });
     receiptResult = { receiptNumber, ...receipt(billing.snapshots.map(line => ({ menuItemId: line.menuItemId, name: line.item.name, qty: line.qty, price: line.item.price, vatRatePercent: line.vatRatePercent, productCode: line.item.productCode })), billing.subtotal, billing.taxAmount, billing.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
   }
-  const result = { order: { id: orderId, orderNumber, branchId, branchName: branch.name, channel, tableNo, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", flow, customerPhone, customerName }, tickets, kot: tickets.flatMap(ticket => ticket.lines), receipt: receiptResult, inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
+  const final = flow === "PAYMENT_FIRST" ? await issueFinalPosDocument(tx, actor, orderId, documentContext) : null;
+  const result = { order: { id: orderId, orderNumber, branchId, branchName: branch.name, channel, tableNo, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", flow, customerPhone, customerName }, tickets, kot: tickets.flatMap(ticket => ticket.lines), receipt: receiptResult, ...(final ? { finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}) } : {}), inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
   await saveAttempt(tx, branchId, orderId, actor.id, "CREATE", key, input, result);
   return result;
 }
@@ -217,16 +219,17 @@ export async function settlePosOrder(tx: Executor, actor: Identity, orderId: str
   const { shiftRunId } = await requireOperableShift(tx, order.branchId);
   const tenderType = tender(input.tenderType);
   const payment = await currency(tx, input.tenderCurrencyCode, order.totalAmount);
-  const savedLines = await tx.select({ id: posOrderLines.id, menuItemId: posOrderLines.menuItemId, qty: posOrderLines.qty, price: posOrderLines.price, vatRatePercent: posOrderLines.vatRatePercent, name: menuItems.name, productCode: menuItems.productCode }).from(posOrderLines).innerJoin(menuItems, eq(menuItems.id, posOrderLines.menuItemId)).where(eq(posOrderLines.orderId, orderId));
+  const savedLines = await tx.select({ id: posOrderLines.id, menuItemId: posOrderLines.menuItemId, qty: posOrderLines.qty, price: posOrderLines.price, vatRatePercent: posOrderLines.vatRatePercent, nameSnapshot: posOrderLines.nameSnapshot, productCodeSnapshot: posOrderLines.productCodeSnapshot, name: menuItems.name, productCode: menuItems.productCode }).from(posOrderLines).innerJoin(menuItems, eq(menuItems.id, posOrderLines.menuItemId)).where(eq(posOrderLines.orderId, orderId));
   if (!savedLines.length) throw new HttpError(409, "Open order has no lines");
   // Collection changes the shift attribution, never the dispatch-time stock/COGS.
   const now = new Date();
   const receiptNumber = `RCP-${Date.now()}-${orderId.slice(0, 4)}`;
   await tx.insert(posReceipts).values({ id: randomUUID(), orderId, branchId: order.branchId, receiptNumber });
   await tx.update(posOrders).set({ revision: (order.revision ?? 1) + 1, tenderType, tenderCurrencyCode: payment.tenderCurrencyCode, fxRateToInr: payment.fxRateToInr, tenderCurrencyAmount: payment.tenderCurrencyAmount, status: "PAID", settledAt: now, shiftRunId }).where(eq(posOrders.id, orderId));
-  const receiptLines = savedLines.map(line => ({ ...line, vatRatePercent: line.vatRatePercent ?? branch.vatRatePercent ?? "18.00" }));
+  const receiptLines = savedLines.map(({ nameSnapshot, productCodeSnapshot, ...line }) => ({ ...line, name: nameSnapshot ?? line.name, productCode: productCodeSnapshot ?? line.productCode, vatRatePercent: line.vatRatePercent ?? branch.vatRatePercent ?? "18.00" }));
   const receiptResult = { receiptNumber, ...receipt(receiptLines, order.subtotal, order.taxAmount, order.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
-  const result = { order: { id: orderId, orderNumber: order.orderNumber, status: "PAID", tenderType }, receipt: receiptResult, inventoryDeducted: [], semiFgDeducted: [] };
+  const final = await issueFinalPosDocument(tx, actor, orderId);
+  const result = { order: { id: orderId, orderNumber: order.orderNumber, status: "PAID", tenderType }, receipt: receiptResult, finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}), inventoryDeducted: [], semiFgDeducted: [] };
   await saveAttempt(tx, order.branchId, orderId, actor.id, "SETTLE", key, input, result);
   return result;
 }

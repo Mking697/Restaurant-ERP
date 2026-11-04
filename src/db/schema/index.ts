@@ -9,6 +9,7 @@ export * from "./purchase";
 export * from "./tasks";
 export * from "./pos";
 export * from "./pos-lifecycle";
+export * from "./pos-documents";
 export * from "./accounts";
 export * from "./expenses";
 export * from "./workforce";

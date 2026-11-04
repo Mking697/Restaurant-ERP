@@ -1,0 +1,9 @@
+{
+  "url": "http://localhost:3125/pos",
+  "documentNumber": "INV-G25-CONV-2026-00000452",
+  "frameTitle": "Invoice-only print document",
+  "framePresent": true,
+  "alerts": [],
+  "nativePrintAction": "clicked built-app Print / reprint document; unmodified iframe onLoad invokes native print",
+  "physicalPrinterDeliveryVerified": false
+}

@@ -1,0 +1,107 @@
+PASS exact order/receipt/ticket/line/stock/lot/movement fingerprint unchanged
+PASS exactly1 newly issued proforma, no new final/receipt/payment/stock
+{
+  "financialFingerprint": "d1720a786666d0f50324cc5cfd0db19257779a0a8c49675849c63e5a6e094718",
+  "documents": [
+    {
+      "id": "fd8ae5a3-e33c-4264-9a35-51672fe10f8d",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000448",
+      "source_type": "DRAFT",
+      "source_id": "8cc6c82a-176c-4250-99be-c8d0bfd2de56",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "34a04024-65f6-4bf8-9153-c30fbce2654c",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000449",
+      "source_type": "DRAFT",
+      "source_id": "8cc6c82a-176c-4250-99be-c8d0bfd2de56",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "b49505c1-d914-4fad-b4d5-647bf80a2f47",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000450",
+      "source_type": "DRAFT",
+      "source_id": "8cc6c82a-176c-4250-99be-c8d0bfd2de56",
+      "source_revision": 2,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "eb85b780-1e73-4f5c-9b3c-367f3af01f20",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000451",
+      "source_type": "ORDER",
+      "source_id": "d1a6aeec-f291-4cc6-bbe2-89c79d743911",
+      "source_revision": 1,
+      "order_id": "d1a6aeec-f291-4cc6-bbe2-89c79d743911",
+      "proforma_id": null
+    },
+    {
+      "id": "5883ce25-a047-46dc-ba5c-c5b849939a4a",
+      "kind": "FINAL",
+      "number": "INV-G25-CONV-2026-00000452",
+      "source_type": "ORDER",
+      "source_id": "d1a6aeec-f291-4cc6-bbe2-89c79d743911",
+      "source_revision": 2,
+      "order_id": "d1a6aeec-f291-4cc6-bbe2-89c79d743911",
+      "proforma_id": "eb85b780-1e73-4f5c-9b3c-367f3af01f20"
+    },
+    {
+      "id": "70785ddd-7981-4c65-90da-71ab80a4d33e",
+      "kind": "PROFORMA",
+      "number": "PF-G25-FAST-2026-00000453",
+      "source_type": "DRAFT",
+      "source_id": "4005d206-31c3-44aa-97d0-5d6045ca179e",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "730f5286-966a-4359-ae01-060645f4cca9",
+      "kind": "FINAL",
+      "number": "INV-G25-FAST-2026-00000454",
+      "source_type": "ORDER",
+      "source_id": "a12336ec-8e33-489f-a03e-23e6980fdcae",
+      "source_revision": 1,
+      "order_id": "a12336ec-8e33-489f-a03e-23e6980fdcae",
+      "proforma_id": "70785ddd-7981-4c65-90da-71ab80a4d33e"
+    },
+    {
+      "id": "495139fc-dad5-45dc-bb05-bb9866f54dd9",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000455",
+      "source_type": "DRAFT",
+      "source_id": "c51268d0-52f4-400e-8386-899b88567d0b",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "1a5d6217-e9de-4a31-a270-e605926716fa",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000456",
+      "source_type": "DRAFT",
+      "source_id": "5fe3341b-4497-49d7-a952-d0e48322c047",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    },
+    {
+      "id": "41ae1b2c-929f-4558-9f78-90a69ab139a1",
+      "kind": "PROFORMA",
+      "number": "PF-G25-CONV-2026-00000868",
+      "source_type": "DRAFT",
+      "source_id": "5fe3341b-4497-49d7-a952-d0e48322c047",
+      "source_revision": 1,
+      "order_id": null,
+      "proforma_id": null
+    }
+  ]
+}

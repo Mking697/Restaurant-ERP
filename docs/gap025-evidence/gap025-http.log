@@ -1,0 +1,184 @@
+PASS exact DB identity
+PASS unpredictable fixture session binding HTTP
+PASS app owner identity matches QA DB
+PASS unpredictable fixture branch binding HTTP
+PASS app branch identity matches QA DB
+PASS save persisted draft HTTP
+PASS issue internal proforma HTTP
+PASS proforma issue financial/stock fingerprint unchanged
+PASS document identity
+PASS document kind
+PASS number has separate prefix/year/sequence
+PASS internal-only disclaimer
+PASS display base currency
+PASS TIN is not invented
+PASS VRN is not invented
+PASS request journal is not disclosed
+PASS captured original seller
+PASS captured original item
+PASS captured draft total
+PASS issue internal proforma HTTP
+PASS exact proforma replay financial/stock fingerprint unchanged
+PASS exact replay flag
+PASS exact original document
+PASS read immutable document HTTP
+PASS document read/reprint boundary financial/stock fingerprint unchanged
+PASS read is immutable
+PASS issue internal proforma HTTP
+PASS source denial null financial/stock fingerprint unchanged
+PASS list denial null HTTP
+PASS issue internal proforma HTTP
+PASS source denial kitchen financial/stock fingerprint unchanged
+PASS list denial kitchen HTTP
+PASS issue internal proforma HTTP
+PASS source denial outsider financial/stock fingerprint unchanged
+PASS list denial outsider HTTP
+PASS issue internal proforma HTTP
+PASS source denial none financial/stock fingerprint unchanged
+PASS list denial none HTTP
+PASS issue internal proforma HTTP
+PASS actor-bound replay financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS same key changed request financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS invalid source revision financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS invalid source revision financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS invalid source revision financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS invalid source revision financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS invalid source revision financial/stock fingerprint unchanged
+PASS cross origin denied
+PASS cross-origin proforma financial/stock fingerprint unchanged
+PASS concurrent first/replay HTTP
+PASS one concurrent document
+PASS one concurrent number
+PASS edit source before dispatch HTTP
+PASS issue internal proforma HTTP
+PASS stale source issue financial/stock fingerprint unchanged
+PASS read immutable document HTTP
+PASS previous issued proforma unchanged
+PASS issue internal proforma HTTP
+PASS replacement keeps a new permanent number
+PASS replacement captures new qty
+PASS dispatch conventional draft HTTP
+PASS conventional remains unpaid
+PASS no final at unpaid dispatch
+PASS read source revision HTTP
+PASS saved source order exists
+PASS issue internal proforma HTTP
+PASS read immutable document HTTP
+PASS proforma survives catalog/seller changes
+PASS full settlement HTTP
+PASS document identity
+PASS document kind
+PASS number has separate prefix/year/sequence
+PASS internal-only disclaimer
+PASS display base currency
+PASS TIN is not invented
+PASS VRN is not invented
+PASS request journal is not disclosed
+PASS final linked to paid order
+PASS final linked to receipt
+PASS applicable proforma linked
+PASS final preserves original item name
+PASS final preserves original code
+PASS final preserves dispatch price
+PASS final preserves dispatch VAT
+PASS final does not reprice
+PASS seller captured when final issued
+PASS settlement leaves stock
+PASS settlement leaves lots
+PASS settlement leaves stock ledger
+PASS captured COGS unchanged
+PASS one order receipt
+PASS replay settlement HTTP
+PASS settlement exact replay financial/stock fingerprint unchanged
+PASS final id stable after replay
+PASS read immutable document HTTP
+PASS final read/print financial/stock fingerprint unchanged
+PASS final reprint survives further master changes
+PASS staff document list HTTP
+PASS list access-filtered
+PASS document list bound
+PASS truncation disclosed
+PASS issued final listed
+PASS legacy notice explicit
+PASS source filters pair validation HTTP
+PASS owner hides linked order HTTP
+PASS read immutable document HTTP
+PASS hidden document denial financial/stock fingerprint unchanged
+PASS read immutable document HTTP
+PASS hidden document denial financial/stock fingerprint unchanged
+PASS read immutable document HTTP
+PASS hidden document denial financial/stock fingerprint unchanged
+PASS read immutable document HTTP
+PASS hidden document denial financial/stock fingerprint unchanged
+PASS issue internal proforma HTTP
+PASS hidden original proforma replay financial/stock fingerprint unchanged
+PASS read immutable document HTTP
+PASS Owner keeps original issued document
+PASS list filters hidden sources HTTP
+PASS hidden issued documents omitted
+PASS revoked grant denies list HTTP
+PASS save persisted draft HTTP
+PASS issue internal proforma HTTP
+PASS dispatch paid fast-food draft HTTP
+PASS fast food payment first
+PASS document identity
+PASS document kind
+PASS number has separate prefix/year/sequence
+PASS internal-only disclaimer
+PASS display base currency
+PASS TIN is not invented
+PASS VRN is not invented
+PASS request journal is not disclosed
+PASS fast-food pre-dispatch proforma link
+PASS fast-food final matches receipt
+PASS replay fast dispatch HTTP
+PASS paid draft exact replay financial/stock fingerprint unchanged
+PASS paid draft final identity stable
+PASS save persisted draft HTTP
+PASS issue internal proforma HTTP
+PASS cancel unpaid draft HTTP
+PASS read immutable document HTTP
+PASS cancelled source retains issued document
+PASS save persisted draft HTTP
+PASS issue internal proforma HTTP
+PASS issued/cancelled number never reused
+PASS open legacy test source HTTP
+PASS legacy settlement not stranded HTTP
+PASS legacy final not fabricated
+PASS legacy missing provenance disclosed
+PASS legacy document lookup honest HTTP
+PASS no invented historical final
+PASS final persistence failure HTTP
+PASS failed final rolls back sale/stock/receipt financial/stock fingerprint unchanged
+PASS actual VAT before document-only fixtures HTTP
+PASS one revenue inclusion per paid order
+PASS VAT retains original captured product code
+PASS newer hidden-document fixture has no financial effect financial/stock fingerprint unchanged
+PASS privacy filtering before 200-row bound HTTP
+PASS older authorized document survives newer private documents
+PASS private document IDs remain excluded
+PASS hidden overflow not disclosed to staff
+PASS visible document overflow has no financial effect financial/stock fingerprint unchanged
+PASS visible document overflow disclosed HTTP
+PASS native visible document bound
+PASS visible overflow disclosed
+PASS overflow still contains no hidden source
+PASS actual VAT after document-only fixtures HTTP
+PASS documents are not a second VAT/revenue source
+PASS Owner list actual scope HTTP
+PASS Owner actual scope
+PASS Owner overflow disclosed
+PASS listed document numbers unique
+PASS QA orders omit customer contacts
+{"result":"PASS","checks":178}
+PASS unpredictable fixture session binding HTTP
+PASS app owner identity matches QA DB
+PASS unpredictable fixture branch binding HTTP
+PASS app branch identity matches QA DB
+PASS scoped FK-aware fixture cleanup

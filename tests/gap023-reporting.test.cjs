@@ -29,7 +29,7 @@ function harness(orders, role = 'BRANCH_MANAGER') {
     return expr;
   };
   const orm = { sql, and: (...ps) => r => ps.filter(Boolean).every(p => p(r)), or: (...ps) => r => ps.filter(Boolean).some(p => p(r)), eq: (a,b) => compare(a,b,(x,y)=>x===y), gte:(a,b)=>compare(a,b,(x,y)=>x>=y), lt:(a,b)=>compare(a,b,(x,y)=>x<y), lte:(a,b)=>compare(a,b,(x,y)=>x<=y), inArray:(a,vs)=>r=>vs.includes(value(r,a)), notInArray:(a,vs)=>r=>!vs.includes(value(r,a)), desc:x=>({sort:x, direction:-1}), min:x=>x };
-  const data = { posOrders: orders, branches: [{id:'a', name:'A', vatRatePercent:'0.00'}], posOrderLines: orders.map(r=>({id:r.id+'-line', orderId:r.id, menuItemId:'dish', qty:1, price:r.totalAmount, vatRatePercent:'0.00'})), menuItems:[{id:'dish',name:'Dish',productCode:'D',vatRatePercent:'0.00'}] };
+  const data = { posOrders: orders, branches: [{id:'a', name:'A', vatRatePercent:'0.00'}], posOrderLines: orders.map(r=>({id:r.id+'-line', orderId:r.id, menuItemId:'dish', qty:1, price:r.totalAmount, vatRatePercent:'0.00',productCodeSnapshot:r.productCodeSnapshot})), menuItems:[{id:'dish',name:'Dish',productCode:'D',vatRatePercent:'0.00'}] };
   const db = { select(columns) {
     let rows = [], ordering = [], bound = Infinity;
     const q = { from(t) { rows = data[t._table] ?? []; queries.push(t._table); return q; }, where(p) { if(p) rows=rows.filter(p); return q; }, orderBy(...xs) { ordering=xs; return q; }, limit(n) {bound=n;return q;}, innerJoin(){return q;}, groupBy(){return q;}, then(resolve,reject) {
@@ -124,6 +124,14 @@ test('POS bound prioritizes OPEN rows without truncating paid summary and disclo
   assert.equal(result.salesSummary.visibleTotal,'2050.00');
   const exact=await harness(rows.slice(0,200)).load('src/app/api/pos/orders/route.ts').GET({url:'http://local/'});
   assert.equal(exact.orderList.truncated,false);
+});
+
+test('GAP025 VAT grouping preserves captured product codes, including known blanks and explicit legacy fallback',async()=>{
+  const rows=[order('captured',{productCodeSnapshot:'OLD-CODE'}),order('blank',{productCodeSnapshot:''}),order('legacy',{productCodeSnapshot:null})];
+  const result=await harness(rows).load('src/app/api/vat/vat-summary/route.ts').GET({url:'http://local/?from=2026-11-01&to=2026-11-01'});
+  assert.equal(result.ordersIncluded,3);
+  assert.deepEqual(Array.from(result.rows,r=>[r.productCode,r.taxableValue]).sort(),[['D','10.00'],['OLD-CODE','10.00'],['UNSPECIFIED','10.00']]);
+  assert.equal(result.grandTotalValue,'30.00');
 });
 
 test('shared sale-time expression emits real PostgreSQL CASE and decodes selected timestamps as Dates',()=>{

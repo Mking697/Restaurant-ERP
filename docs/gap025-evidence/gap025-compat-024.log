@@ -1,0 +1,655 @@
+PASS connected database identity
+PASS live app recognizes unpredictable owner HTTP
+PASS exact seeded session identity
+PASS live app reads seeded branch HTTP
+PASS exact seeded branch identity
+PASS unpredictable branch code binding
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS invalid request key HTTP
+PASS invalid key rejected SQL unchanged
+PASS invalid request key HTTP
+PASS invalid key rejected SQL unchanged
+PASS invalid request key HTTP
+PASS invalid key rejected SQL unchanged
+PASS invalid revision HTTP
+PASS invalid revision rejected SQL unchanged
+PASS invalid revision HTTP
+PASS invalid revision rejected SQL unchanged
+PASS invalid revision HTTP
+PASS invalid revision rejected SQL unchanged
+PASS invalid revision HTTP
+PASS invalid revision rejected SQL unchanged
+PASS invalid revision HTTP
+PASS invalid revision rejected SQL unchanged
+PASS cross-origin HTTP
+PASS cross origin denied SQL unchanged
+PASS cross branch draft menu HTTP
+PASS foreign menu save denied SQL unchanged
+PASS missing ticket 404 HTTP
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS create draft zero posting
+PASS draft create exact retry HTTP
+PASS draft create exact retry replay flag
+PASS draft create exact retry immutable original result
+PASS draft create exact retry SQL unchanged
+PASS different actor same key HTTP
+PASS draft create actor binding SQL unchanged
+PASS changed draft key payload HTTP
+PASS draft create payload binding SQL unchanged
+PASS edit draft HTTP
+PASS edit draft zero posting SQL unchanged
+PASS draft edited payload persisted
+PASS draft edit revision advances
+PASS edited draft persisted in PostgreSQL
+PASS edit exact retry before stale revision check HTTP
+PASS edit exact retry before stale revision check replay flag
+PASS edit exact retry before stale revision check immutable original result
+PASS edit exact retry before stale revision check SQL unchanged
+PASS stale edit HTTP
+PASS stale edit rejected SQL unchanged
+PASS stale dispatch HTTP
+PASS stale dispatch rejected SQL unchanged
+PASS stale draft cancel HTTP
+PASS stale draft cancellation rejected SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS same edit key different draft HTTP
+PASS edit key entity binding SQL unchanged
+PASS cancel draft HTTP
+PASS draft cancel zero posting SQL unchanged
+PASS cancelled draft persisted
+PASS cancelled draft persisted in PostgreSQL
+PASS cancel draft historical retry HTTP
+PASS cancel draft historical retry replay flag
+PASS cancel draft historical retry immutable original result
+PASS cancel draft historical retry SQL unchanged
+PASS edit historic retry after cancellation HTTP
+PASS edit historic retry after cancellation replay flag
+PASS edit historic retry after cancellation immutable original result
+PASS edit historic retry after cancellation SQL unchanged
+PASS cancelled draft dispatch HTTP
+PASS cancelled draft dispatch denied SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS concurrent edit versus dispatch exactly one operation wins
+PASS winning edit persisted
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS same-key concurrent dispatch HTTP outcomes
+PASS concurrent retry original result
+PASS one exact replay
+PASS conventional dine-in OPEN
+PASS unpaid dispatch no receipt
+PASS stock aggregate deducted once
+PASS one admitted order for draft
+PASS one captured COGS
+PASS dispatch consumption ledger once
+PASS dispatch creates exactly original lines/tickets and no receipts
+PASS dispatch exact retry HTTP
+PASS dispatch exact retry replay flag
+PASS dispatch exact retry immutable original result
+PASS dispatch exact retry SQL unchanged
+PASS dispatch receipt binds original actor/entity/key
+PASS dispatch different actor same key HTTP
+PASS dispatch retry actor binding SQL unchanged
+PASS repeat dispatch new key HTTP
+PASS new key cannot dispatch again SQL unchanged
+PASS edit dispatched draft HTTP
+PASS dispatched draft immutable SQL unchanged
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS split kitchen and bar tickets
+PASS ticket forbids id
+PASS ticket forbids orderId
+PASS ticket forbids branchId
+PASS ticket forbids orderNumber
+PASS ticket forbids tableNo
+PASS ticket forbids station
+PASS ticket forbids ticketNumber
+PASS ticket forbids status
+PASS ticket forbids revision
+PASS ticket forbids createdAt
+PASS ticket forbids lines
+PASS ticket forbids orderLineId
+PASS ticket forbids menuItemId
+PASS ticket forbids name
+PASS ticket forbids qty
+PASS ticket forbids snapshotAvailable
+PASS ticket forbids history
+PASS ticket forbids id
+PASS ticket forbids action
+PASS ticket forbids actorId
+PASS ticket forbids createdAt
+PASS ticket forbids revision
+PASS ticket forbids toStatus
+PASS ticket forbids allowedActions
+PASS persisted snapshot available
+PASS initial SENT status
+PASS ticket forbids id
+PASS ticket forbids orderId
+PASS ticket forbids branchId
+PASS ticket forbids orderNumber
+PASS ticket forbids tableNo
+PASS ticket forbids station
+PASS ticket forbids ticketNumber
+PASS ticket forbids status
+PASS ticket forbids revision
+PASS ticket forbids createdAt
+PASS ticket forbids lines
+PASS ticket forbids orderLineId
+PASS ticket forbids menuItemId
+PASS ticket forbids name
+PASS ticket forbids qty
+PASS ticket forbids snapshotAvailable
+PASS ticket forbids history
+PASS ticket forbids id
+PASS ticket forbids action
+PASS ticket forbids actorId
+PASS ticket forbids createdAt
+PASS ticket forbids revision
+PASS ticket forbids toStatus
+PASS ticket forbids allowedActions
+PASS persisted snapshot available
+PASS initial SENT status
+PASS ticket snapshot read HTTP
+PASS snapshot original menu name
+PASS snapshot original menu identity
+PASS snapshot original quantity
+PASS ticket snapshot read HTTP
+PASS snapshot survives catalog change 0
+PASS ticket snapshot read HTTP
+PASS snapshot survives catalog change 1
+PASS ticket snapshot read HTTP
+PASS snapshot survives catalog change 2
+PASS cashier kitchen read no posting HTTP
+PASS lifecycle read no posting HTTP
+PASS GET and repeated print preview never post SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS FAST_FOOD missing tender blocks admission HTTP
+PASS FAST_FOOD missing tender atomic rollback
+PASS save FAST_FOOD tender HTTP
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS FAST_FOOD PAID before preparation
+PASS FAST_FOOD receipt exists
+PASS FAST_FOOD stock once
+PASS owner FAST_FOOD queue HTTP
+PASS paid preparation independent
+PASS Owner reads active paid FAST_FOOD order HTTP
+PASS active paid FAST_FOOD lifecycle exists
+PASS CANCEL order HTTP
+PASS CLOSE order HTTP
+PASS active PAID cannot cancel or close unserved SQL unchanged
+PASS FAST_FOOD exact dispatch retry HTTP
+PASS FAST_FOOD exact dispatch retry replay flag
+PASS FAST_FOOD exact dispatch retry immutable original result
+PASS FAST_FOOD exact dispatch retry SQL unchanged
+PASS FAST_FOOD retry never stock twice
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS TAKEAWAY missing tender HTTP
+PASS TAKEAWAY missing tender blocks dispatch SQL unchanged
+PASS TAKEAWAY save payment HTTP
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS TAKEAWAY payment before admission
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS SWIGGY missing tender HTTP
+PASS SWIGGY missing tender blocks dispatch SQL unchanged
+PASS SWIGGY save payment HTTP
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS SWIGGY payment before admission
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS ZOMATO missing tender HTTP
+PASS ZOMATO missing tender blocks dispatch SQL unchanged
+PASS ZOMATO save payment HTTP
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS ZOMATO payment before admission
+PASS kitchen-only queue HTTP
+PASS kitchen-only capability separation
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids orderId
+PASS kitchen-only response forbids branchId
+PASS kitchen-only response forbids orderNumber
+PASS kitchen-only response forbids tableNo
+PASS kitchen-only response forbids station
+PASS kitchen-only response forbids ticketNumber
+PASS kitchen-only response forbids status
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids lines
+PASS kitchen-only response forbids orderLineId
+PASS kitchen-only response forbids menuItemId
+PASS kitchen-only response forbids name
+PASS kitchen-only response forbids qty
+PASS kitchen-only response forbids snapshotAvailable
+PASS kitchen-only response forbids history
+PASS kitchen-only response forbids id
+PASS kitchen-only response forbids action
+PASS kitchen-only response forbids actorId
+PASS kitchen-only response forbids createdAt
+PASS kitchen-only response forbids revision
+PASS kitchen-only response forbids toStatus
+PASS kitchen-only response forbids allowedActions
+PASS kitchen cannot list bills HTTP
+PASS kitchen cannot list financial orders HTTP
+PASS kitchen cannot bill HTTP
+PASS kitchen cannot create draft SQL unchanged
+PASS kitchen ADD denied HTTP
+PASS kitchen cannot add billed lines SQL unchanged
+PASS kitchen SETTLE denied HTTP
+PASS kitchen cannot settle bill SQL unchanged
+PASS queue denied null HTTP
+PASS ticket denied null HTTP
+PASS START ticket HTTP
+PASS action denied null SQL unchanged
+PASS lifecycle denied null HTTP
+PASS queue denied none HTTP
+PASS ticket denied none HTTP
+PASS START ticket HTTP
+PASS action denied none SQL unchanged
+PASS lifecycle denied none HTTP
+PASS queue denied outsider HTTP
+PASS ticket denied outsider HTTP
+PASS START ticket HTTP
+PASS action denied outsider SQL unchanged
+PASS lifecycle denied outsider HTTP
+PASS START ticket HTTP
+PASS cashier cannot START without kitchen grant SQL unchanged
+PASS READY ticket HTTP
+PASS cannot skip READY SQL unchanged
+PASS SERVE ticket HTTP
+PASS cannot skip SERVE SQL unchanged
+PASS CLOSE order HTTP
+PASS kitchen cannot close SQL unchanged
+PASS CLOSE order HTTP
+PASS close unpaid/unserved denied SQL unchanged
+PASS START ticket HTTP
+PASS START has no stock/cost/receipt effects SQL unchanged
+PASS START PREPARING
+PASS event original kitchen actor
+PASS START retry original actor and state HTTP
+PASS START retry original actor and state replay flag
+PASS START retry original actor and state immutable original result
+PASS START retry original actor and state SQL unchanged
+PASS START replay other authorized actor HTTP
+PASS START key actor bound SQL unchanged
+PASS START key changed action HTTP
+PASS START key payload bound SQL unchanged
+PASS START key wrong ticket HTTP
+PASS START key entity bound SQL unchanged
+PASS revoked kitchen cannot read old ticket HTTP
+PASS revoked START replay HTTP
+PASS revoked kitchen cached action denied SQL unchanged
+PASS transferred kitchen replay denied HTTP
+PASS original actor branch transfer blocks cached action SQL unchanged
+PASS conflicting concurrent READY keys HTTP outcomes
+PASS one READY event
+PASS SERVE ticket HTTP
+PASS kitchen-only cannot SERVE SQL unchanged
+PASS READY ticket HTTP
+PASS cashier cannot READY SQL unchanged
+PASS SERVE ticket HTTP
+PASS SERVE no posting SQL unchanged
+PASS cashier SERVED
+PASS old START retry after SERVED is original snapshot HTTP
+PASS old START retry after SERVED is original snapshot replay flag
+PASS old START retry after SERVED is original snapshot immutable original result
+PASS old START retry after SERVED is original snapshot SQL unchanged
+PASS START ticket HTTP
+PASS no backwards START SQL unchanged
+PASS concurrent conflicting START versus READY HTTP outcomes
+PASS conflicting actions admit START only
+PASS READY ticket HTTP
+PASS SERVE ticket HTTP
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS prepared and served still unpaid
+PASS CLOSE order HTTP
+PASS fully served unpaid cannot CLOSE SQL unchanged
+PASS new admitted items use conventional ADD HTTP
+PASS settle while preparing HTTP
+PASS settlement independent of new unserved ticket SQL unchanged
+PASS settlement creates exactly one receipt
+PASS settled PAID
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS CLOSE order HTTP
+PASS PAID but new ticket unserved cannot CLOSE SQL unchanged
+PASS START ticket HTTP
+PASS READY ticket HTTP
+PASS SERVE ticket HTTP
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS same-key concurrent CLOSE HTTP outcomes
+PASS CLOSE exactly one replay
+PASS CLOSE no stock/COGS/receipt effect
+PASS CLOSED service status
+PASS closed timestamp saved
+PASS one CLOSE event
+PASS CLOSE exact retry HTTP
+PASS CLOSE exact retry replay flag
+PASS CLOSE exact retry immutable original result
+PASS CLOSE exact retry SQL unchanged
+PASS closed add HTTP
+PASS new ADD after CLOSED denied SQL unchanged
+PASS closed settle HTTP
+PASS new SETTLE after CLOSED denied SQL unchanged
+PASS historic ADD after CLOSED safe HTTP
+PASS historic ADD after CLOSED safe replay flag
+PASS historic ADD after CLOSED safe immutable original result
+PASS historic ADD after CLOSED safe SQL unchanged
+PASS historic SETTLE after CLOSED safe HTTP
+PASS historic SETTLE after CLOSED safe replay flag
+PASS historic SETTLE after CLOSED safe immutable original result
+PASS historic SETTLE after CLOSED safe SQL unchanged
+PASS CANCEL order HTTP
+PASS paid cancellation denied SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS CANCEL order HTTP
+PASS cashier cannot cancel unpaid order SQL unchanged
+PASS CANCEL order HTTP
+PASS kitchen cannot cancel unpaid order SQL unchanged
+PASS CANCEL order HTTP
+PASS manager cancellation reason required SQL unchanged
+PASS CANCEL order HTTP
+PASS blank cancellation reason invalid SQL unchanged
+PASS CANCEL order HTTP
+PASS manager cancellation no stock/cost/receipt/restock effect
+PASS cancel financial VOIDED
+PASS cancel service CANCELLED
+PASS all production tickets cancelled
+PASS cancel retains subtotal
+PASS cancel retains total_amount
+PASS cancel retains cogs_amount
+PASS cancel retains cogs_complete
+PASS cancel retains stock_deducted_at
+PASS cancel event audited reason/actor
+PASS manager cancel exact retry HTTP
+PASS manager cancel exact retry replay flag
+PASS manager cancel exact retry immutable original result
+PASS manager cancel exact retry SQL unchanged
+PASS live manager authority before cancel replay HTTP
+PASS downgraded manager cannot replay cancellation SQL unchanged
+PASS changed cancellation reason HTTP
+PASS cancel key reason conflict SQL unchanged
+PASS cancelled add HTTP
+PASS cancelled order ADD denied SQL unchanged
+PASS cancelled settle HTTP
+PASS cancelled order SETTLE denied SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS START ticket HTTP
+PASS Owner marks fixture private HTTP
+PASS live private flag persisted
+PASS hidden ticket unreadable cashier HTTP
+PASS hidden START cached replay cashier HTTP
+PASS hidden ticket action replay cashier SQL unchanged
+PASS filtered hidden queue cashier HTTP
+PASS hidden ticket absent cashier
+PASS hidden ticket unreadable kitchen HTTP
+PASS hidden START cached replay kitchen HTTP
+PASS hidden ticket action replay kitchen SQL unchanged
+PASS filtered hidden queue kitchen HTTP
+PASS hidden ticket absent kitchen
+PASS hidden dispatch replay HTTP
+PASS hidden draft dispatch cached replay SQL unchanged
+PASS hidden draft create replay HTTP
+PASS hidden draft create cached replay SQL unchanged
+PASS cashier filtered lifecycle HTTP
+PASS hidden order absent lifecycle
+PASS hidden dispatched draft absent lifecycle
+PASS ticket snapshot read HTTP
+PASS Owner authorized private ticket
+PASS cached dispatch denied null HTTP
+PASS cached dispatch authority null SQL unchanged
+PASS cached cancel denied null HTTP
+PASS cached cancellation authority null SQL unchanged
+PASS cached dispatch denied none HTTP
+PASS cached dispatch authority none SQL unchanged
+PASS cached cancel denied none HTTP
+PASS cached cancellation authority none SQL unchanged
+PASS cached dispatch denied outsider HTTP
+PASS cached dispatch authority outsider SQL unchanged
+PASS cached cancel denied outsider HTTP
+PASS cached cancellation authority outsider SQL unchanged
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS dispatch draft HTTP
+PASS draft persisted DISPATCHED
+PASS draft links admitted order
+PASS lifecycle authorized read HTTP
+PASS lifecycle includes fixture order
+PASS create persisted draft HTTP
+PASS draft starts DRAFT
+PASS draft revision positive
+PASS draft no admitted order
+PASS draft HTTP matches PostgreSQL persistence
+PASS persisted draft table identified
+PASS overnight BAR queue HTTP
+PASS overnight SENT ticket retained
+PASS overnight lifecycle HTTP
+PASS overnight unresolved OPEN retained
+PASS overnight unresolved DRAFT retained
+PASS queue discloses positive integer bound
+PASS queue discloses truncation type
+PASS lifecycle discloses positive integer bound
+PASS lifecycle discloses truncation type
+PASS ticket snapshot read HTTP
+PASS legacy absence explicitly disclosed
+PASS legacy lines not reconstructed from catalog
+PASS ticket forbids id
+PASS ticket forbids orderId
+PASS ticket forbids branchId
+PASS ticket forbids orderNumber
+PASS ticket forbids tableNo
+PASS ticket forbids station
+PASS ticket forbids ticketNumber
+PASS ticket forbids status
+PASS ticket forbids revision
+PASS ticket forbids createdAt
+PASS ticket forbids lines
+PASS ticket forbids snapshotAvailable
+PASS ticket forbids history
+PASS ticket forbids allowedActions
+PASS legacy missing snapshot read cannot fabricate or post SQL unchanged
+PASS station and privacy filters before queue bound HTTP
+PASS older BAR survives newer other-station/private rows
+PASS station filter respected
+PASS queue row bound respected
+PASS privacy before lifecycle bound HTTP
+PASS older visible order not crowded by hidden rows
+PASS private decoys excluded before bounds
+PASS Owner ALL bounded queue HTTP
+PASS Owner queue bounded
+PASS Owner overflow disclosed
+PASS invalid station fails fast HTTP
+PASS all orders omit provider contacts
+{"result":"PASS","checks":648}
+PASS live app recognizes unpredictable owner HTTP
+PASS exact seeded session identity
+PASS live app reads seeded branch HTTP
+PASS exact seeded branch identity
+PASS unpredictable branch code binding
+PASS scoped FK-aware fixture cleanup

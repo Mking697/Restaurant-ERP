@@ -1,0 +1,15 @@
+{
+  "path": "/pos",
+  "sameBrowserRealm": true,
+  "statuses": [
+    201,
+    200
+  ],
+  "byteIdentical": true,
+  "sameDocument": true,
+  "resolved": true,
+  "documentId": "076da530-7b50-45f5-8d1b-9199a65c887e",
+  "routeRoundTrip": "POS -> Guide -> POS through actual client links",
+  "firstResponse": "real201 committed; acknowledgment intentionally dropped in QA wrapper",
+  "hardReloadPersistenceClaimed": false
+}

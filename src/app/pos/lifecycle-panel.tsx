@@ -78,29 +78,31 @@ export function PosLifecyclePanel(props: Props) {
     inFlight.current = true; setBusy(true); setMessage(""); props.onPendingChange(true);
     try {
       const result = await requestJson<{ draft?: Draft; ticket?: Ticket; order?: LifecycleOrder }>(intent.url, { method: intent.method, body: intent.body });
+      if (!mounted.current || liveContext.current !== context || pendingIntent.current !== intent) { intent.hadUnknown = true; return; }
       const entity = intent.action.endsWith("DRAFT") ? result.draft : intent.action === "SERVE" ? result.ticket : result.order;
       const expectedRevision = JSON.parse(intent.body).expectedRevision ?? 0;
       const expectedStatus: Record<string, string> = { CREATE_DRAFT: "DRAFT", EDIT_DRAFT: "DRAFT", DISPATCH_DRAFT: "DISPATCHED", CANCEL_DRAFT: "CANCELLED", SERVE: "SERVED", CANCEL: "VOIDED" };
       if (!entity?.id || (intent.entityId !== "NEW" && entity.id !== intent.entityId) || entity.branchId !== intent.branchId || !Number.isInteger(entity.revision) || entity.revision <= expectedRevision || (intent.action === "CLOSE" ? result.order?.serviceStatus !== "CLOSED" : entity.status !== expectedStatus[intent.action])) throw new Error("Unverified lifecycle acknowledgment.");
-      pendingIntent.current = null; props.releaseMutation("lifecycle"); props.onPendingChange(false);
+      pendingIntent.current = null;
       if (!mounted.current || liveContext.current !== context) return;
       setMessage("Action confirmed. Reloading current work; do not submit it again.");
       // Refresh failures cannot change the already verified write outcome.
       try {
         const refreshed = await reload();
-        await props.onChanged();
-        if (mounted.current && liveContext.current === context) setMessage(refreshed ? "Action confirmed. Current work refreshed." : "Action confirmed, but refresh failed. Reload current work; do not submit the action again.");
+        const parentRefreshed = await props.onChanged();
+        if (mounted.current && liveContext.current === context) setMessage(refreshed && parentRefreshed !== false ? "Action confirmed. Current work refreshed." : "Action confirmed, but refresh failed. Reload current work; do not submit the action again.");
       } catch {
         if (mounted.current && liveContext.current === context) setMessage("Action confirmed, but refresh failed. Reload current work; do not submit the action again.");
       }
     } catch (err) {
+      if (!mounted.current || liveContext.current !== context || pendingIntent.current !== intent) { intent.hadUnknown = true; return; }
       if (err instanceof RequestJsonError && err.outcome === "rejected" && !intent.hadUnknown) { pendingIntent.current = null; props.releaseMutation("lifecycle"); props.onPendingChange(false); }
       else intent.hadUnknown = true;
       if (mounted.current && liveContext.current === context) {
         setMessage(pendingIntent.current ? "Outcome unknown. Replay the exact lifecycle request; never create a duplicate." : err instanceof Error ? err.message : "Action rejected.");
         if (err instanceof RequestJsonError && [401, 403, 404, 409].includes(err.status ?? 0)) await reload();
       }
-    } finally { inFlight.current = false; if (mounted.current && liveContext.current === context) setBusy(false); }
+    } finally { if (!pendingIntent.current) { props.releaseMutation("lifecycle"); props.onPendingChange(false); } inFlight.current = false; if (mounted.current && liveContext.current === context) setBusy(false); }
   }
   async function saveDraft() {
     if (!editing || props.menuLoading || props.menuError || !payload.lines.length || payload.lines.some(line => !menu.some(item => item.id === line.menuItemId) || !Number.isInteger(line.qty) || line.qty < 1 || line.qty > 500)) return;

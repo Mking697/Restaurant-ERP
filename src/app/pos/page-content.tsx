@@ -14,17 +14,19 @@ import { formatInr } from "@/lib/utils";
 import { useShiftStatus, ShiftHandoverGate } from "@/lib/shift-gate";
 import { Plus, MessageCircle } from "lucide-react";
 import { PosLifecyclePanel, type LifecyclePending } from "./lifecycle-panel";
+import { PosDocumentsPanel, type DocumentPending } from "./documents-panel";
+import type { Document } from "@/lib/pos-documents";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
 interface OrderRow { ownerOnly?: boolean; operatingConcept: "FAST_FOOD" | "CONVENTIONAL"; id: string; branchId: string; orderNumber: string; channel: string; tableNo: string; counterNo: string; totalAmount: string; tenderType: string; tenderCurrencyCode: string; tenderCurrencyAmount: string; status: string; createdAt: string; }
 interface MenuItemRow { id: string; branchId: string; name: string; price: string; isActive: boolean; isSellable: boolean; }
-interface OrderResult { order: { id?: string; orderNumber: string; status?: string; flow?: "PAYMENT_FIRST" | "PRODUCTION_FIRST" }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; lines: { name: string; qty: number }[] }[]; kot: { name: string; qty: number }[]; receipt: { receiptNumber?: string; lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null } | null; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
+interface OrderResult { finalDocument?: Document | null; documentUnavailableReason?: string; order: { id?: string; orderNumber: string; status?: string; flow?: "PAYMENT_FIRST" | "PRODUCTION_FIRST" }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; lines: { name: string; qty: number }[] }[]; kot: { name: string; qty: number }[]; receipt: { receiptNumber?: string; lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null } | null; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
 interface CurrencyRateRow { id: string; currencyCode: string; rateToInr: string; updatedAt: string; }
 
 const CHANNEL_VARIANT: Record<string, "default" | "secondary" | "warning" | "destructive"> = { DINE_IN: "default", TAKEAWAY: "secondary", SWIGGY: "warning", ZOMATO: "destructive" };
 const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 const newAttemptKey = () => `pos-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-type MutationLock = { kind: "legacy" | "lifecycle"; identity: string } | null;
+type MutationLock = { kind: "legacy" | "lifecycle" | "documents"; identity: string } | null;
 
 export default function PosPage() {
   const actor = useCurrentUser();
@@ -32,6 +34,23 @@ export default function PosPage() {
   const identity = JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess]);
   // Preserve lifecycle uncertainty across scope remounts; quarantine it on authority change.
   const pendingLifecycle = React.useRef<LifecyclePending | null>(null);
+  const documentOwner = React.useRef<{ current: DocumentPending | null }>({ current: null });
+  const [documentIntentReady, setDocumentIntentReady] = React.useState(false);
+  React.useEffect(() => {
+    // Browser-realm memory outlives this route, not the browser session. Never
+    // populate module/server globals or touch browser APIs during hydration.
+    try {
+      if (typeof window !== "undefined") {
+        const browser = window as Window & { __posDocumentIntent?: { current: DocumentPending | null } };
+        documentOwner.current = browser.__posDocumentIntent ??= { current: null };
+      }
+      setDocumentIntentReady(true);
+    } catch {
+      // No recovered owner means no safe new write, even if browser access fails.
+      setDocumentIntentReady(false);
+    }
+  }, []);
+  const pendingDocuments = documentOwner.current;
   const mutationLock = React.useRef<MutationLock>(null);
   const scopeLock = React.useRef<{ identity: string; selected: string } | null>(null);
   const currentIdentity = React.useRef(identity);
@@ -40,28 +59,31 @@ export default function PosPage() {
   if (mutationLock.current?.kind === "legacy" && mutationLock.current.identity !== identity) mutationLock.current = null;
   const [, refreshScope] = React.useState(0);
   // Keep exact intent alive across branch changes, but not across authority changes.
-  const scope = pendingLifecycle.current?.identity === identity ? pendingLifecycle.current.branchId : scopeLock.current?.identity === identity ? scopeLock.current.selected : selected;
-  return <ScopedPos key={JSON.stringify([identity, scope])} selectedScope={scope} pendingLifecycle={pendingLifecycle} mutationLock={mutationLock} onPendingChange={pending => {
+  const scope = pendingDocuments.current?.identity === identity ? pendingDocuments.current.branchId : pendingLifecycle.current?.identity === identity ? pendingLifecycle.current.branchId : scopeLock.current?.identity === identity ? scopeLock.current.selected : selected;
+  return <ScopedPos key={JSON.stringify([identity, scope])} selectedScope={scope} documentIntentReady={documentIntentReady} pendingDocuments={pendingDocuments} pendingLifecycle={pendingLifecycle} mutationLock={mutationLock} onPendingChange={pending => {
     if (currentIdentity.current !== identity) return;
     scopeLock.current = pending ? { identity, selected: scope } : null;
     refreshScope(value => value + 1);
   }} />;
 }
-function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPending, mutationLock: outerLock }: { selectedScope?: string; onPendingChange?: (pending: boolean) => void; pendingLifecycle?: React.MutableRefObject<LifecyclePending | null>; mutationLock?: React.MutableRefObject<MutationLock> } = {}) {
+function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange, pendingLifecycle: outerPending, pendingDocuments: outerDocuments, mutationLock: outerLock }: { selectedScope?: string; documentIntentReady?: boolean; onPendingChange?: (pending: boolean) => void; pendingLifecycle?: React.MutableRefObject<LifecyclePending | null>; pendingDocuments?: React.MutableRefObject<DocumentPending | null>; mutationLock?: React.MutableRefObject<MutationLock> } = {}) {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
   const identity = JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess]);
   const localPending = React.useRef<LifecyclePending | null>(null);
+  const localDocuments = React.useRef<DocumentPending | null>(null);
+  const pendingDocuments = outerDocuments ?? localDocuments;
   const localLock = React.useRef<MutationLock>(null);
   const pendingLifecycle = outerPending ?? localPending;
   const sharedLock = outerLock ?? localLock;
   const [, refreshMutation] = React.useState(0);
-  function acquireMutation(kind: "legacy" | "lifecycle") {
+  function acquireMutation(kind: "legacy" | "lifecycle" | "documents") {
+    if (!documentIntentReady) return false;
     const lock = sharedLock.current;
-    if ((pendingLifecycle.current && pendingLifecycle.current.identity !== identity) || (lock && (lock.kind !== kind || lock.identity !== identity))) return false;
+    if ((pendingLifecycle.current && (kind !== "lifecycle" || pendingLifecycle.current.identity !== identity)) || (pendingDocuments.current && (kind !== "documents" || pendingDocuments.current.identity !== identity)) || (lock && (lock.kind !== kind || lock.identity !== identity))) return false;
     sharedLock.current = { kind, identity }; refreshMutation(value => value + 1); return true;
   }
-  function releaseMutation(kind: "legacy" | "lifecycle") {
+  function releaseMutation(kind: "legacy" | "lifecycle" | "documents") {
     if (sharedLock.current?.kind === kind && sharedLock.current.identity === identity) sharedLock.current = null;
     refreshMutation(value => value + 1);
   }
@@ -76,6 +98,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
 
   const [orders, setOrders] = React.useState<OrderRow[]>([]);
   const [lifecycleRefreshToken, refreshLifecycle] = React.useState(0);
+  const [documentRefreshToken, refreshDocuments] = React.useState(0);
   const [menuOptions, setMenuOptions] = React.useState<MenuItemRow[]>([]);
   const [menuLoading, setMenuLoading] = React.useState(true);
   const [menuError, setMenuError] = React.useState("");
@@ -99,7 +122,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
   const [openOrderLines, setOpenOrderLines] = React.useState<{ menuItemId: string; qty: number }[]>([]);
   const orderAttempt = React.useRef<{ key: string; payload: Record<string, unknown>; hadUnknown?: boolean } | null>(null);
   const openOrderAttempt = React.useRef<{ kind: "ADD" | "SETTLE"; orderId: string; key: string; payload: Record<string, unknown>; hadUnknown?: boolean } | null>(null);
-  const mutationLocked = busy || !!orderAttempt.current || !!openOrderAttempt.current || !!sharedLock.current || !!pendingLifecycle.current;
+  const mutationLocked = !documentIntentReady || busy || !!orderAttempt.current || !!openOrderAttempt.current || !!sharedLock.current || !!pendingLifecycle.current || !!pendingDocuments.current;
 
   const [ratesOpen, setRatesOpen] = React.useState(false);
   const [newCode, setNewCode] = React.useState("USD");
@@ -162,7 +185,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
       const data = await requestJson<{ order: { id: string; ownerOnly: boolean }; changed: boolean }>(`/api/pos/orders/${encodeURIComponent(target.id)}/visibility`, { method: "PATCH", body: JSON.stringify({ ownerOnly, reason: visibilityReason.trim() }) });
       if (!mounted.current) return;
       if (data.order?.id !== target.id || data.order.ownerOnly !== ownerOnly || typeof data.changed !== "boolean") throw new Error("Unverified visibility acknowledgment");
-      refreshLifecycle(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
       setVisibilityTarget(null); setVisibilityReason("");
       setVisibilityMessage(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
       // A confirmed PATCH stays confirmed even when this separate GET fails.
@@ -199,7 +222,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
   function updateLine(index: number, patch: Partial<{ menuItemId: string; qty: number }>) { setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line))); }
   function removeLine(index: number) { setLines((prev) => prev.filter((_, i) => i !== index)); }
 
-  const canOrder = allowed && !!orderBranchId && !loading && !ordersError && !visibilityUnknown && !visibilityBusy && !menuLoading && !menuError && !shiftStatus.loading && !shiftStatus.error && !shiftStatus.pendingHandover;
+  const canOrder = documentIntentReady && allowed && !!orderBranchId && !loading && !ordersError && !visibilityUnknown && !visibilityBusy && !menuLoading && !menuError && !shiftStatus.loading && !shiftStatus.error && !shiftStatus.pendingHandover;
   React.useEffect(() => { if (!orderAttempt.current && (!allowed || !orderBranchId || ordersError || menuError || shiftStatus.loading || shiftStatus.error || shiftStatus.pendingHandover)) setOpen(false); }, [allowed, orderBranchId, ordersError, menuError, shiftStatus.loading, shiftStatus.error, shiftStatus.pendingHandover]);
   const orderInFlight = React.useRef(false);
   function beginOpenOrder(target: OrderRow, mode: "ADD" | "SETTLE") {
@@ -218,7 +241,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
       orderAttempt.current ??= { key: String(payload.idempotencyKey), payload };
       const data = await requestJson<OrderResult>("/api/pos/orders", { method: "POST", body: JSON.stringify(payload) });
       orderAttempt.current = null;
-      refreshLifecycle(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
       setResult(data); setOpen(false);
       setLines([]); setTableNo(""); setCustomerPhone(""); setCustomerName(""); setTenderCurrencyCode("INR");
       if (!await reloadOrders(data)) setError("Order confirmed. Could not reload the order list; do not submit it again.");
@@ -246,7 +269,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
       const url = `/api/pos/orders/${encodeURIComponent(openOrderTarget.id)}/${kind === "ADD" ? "lines" : "settle"}`;
       const data = await requestJson<Record<string, unknown>>(url, { method: "POST", body: JSON.stringify(payload) });
       openOrderAttempt.current = null; setOpenOrderTarget(null); setOpenOrderLines([]);
-      refreshLifecycle(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
       if (kind === "SETTLE") {
         const settlement = data as unknown as OrderResult;
         const settlementResult = { ...settlement, order: { ...settlement.order, flow: "PRODUCTION_FIRST" as const }, kot: [], whatsapp: { attempted: false, sent: false } };
@@ -271,6 +294,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
   }
 
   async function sendOffer() {
+    if (!documentIntentReady) return;
     setOfferBusy(true); setError(""); setOfferResult(null);
     try {
       const data = await requestJson<{ targeted: number; sent: number; failed: number }>("/api/whatsapp/offer-alert", { method: "POST", body: JSON.stringify({ branchId: orderBranchId || undefined, offerText, validUntil: offerValidUntil }) });
@@ -280,6 +304,7 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
   }
 
   async function saveRate() {
+    if (!documentIntentReady) return;
     setRateBusy(true); setError("");
     try {
       await requestJson("/api/currency-rates", { method: "POST", body: JSON.stringify({ currencyCode: newCode, rateToInr: Number(newRate) }) });
@@ -364,7 +389,11 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
 
       {!allowed ? <p role="alert">{uiText("POS / Cashier permission is required.")}</p> : <ShiftHandoverGate branchId={orderBranchId} pendingHandover={shiftStatus.pendingHandover} loading={shiftStatus.loading} error={shiftStatus.error} onRetry={shiftStatus.reload} onAccepted={shiftStatus.reload}><>
         {pendingScopeMessage && <p role="alert">{uiText(pendingScopeMessage)}</p>}
-        <PosLifecyclePanel refreshToken={lifecycleRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} operatingConcept={operatingConcept} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current} menuOptions={menuOptions} menuLoading={menuLoading} menuError={menuError} currencyCodes={["INR", ...currencyRates.map(rate => rate.currencyCode).filter(code => code !== "INR")]} pendingIntent={pendingLifecycle} acquireMutation={kind => {
+        <PosLifecyclePanel refreshToken={lifecycleRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} operatingConcept={operatingConcept} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current && !pendingDocuments.current} menuOptions={menuOptions} menuLoading={menuLoading} menuError={menuError} currencyCodes={["INR", ...currencyRates.map(rate => rate.currencyCode).filter(code => code !== "INR")]} pendingIntent={pendingLifecycle} acquireMutation={kind => {
+          if (!mounted.current || !canOrder || visibilityBusy || visibilityInFlight.current || visibilityUnknown || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return false;
+          return acquireMutation(kind);
+        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={async () => { refreshDocuments(value => value + 1); return reloadOrders(); }} />
+        <PosDocumentsPanel refreshToken={documentRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current && !pendingLifecycle.current} pendingIntent={pendingDocuments} acquireMutation={kind => {
           if (!mounted.current || !canOrder || visibilityBusy || visibilityInFlight.current || visibilityUnknown || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return false;
           return acquireMutation(kind);
         }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={reloadOrders} />
@@ -372,6 +401,8 @@ function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPend
         {error && !open && <p role="alert" className="mb-4 text-destructive">{uiText(error)}</p>}
             {result && <div role="status" className="mt-3 space-y-3 rounded-md border p-3 text-sm">
               <p className="font-medium">{uiText("Order")} {result.order.orderNumber} {result.order.status === "OPEN" ? uiText("opened and sent to production.") : uiText("confirmed.")}</p>
+              {result.finalDocument && <p>INTERNAL SALES DOCUMENT — NOT A FISCAL RECEIPT. Final {result.finalDocument.number}; receipt {result.finalDocument.receiptNumber || "none"}; applicable proforma {result.finalDocument.proformaId || "none"}. View / print the immutable final in document history above; kitchen tickets are separate.</p>}
+              {result.documentUnavailableReason && <p role="status">Immutable final document unavailable: {result.documentUnavailableReason}. Existing receipt/payment is unchanged; missing legacy snapshots are not fabricated.</p>}
               {result.tickets?.map(ticket => <div key={ticket.ticketNumber}><p className="font-medium">{ticket.ticketType} — {ticket.ticketNumber}</p><ul className="list-disc pl-5">{ticket.lines.map((line, i) => <li key={i}>{line.name} × {line.qty}</li>)}</ul></div>)}
               {!result.tickets?.length && !!result.kot.length && <div><p className="font-medium">{uiText("KOT (kitchen copy, no price)")}</p><ul className="list-disc pl-5">{result.kot.map((k, i) => <li key={i}>{k.name} × {k.qty}</li>)}</ul></div>}
               {result.receipt && <div><p className="font-medium">{uiText("Receipt")} {result.receipt.receiptNumber}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>

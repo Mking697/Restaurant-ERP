@@ -116,7 +116,7 @@ export async function dispatchPosDraft(tx: Executor, actor: Identity, id: string
   editable(row, input.expectedRevision);
   const payload = await draftPayload(tx, row.branchId, row.payload);
   // Namespace is per persisted draft, never reuse the caller's key in GAP-023.
-  const admitted = await createPosOrder(tx, actor, row.branchId, { ...payload, idempotencyKey: `draft:${id}` });
+  const admitted = await createPosOrder(tx, actor, row.branchId, { ...payload, idempotencyKey: `draft:${id}` }, { draftId: id, draftRevision: row.revision });
   const orderId = (admitted as { order: { id: string } }).order.id;
   const updated = await changeDraft(tx, row, { status: "DISPATCHED", orderId });
   await event(tx, actor, row.branchId, "DRAFT", id, "DISPATCH_DRAFT", updated.revision, "DRAFT", "DISPATCHED");
