@@ -7,6 +7,7 @@ import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { assertAcyclicInsert, buildRecipeIndex, parseBomRow, type BomRow } from "@/lib/server/bom";
 import { lockRecipeBranch, replaceRecipe } from "@/lib/server/recipe-write";
+import { productionStation } from "@/lib/server/pos-order-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +49,9 @@ export async function PUT(request: Request) {
       const branchId = branchScope(actor, item.branchId);
       if (!branchId || input.branchId !== branchId) throw new HttpError(400, "branchId must match the menu item's branch");
       await lockRecipeBranch(tx, branchId);
-      return replaceRecipe(tx, actor, branchId, item.id, input.components);
+      const rows = await replaceRecipe(tx, actor, branchId, item.id, input.components);
+      await tx.update(menuItems).set({ productionStation: productionStation(input.productionStation ?? item.productionStation) }).where(eq(menuItems.id, item.id));
+      return rows;
     });
     return json({ bomRecipes: rows });
   });

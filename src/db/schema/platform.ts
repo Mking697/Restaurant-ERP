@@ -1,4 +1,6 @@
-import { boolean, index, integer, numeric, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, numeric, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export const branchOperatingConceptEnum = pgEnum("branch_operating_concept", ["FAST_FOOD", "CONVENTIONAL"]);
 
 /**
  * Tenancy root. One row per branch, B1..B6+ — scales to N branches without a
@@ -13,6 +15,7 @@ export const branches = pgTable(
     name: text("name").notNull(),
     code: text("code").notNull().unique(), // "B1".."B6"
     address: text("address").notNull().default(""),
+    operatingConcept: branchOperatingConceptEnum("operating_concept").notNull().default("FAST_FOOD"),
     // Tanzania VAT is a flat national rate (18% standard, TRA) — no state/
     // CGST-SGST-IGST concept exists here. This column is an OPTIONAL
     // branch-level override of that flat rate (e.g. a branch not VAT

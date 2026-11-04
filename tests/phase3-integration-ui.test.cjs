@@ -60,6 +60,9 @@ test('Dashboard reads the shared scoped MIS reader without APP_ORIGIN or cookie 
     '@/lib/server/http': { api: fn => fn(), json: data => data },
     '@/lib/server/permissions': { assertModule: noop, branchScope: () => 'own-branch' },
     '@/lib/server/order-visibility': { operationalOrderVisibility: noop },
+    // This test isolates MIS grant delegation; timestamp behavior has executable
+    // row/SQL coverage in gap023-reporting.test.cjs.
+    '@/lib/server/pos-reporting': { posSaleTime: {} },
     '@/app/api/mis/_shared': { listMisScores: async (...args) => { calls.push(args); return []; } },
     '@/app/api/reports/_aggregation': { computeInventoryValue: noop, istDayKey: noop, istDayRange: () => ({}), istMonthRange: () => ({}), sumMoneyInr: noop },
     '@/app/api/reports/_data': { branchFoodCost: noop, closingCash: async () => [], foodRates: async () => new Map(), inventoryRates: async () => new Map(), reportBranches: async () => [] },

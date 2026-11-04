@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { branches } from "@/db/schema/platform";
 import { dailySummaryLog } from "@/db/schema/notifications";
 import { inventoryStock } from "@/db/schema/inventory";
 import { posOrders } from "@/db/schema/pos";
+import { posSaleTime } from "./pos-reporting";
 import { shiftHandovers } from "@/db/schema/shifts";
 import { taskInstances } from "@/db/schema/tasks";
 import { locked } from "./auth";
@@ -71,9 +72,9 @@ export async function runDailySummary(now: Date = new Date()): Promise<DailySumm
       .where(
         and(
           eq(posOrders.branchId, branch.id),
-          eq(posOrders.status, "COMPLETED"),
-          gte(posOrders.createdAt, startUtc),
-          lt(posOrders.createdAt, endUtc)
+          inArray(posOrders.status, ["PAID", "COMPLETED"]),
+          gte(posSaleTime, startUtc),
+          lt(posSaleTime, endUtc)
         )
       );
     // Fail closed for anything not explicitly public; never mention hidden sales

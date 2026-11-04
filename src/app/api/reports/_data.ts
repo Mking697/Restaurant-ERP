@@ -8,6 +8,7 @@ import { bomRecipes, menuItems } from "@/db/schema/menu";
 import { vendorRates } from "@/db/schema/vendors";
 import { HttpError, type Identity } from "@/lib/server/permissions";
 import { operationalOrderVisibility } from "@/lib/server/order-visibility";
+import { posSaleTime } from "@/lib/server/pos-reporting";
 import { allocateSaleRevenue, buildRecipeIndex, computeFoodCost, postedFoodCost, istDayKey, istMonthRange, sumMoneyInr, type SoldLine } from "./_aggregation";
 
 export async function reportBranches(scope: string | null) {
@@ -33,7 +34,7 @@ export async function inventoryRates() {
   return rates;
 }
 export async function branchFoodCost(actor: Identity, branchId: string, range: { start: Date; end: Date }, rates: Map<string, number>) {
-  const orders = await db.select({ id: posOrders.id, totalAmount: posOrders.totalAmount, cogsAmount: posOrders.cogsAmount, cogsComplete: posOrders.cogsComplete }).from(posOrders).where(and(eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED"), gte(posOrders.createdAt, range.start), lt(posOrders.createdAt, range.end), operationalOrderVisibility(actor)));
+  const orders = await db.select({ id: posOrders.id, totalAmount: posOrders.totalAmount, cogsAmount: posOrders.cogsAmount, cogsComplete: posOrders.cogsComplete }).from(posOrders).where(and(eq(posOrders.branchId, branchId), inArray(posOrders.status, ["PAID", "COMPLETED"]), gte(posSaleTime, range.start), lt(posSaleTime, range.end), operationalOrderVisibility(actor)));
   const lines = orders.length ? await db.select({ id: posOrderLines.id, orderId: posOrderLines.orderId, menuItemId: posOrderLines.menuItemId, menuItemName: menuItems.name, price: posOrderLines.price, qty: posOrderLines.qty }).from(posOrderLines).innerJoin(menuItems, eq(menuItems.id, posOrderLines.menuItemId)).where(inArray(posOrderLines.orderId, orders.map((o) => o.id))).orderBy(posOrderLines.id) : [];
   const sold: SoldLine[] = [];
   const excludedOrders: { orderId: string; reason: string }[] = [];

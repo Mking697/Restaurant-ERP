@@ -5,6 +5,28 @@ export interface GuideExample {
 }
 // Practice instructions, never business records or automatically submitted forms.
 export const GUIDE_EXAMPLES: Record<string, { en: GuideExample; hinglish: GuideExample }> = {
+  "/kitchen": {
+  "en": {
+    "scenario": "Practice immutable Kitchen/Bar ticket preparation only on a disposable QA branch.",
+    "steps": [
+      "Owner grants POS_KITCHEN to kitchen staff; keep POS_CASHIER separate.",
+      "Dispatch a QA order on POS with the existing concept payment sequence, then open Kitchen / Bar Queue.",
+      "Filter station, Start the SENT ticket, then mark Ready. As cashier, mark Served.",
+      "View / reprint the original no-price snapshot, then settle any unpaid Conventional order and Close on POS once every ticket is served."
+    ],
+    "result": "Preparation and financial status remain separate. View/reprint/serve/close do not post stock again; missing historical snapshots remain unavailable. No production release, automatic refunds or printer-device integration is implied."
+  },
+  "hinglish": {
+    "scenario": "Sirf disposable QA branch par saved Kitchen/Bar ticket preparation practice karo.",
+    "steps": [
+      "Owner se kitchen staff ko POS_KITCHEN grant dilwao; POS_CASHIER alag rakho.",
+      "POS se QA order approved concept payment flow par dispatch karo, phir Kitchen / Bar Queue kholo.",
+      "Station filter karke SENT ticket Start aur phir Ready karo. Cashier se Served mark karo.",
+      "Original no-price snapshot View / reprint karo; unpaid Conventional order settle karke saare tickets Served hone par POS par Close karo."
+    ],
+    "result": "Preparation aur payment status alag hain. View/reprint/serve/close se stock dobara nahi katta; missing old snapshot unavailable hai. Production release, automatic refund ya printer-device integration ka claim nahi."
+  }
+},
   "/dashboard": {
   "en": {
     "scenario": "Compare real database sales and stock KPIs for permitted branches without changing records.",

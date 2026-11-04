@@ -19,6 +19,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   if (href === "/admin/settings/restaurant" || href === "/admin/settings/whatsapp" || href === "/admin/settings/business-policy") return user.role === "SUPER_ADMIN";
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
+    "/kitchen": ["POS_KITCHEN", "POS_CASHIER"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
     "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"],
     "/workforce": ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"],
@@ -29,7 +30,7 @@ function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/ho-stock-review": "HO Stock Review", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer",
-  "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
+  "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/kitchen": "Kitchen / Bar Queue", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
   "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/admin/settings/business-policy": "Business Policy Settings", "/guide": "Guide Book",
 };
 function NavList({ user, activeHref, onNavigate }: { user: CurrentUser; activeHref?: string; onNavigate?: () => void }) {

@@ -267,6 +267,20 @@
       "when": 1793590366418,
       "tag": "0037_far_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793725007601,
+      "tag": "0038_mysterious_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793763179822,
+      "tag": "0039_luxuriant_black_tom",
+      "breakpoints": true
     }
   ]
 }

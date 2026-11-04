@@ -1,6 +1,7 @@
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { posOrders } from "@/db/schema/pos";
+import { posSaleTime } from "@/lib/server/pos-reporting";
 import { requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
 import { assertModule, branchScope } from "@/lib/server/permissions";
@@ -33,10 +34,12 @@ export async function GET(request: Request) {
     const start = istDayRange(windowStart).start;
     const end = istDayRange(now).end;
 
+    // The aggregation helper's legacy createdAt input must carry the same
+    // sale timestamp used by the WHERE window, not the table-opening time.
     const rows = await db
-      .select({ createdAt: posOrders.createdAt, totalAmount: posOrders.totalAmount })
+      .select({ createdAt: posSaleTime, totalAmount: posOrders.totalAmount })
       .from(posOrders)
-      .where(and(scope ? eq(posOrders.branchId, scope) : undefined, eq(posOrders.status, "COMPLETED"), gte(posOrders.createdAt, start), lt(posOrders.createdAt, end), operationalOrderVisibility(actor)));
+      .where(and(scope ? eq(posOrders.branchId, scope) : undefined, inArray(posOrders.status, ["PAID", "COMPLETED"]), gte(posSaleTime, start), lt(posSaleTime, end), operationalOrderVisibility(actor)));
 
     const trend = groupRevenueByDay(rows, days, now);
     return json({ branchId: scope, days, trend, notes: ["Real daily revenue from completed pos_orders, respecting operational order visibility.", "primeCostPercent is not included per-day this pass — no real daily-granularity prime-cost figure exists yet."] });

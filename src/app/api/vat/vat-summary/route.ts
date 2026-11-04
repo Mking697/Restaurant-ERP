@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { posOrderLines, posOrders } from "@/db/schema/pos";
 import { menuItems } from "@/db/schema/menu";
@@ -7,6 +7,8 @@ import { requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { vatSummary, type VatSummaryLineInput } from "@/lib/server/vat-summary";
+import { posSaleTime } from "@/lib/server/pos-reporting";
+import { businessDateRange } from "@/lib/server/business-calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,15 +31,17 @@ export async function GET(request: Request) {
     const from = url.searchParams.get("from") ?? "";
     const to = url.searchParams.get("to") ?? "";
     if (!DATE_RE.test(from) || !DATE_RE.test(to)) throw new HttpError(400, "from/to must be YYYY-MM-DD");
-    const fromDate = new Date(`${from}T00:00:00.000Z`);
-    const toDate = new Date(`${to}T23:59:59.999Z`);
-    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) throw new HttpError(400, "from/to is not a valid calendar date");
-    if (fromDate > toDate) throw new HttpError(400, "from must be before to");
+    let fromDate: Date, toDate: Date;
+    try {
+      fromDate = businessDateRange(from).start;
+      toDate = businessDateRange(to).end;
+    } catch { throw new HttpError(400, "from/to is not a valid calendar date"); }
+    if (from > to) throw new HttpError(400, "from must be before to");
 
     const orders = await db
       .select({ id: posOrders.id, branchId: posOrders.branchId })
       .from(posOrders)
-      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, ne(posOrders.status, "VOIDED"), gte(posOrders.createdAt, fromDate), lte(posOrders.createdAt, toDate)));
+      .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, inArray(posOrders.status, ["PAID", "COMPLETED"]), gte(posSaleTime, fromDate), lt(posSaleTime, toDate)));
     if (!orders.length) return json({ rows: [], grandTaxableValue: "0.00", grandTotalTax: "0.00", grandTotalValue: "0.00", ordersIncluded: 0 });
 
     const branchIds = [...new Set(orders.map((o) => o.branchId))];
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
 
     const orderIds = orders.map((o) => o.id);
     const lineRows = await db
-      .select({ orderId: posOrderLines.orderId, qty: posOrderLines.qty, price: posOrderLines.price, menuItemId: posOrderLines.menuItemId })
+      .select({ orderId: posOrderLines.orderId, qty: posOrderLines.qty, price: posOrderLines.price, menuItemId: posOrderLines.menuItemId, vatRatePercent: posOrderLines.vatRatePercent })
       .from(posOrderLines)
       .where(inArray(posOrderLines.orderId, orderIds));
     const menuItemIds = [...new Set(lineRows.map((l) => l.menuItemId))];
@@ -60,7 +64,7 @@ export async function GET(request: Request) {
       const branchOverride = branchVatOverrideById.get(branchIdForLine) ?? null;
       return {
         productCode: item?.productCode ?? "",
-        ratePercent: branchOverride ?? item?.vatRatePercent ?? "0.00",
+        ratePercent: line.vatRatePercent ?? branchOverride ?? item?.vatRatePercent ?? "0.00",
         qty: line.qty,
         lineTotalDecimal: (Number(line.price) * line.qty).toFixed(2),
       };

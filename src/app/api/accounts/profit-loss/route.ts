@@ -1,8 +1,9 @@
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { branchExpenses } from "@/db/schema/expenses";
 import { payrollSnapshots } from "@/db/schema/workforce";
 import { posOrders } from "@/db/schema/pos";
+import { posSaleTime } from "@/lib/server/pos-reporting";
 import { requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
 import { expenseMonth, expensePermission, expenseProfitLoss, expenseScope } from "@/lib/server/expenses";
@@ -29,9 +30,9 @@ export async function GET(request: Request) { return api(async () => {
     .from(posOrders)
     .where(and(
       scope ? eq(posOrders.branchId, scope) : undefined,
-      gte(posOrders.createdAt, new Date(range.start)),
-      lt(posOrders.createdAt, new Date(range.end)),
-      eq(posOrders.status, "COMPLETED"),
+      gte(posSaleTime, new Date(range.start)),
+      lt(posSaleTime, new Date(range.end)),
+      inArray(posOrders.status, ["PAID", "COMPLETED"]),
       operationalOrderVisibility(actor)
     ));
   // COGS — real sum of each completed order's own captured cogsAmount
@@ -47,9 +48,9 @@ export async function GET(request: Request) { return api(async () => {
     .from(posOrders)
     .where(and(
       scope ? eq(posOrders.branchId, scope) : undefined,
-      gte(posOrders.createdAt, new Date(range.start)),
-      lt(posOrders.createdAt, new Date(range.end)),
-      eq(posOrders.status, "COMPLETED"),
+      gte(posSaleTime, new Date(range.start)),
+      lt(posSaleTime, new Date(range.end)),
+      inArray(posOrders.status, ["PAID", "COMPLETED"]),
       operationalOrderVisibility(actor)
     ));
   return json(expenseProfitLoss(range.month, expenses, payroll, revenueRow.revenue, cogsRow.cogs, cogsRow.cogsComplete));

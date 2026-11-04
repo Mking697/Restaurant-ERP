@@ -17,6 +17,7 @@ export const MODULE_KEYS = [
   "TASKS_DELEGATION", // one-time delegation
   "CHECKLISTS", // multi-step checklist templates/runs (opening/closing, audits)
   "POS_CASHIER", // POS billing
+  "POS_KITCHEN", // preparation queue only; does not grant billing/collection
   "OFFICIAL_SALES_REPORTS", // unfiltered official VAT/accounting sales exports; not operational visibility
   "CASH_DROP", // blind cash drop entry
   "PETTY_CASH", // petty cash ledger

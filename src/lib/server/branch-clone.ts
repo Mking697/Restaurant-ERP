@@ -52,6 +52,7 @@ export async function cloneBranch(tx: Executor, actor: Identity, input: Record<s
         category: item.category,
         outputUnit: item.outputUnit,
         price: item.price,
+        productionStation: item.productionStation,
         isActive: item.isActive,
         isSemiFg: item.isSemiFg,
         isSellable: item.isSellable,

@@ -13,31 +13,69 @@ import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 import { formatInr } from "@/lib/utils";
 import { useShiftStatus, ShiftHandoverGate } from "@/lib/shift-gate";
 import { Plus, MessageCircle } from "lucide-react";
+import { PosLifecyclePanel, type LifecyclePending } from "./lifecycle-panel";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
-interface OrderRow { ownerOnly?: boolean; id: string; branchId: string; orderNumber: string; channel: string; tableNo: string; counterNo: string; totalAmount: string; tenderType: string; tenderCurrencyCode: string; tenderCurrencyAmount: string; status: string; createdAt: string; }
+interface OrderRow { ownerOnly?: boolean; operatingConcept: "FAST_FOOD" | "CONVENTIONAL"; id: string; branchId: string; orderNumber: string; channel: string; tableNo: string; counterNo: string; totalAmount: string; tenderType: string; tenderCurrencyCode: string; tenderCurrencyAmount: string; status: string; createdAt: string; }
 interface MenuItemRow { id: string; branchId: string; name: string; price: string; isActive: boolean; isSellable: boolean; }
-interface OrderResult { order: { orderNumber: string }; kot: { name: string; qty: number }[]; receipt: { lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null }; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
+interface OrderResult { order: { id?: string; orderNumber: string; status?: string; flow?: "PAYMENT_FIRST" | "PRODUCTION_FIRST" }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; lines: { name: string; qty: number }[] }[]; kot: { name: string; qty: number }[]; receipt: { receiptNumber?: string; lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null } | null; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
 interface CurrencyRateRow { id: string; currencyCode: string; rateToInr: string; updatedAt: string; }
 
 const CHANNEL_VARIANT: Record<string, "default" | "secondary" | "warning" | "destructive"> = { DINE_IN: "default", TAKEAWAY: "secondary", SWIGGY: "warning", ZOMATO: "destructive" };
 const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const newAttemptKey = () => `pos-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+type MutationLock = { kind: "legacy" | "lifecycle"; identity: string } | null;
 
 export default function PosPage() {
   const actor = useCurrentUser();
   const selected = useSelectedBranchId();
-  return <ScopedPos key={JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess, selected])} />;
+  const identity = JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess]);
+  // Preserve lifecycle uncertainty across scope remounts; quarantine it on authority change.
+  const pendingLifecycle = React.useRef<LifecyclePending | null>(null);
+  const mutationLock = React.useRef<MutationLock>(null);
+  const scopeLock = React.useRef<{ identity: string; selected: string } | null>(null);
+  const currentIdentity = React.useRef(identity);
+  currentIdentity.current = identity;
+  if (scopeLock.current && scopeLock.current.identity !== identity) scopeLock.current = null;
+  if (mutationLock.current?.kind === "legacy" && mutationLock.current.identity !== identity) mutationLock.current = null;
+  const [, refreshScope] = React.useState(0);
+  // Keep exact intent alive across branch changes, but not across authority changes.
+  const scope = pendingLifecycle.current?.identity === identity ? pendingLifecycle.current.branchId : scopeLock.current?.identity === identity ? scopeLock.current.selected : selected;
+  return <ScopedPos key={JSON.stringify([identity, scope])} selectedScope={scope} pendingLifecycle={pendingLifecycle} mutationLock={mutationLock} onPendingChange={pending => {
+    if (currentIdentity.current !== identity) return;
+    scopeLock.current = pending ? { identity, selected: scope } : null;
+    refreshScope(value => value + 1);
+  }} />;
 }
-function ScopedPos() {
+function ScopedPos({ selectedScope, onPendingChange, pendingLifecycle: outerPending, mutationLock: outerLock }: { selectedScope?: string; onPendingChange?: (pending: boolean) => void; pendingLifecycle?: React.MutableRefObject<LifecyclePending | null>; mutationLock?: React.MutableRefObject<MutationLock> } = {}) {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
-  const selected = useSelectedBranchId();
+  const identity = JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess]);
+  const localPending = React.useRef<LifecyclePending | null>(null);
+  const localLock = React.useRef<MutationLock>(null);
+  const pendingLifecycle = outerPending ?? localPending;
+  const sharedLock = outerLock ?? localLock;
+  const [, refreshMutation] = React.useState(0);
+  function acquireMutation(kind: "legacy" | "lifecycle") {
+    const lock = sharedLock.current;
+    if ((pendingLifecycle.current && pendingLifecycle.current.identity !== identity) || (lock && (lock.kind !== kind || lock.identity !== identity))) return false;
+    sharedLock.current = { kind, identity }; refreshMutation(value => value + 1); return true;
+  }
+  function releaseMutation(kind: "legacy" | "lifecycle") {
+    if (sharedLock.current?.kind === kind && sharedLock.current.identity === identity) sharedLock.current = null;
+    refreshMutation(value => value + 1);
+  }
+  const requestedSelection = useSelectedBranchId();
+  const selected = selectedScope ?? requestedSelection;
   const { branches } = useBranches();
   const allowed = hasCurrentModule(actor, "POS_CASHIER");
   const orderBranchId = actor.role === "SUPER_ADMIN" ? (selected !== "all" ? selected : "") : actor.branchId ?? "";
+  const operatingConcept = branches.find(branch => branch.id === orderBranchId)?.operatingConcept ?? "FAST_FOOD";
+  const pendingScopeMessage = requestedSelection !== selected ? `Pending order outcome in ${branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId}. Replay the exact request here before switching branch scope.` : "";
   const shiftStatus = useShiftStatus(orderBranchId, allowed);
 
   const [orders, setOrders] = React.useState<OrderRow[]>([]);
+  const [lifecycleRefreshToken, refreshLifecycle] = React.useState(0);
   const [menuOptions, setMenuOptions] = React.useState<MenuItemRow[]>([]);
   const [menuLoading, setMenuLoading] = React.useState(true);
   const [menuError, setMenuError] = React.useState("");
@@ -56,6 +94,12 @@ function ScopedPos() {
   const [lines, setLines] = React.useState<{ menuItemId: string; qty: number }[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<OrderResult | null>(null);
+  const [openOrderTarget, setOpenOrderTarget] = React.useState<OrderRow | null>(null);
+  const [openOrderMode, setOpenOrderMode] = React.useState<"ADD" | "SETTLE">("ADD");
+  const [openOrderLines, setOpenOrderLines] = React.useState<{ menuItemId: string; qty: number }[]>([]);
+  const orderAttempt = React.useRef<{ key: string; payload: Record<string, unknown>; hadUnknown?: boolean } | null>(null);
+  const openOrderAttempt = React.useRef<{ kind: "ADD" | "SETTLE"; orderId: string; key: string; payload: Record<string, unknown>; hadUnknown?: boolean } | null>(null);
+  const mutationLocked = busy || !!orderAttempt.current || !!openOrderAttempt.current || !!sharedLock.current || !!pendingLifecycle.current;
 
   const [ratesOpen, setRatesOpen] = React.useState(false);
   const [newCode, setNewCode] = React.useState("USD");
@@ -110,7 +154,7 @@ function ScopedPos() {
   React.useEffect(() => { void reloadOrders(); return () => { listVersion.current++; }; }, [reloadOrders]);
 
   async function changeVisibility() {
-    if (!isOwner || !visibilityTarget || visibilityBusy || visibilityInFlight.current || visibilityUnknown || loading || ordersError || visibilityReason.trim().length < 3 || visibilityReason.trim().length > 500) return;
+    if (!isOwner || !visibilityTarget || mutationLocked || sharedLock.current || pendingLifecycle.current || visibilityBusy || visibilityInFlight.current || visibilityUnknown || loading || ordersError || visibilityReason.trim().length < 3 || visibilityReason.trim().length > 500) return;
     const target = visibilityTarget;
     const ownerOnly = !target.ownerOnly;
     visibilityInFlight.current = true; setVisibilityBusy(true); setVisibilityMessage("");
@@ -118,6 +162,7 @@ function ScopedPos() {
       const data = await requestJson<{ order: { id: string; ownerOnly: boolean }; changed: boolean }>(`/api/pos/orders/${encodeURIComponent(target.id)}/visibility`, { method: "PATCH", body: JSON.stringify({ ownerOnly, reason: visibilityReason.trim() }) });
       if (!mounted.current) return;
       if (data.order?.id !== target.id || data.order.ownerOnly !== ownerOnly || typeof data.changed !== "boolean") throw new Error("Unverified visibility acknowledgment");
+      refreshLifecycle(value => value + 1);
       setVisibilityTarget(null); setVisibilityReason("");
       setVisibilityMessage(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
       // A confirmed PATCH stays confirmed even when this separate GET fails.
@@ -155,19 +200,66 @@ function ScopedPos() {
   function removeLine(index: number) { setLines((prev) => prev.filter((_, i) => i !== index)); }
 
   const canOrder = allowed && !!orderBranchId && !loading && !ordersError && !visibilityUnknown && !visibilityBusy && !menuLoading && !menuError && !shiftStatus.loading && !shiftStatus.error && !shiftStatus.pendingHandover;
-  React.useEffect(() => { if (!allowed || !orderBranchId || ordersError || menuError || shiftStatus.loading || shiftStatus.error || shiftStatus.pendingHandover) setOpen(false); }, [allowed, orderBranchId, ordersError, menuError, shiftStatus.loading, shiftStatus.error, shiftStatus.pendingHandover]);
+  React.useEffect(() => { if (!orderAttempt.current && (!allowed || !orderBranchId || ordersError || menuError || shiftStatus.loading || shiftStatus.error || shiftStatus.pendingHandover)) setOpen(false); }, [allowed, orderBranchId, ordersError, menuError, shiftStatus.loading, shiftStatus.error, shiftStatus.pendingHandover]);
   const orderInFlight = React.useRef(false);
+  function beginOpenOrder(target: OrderRow, mode: "ADD" | "SETTLE") {
+    if (!allowed || loading || ordersError || visibilityUnknown || visibilityBusy || sharedLock.current || pendingLifecycle.current || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return;
+    setOpen(false); setOpenOrderMode(mode); setOpenOrderTarget(target); setError("");
+    setTenderType("CASH"); setTenderCurrencyCode("INR");
+    setOpenOrderLines(target.branchId === orderBranchId && menuOptions[0] ? [{ menuItemId: menuOptions[0].id, qty: 1 }] : []);
+  }
   async function submitOrder() {
-    if (!canOrder || busy || orderInFlight.current || !lines.length) return;
+    if (!mounted.current || !canOrder || visibilityInFlight.current || busy || orderInFlight.current || openOrderAttempt.current || !lines.length || !acquireMutation("legacy")) return;
     orderInFlight.current = true;
+    onPendingChange?.(true);
     setBusy(true); setError(""); setResult(null);
     try {
-      const data = await requestJson<OrderResult>("/api/pos/orders", { method: "POST", body: JSON.stringify({ branchId: orderBranchId, channel, tableNo, counterNo, customerPhone, customerName, tenderType, tenderCurrencyCode, lines }) });
-      setResult(data);
+      const payload = orderAttempt.current?.payload ?? { branchId: orderBranchId, channel, tableNo, counterNo, customerPhone, customerName, tenderType, tenderCurrencyCode, lines, idempotencyKey: newAttemptKey() };
+      orderAttempt.current ??= { key: String(payload.idempotencyKey), payload };
+      const data = await requestJson<OrderResult>("/api/pos/orders", { method: "POST", body: JSON.stringify(payload) });
+      orderAttempt.current = null;
+      refreshLifecycle(value => value + 1);
+      setResult(data); setOpen(false);
       setLines([]); setTableNo(""); setCustomerPhone(""); setCustomerName(""); setTenderCurrencyCode("INR");
       if (!await reloadOrders(data)) setError("Order confirmed. Could not reload the order list; do not submit it again.");
-    } catch (err) { setError(err instanceof Error ? err.message : "Order failed"); }
-    finally { orderInFlight.current = false; setBusy(false); }
+    } catch (err) {
+      if (err instanceof RequestJsonError && err.outcome === "rejected" && !orderAttempt.current?.hadUnknown) orderAttempt.current = null;
+      else if (orderAttempt.current) orderAttempt.current.hadUnknown = true;
+      setError(orderAttempt.current ? "Order outcome unknown. Replay exact request with the same key; do not create a new order." : err instanceof Error ? err.message : "Order failed");
+    }
+    finally { orderInFlight.current = false; setBusy(false); if (!orderAttempt.current) { releaseMutation("legacy"); onPendingChange?.(false); } }
+  }
+
+  async function mutateOpenOrder() {
+    if (!mounted.current || !openOrderTarget || busy || visibilityInFlight.current || orderInFlight.current || orderAttempt.current || !canOrder || openOrderTarget.branchId !== orderBranchId) return;
+    if (openOrderAttempt.current && (openOrderAttempt.current.orderId !== openOrderTarget.id || openOrderAttempt.current.kind !== openOrderMode)) return;
+    if (!acquireMutation("legacy")) return;
+    orderInFlight.current = true;
+    onPendingChange?.(true);
+    const kind = openOrderMode;
+    const payload = openOrderAttempt.current?.orderId === openOrderTarget.id && openOrderAttempt.current.kind === kind
+      ? openOrderAttempt.current.payload
+      : kind === "ADD" ? { lines: openOrderLines, idempotencyKey: newAttemptKey() } : { tenderType, tenderCurrencyCode, idempotencyKey: newAttemptKey() };
+    openOrderAttempt.current ??= { kind, orderId: openOrderTarget.id, key: String(payload.idempotencyKey), payload };
+    setBusy(true); setError("");
+    try {
+      const url = `/api/pos/orders/${encodeURIComponent(openOrderTarget.id)}/${kind === "ADD" ? "lines" : "settle"}`;
+      const data = await requestJson<Record<string, unknown>>(url, { method: "POST", body: JSON.stringify(payload) });
+      openOrderAttempt.current = null; setOpenOrderTarget(null); setOpenOrderLines([]);
+      refreshLifecycle(value => value + 1);
+      if (kind === "SETTLE") {
+        const settlement = data as unknown as OrderResult;
+        const settlementResult = { ...settlement, order: { ...settlement.order, flow: "PRODUCTION_FIRST" as const }, kot: [], whatsapp: { attempted: false, sent: false } };
+        if (!await reloadOrders(settlementResult)) setError("Settlement confirmed. Could not reload the order list; do not submit it again.");
+      } else {
+        const dispatchResult = { ...(data as unknown as OrderResult), kot: [], receipt: null, whatsapp: { attempted: false, sent: false } };
+        if (!await reloadOrders(dispatchResult)) setError("Items confirmed. Could not reload the order list; do not submit them again.");
+      }
+    } catch (err) {
+      if (err instanceof RequestJsonError && err.outcome === "rejected" && !openOrderAttempt.current?.hadUnknown) openOrderAttempt.current = null;
+      else if (openOrderAttempt.current) openOrderAttempt.current.hadUnknown = true;
+      setError(openOrderAttempt.current ? "Open-order outcome unknown. Replay exact request with the same key; do not start another mutation." : err instanceof Error ? err.message : "Order update failed");
+    } finally { orderInFlight.current = false; setBusy(false); if (!openOrderAttempt.current) { releaseMutation("legacy"); onPendingChange?.(false); } }
   }
 
   async function loadOfferTarget() {
@@ -200,7 +292,7 @@ function ScopedPos() {
 
   return (
     <AppShell activeHref="/pos">
-      <PageHeader title={uiText("POS / Cashier")} description={uiText("Confirm deducts direct raw materials and already-produced Semi-FG stock, then creates a KOT and receipt. The server rechecks shift status when saving.", "Confirm par direct raw aur pehle se produced Semi-FG stock deduct hota hai, phir KOT aur receipt bante hain. Save par server shift status dobara check karta hai.")}>
+      <PageHeader title={uiText("POS / Cashier")} description={uiText("Fast-food and non-dine-in orders are paid first. Conventional dine-in validates and posts stock when KOT/BOT tickets are dispatched, then creates the receipt when payment is settled.")}>
         <div className="flex flex-wrap gap-2">
         {isOwner && <Dialog open={ratesOpen} onOpenChange={(v) => { setRatesOpen(v); if (v) setError(""); }}>
           <DialogTrigger asChild><Button size="sm" variant="outline">{uiText("Currency Rates")}</Button></DialogTrigger>
@@ -229,11 +321,12 @@ function ScopedPos() {
             <DialogFooter><Button type="button" variant="outline" onClick={() => setOfferOpen(false)}>{uiText("Close")}</Button><Button disabled={offerBusy || !offerText.trim() || !offerTargetCount} onClick={sendOffer}>{offerBusy ? uiText("Sending…") : uiText("Send Offer Alert")}</Button></DialogFooter>
           </DialogContent>
         </Dialog>}
-        {allowed && <Dialog open={open && canOrder} onOpenChange={(v) => { if (v && !canOrder) return; setOpen(v); if (v) { setResult(null); setError(""); setLines(menuOptions[0] ? [{ menuItemId: menuOptions[0].id, qty: 1 }] : []); } }}>
-          <DialogTrigger asChild><Button size="sm" disabled={!canOrder || busy}><Plus /> {uiText("New Order")}</Button></DialogTrigger>
+        {allowed && <Dialog open={open && (canOrder || !!orderAttempt.current)} onOpenChange={(v) => { if (!v && orderAttempt.current) return; if (v && (!canOrder || orderInFlight.current || orderAttempt.current || openOrderAttempt.current)) return; setOpen(v); if (v) { setResult(null); setError(""); setLines(menuOptions[0] ? [{ menuItemId: menuOptions[0].id, qty: 1 }] : []); } }}>
+          <DialogTrigger asChild><Button size="sm" disabled={!canOrder || mutationLocked}><Plus /> {uiText("New Order")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{uiText("New Order")}</DialogTitle><DialogDescription>{uiText("Confirm deducts real branch inventory — insufficient stock rejects the whole order.", "Confirm karte hi real branch inventory minus hoti hai — stock kam ho to poora order reject hoga.")}</DialogDescription></DialogHeader>
-            {!orderBranchId ? <p role="alert" className="text-destructive">{uiText("Select a branch first.")}</p> : <div className="space-y-3">
+            <DialogHeader><DialogTitle>{uiText("New Order")}</DialogTitle><DialogDescription>{uiText(operatingConcept === "CONVENTIONAL" && channel === "DINE_IN" ? "This validates and posts stock, opens the table, and dispatches KOT/BOT tickets. Payment and receipt happen at settlement." : "Confirm records payment, deducts real branch inventory, and creates tickets plus receipt atomically.")}</DialogDescription></DialogHeader>
+            {pendingScopeMessage && <p role="alert">{uiText(pendingScopeMessage)}</p>}
+            {!orderBranchId ? <p role="alert" className="text-destructive">{uiText("Select a branch first.")}</p> : <fieldset disabled={mutationLocked} className="space-y-3">
               {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1 text-xs font-medium"><span>{uiText("Channel")}</span><select className={inputClass} value={channel} onChange={(e) => setChannel(e.target.value)}><option value="DINE_IN">{uiText("Dine-in")}</option><option value="TAKEAWAY">{uiText("Takeaway")}</option><option value="SWIGGY">{uiText("Swiggy")}</option><option value="ZOMATO">{uiText("Zomato")}</option></select></label>
@@ -258,31 +351,38 @@ function ScopedPos() {
                 <Button type="button" variant="outline" size="sm" disabled={!menuOptions.length} onClick={addLine}>{uiText("Add Item Line")}</Button>
                 {!menuOptions.length && <p className="text-xs text-muted-foreground">{uiText("No sellable menu items in this branch — add some on the Menu & BOM page.")}</p>}
               </div>
-            </div>}
+            </fieldset>}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>{uiText("Cancel")}</Button>
-              <Button disabled={busy || !canOrder || !lines.length} onClick={submitOrder}>{busy ? uiText("Placing…") : uiText("Confirm Order")}</Button>
+              <Button variant="outline" disabled={busy || !!orderAttempt.current} onClick={() => setOpen(false)}>{uiText("Cancel")}</Button>
+              <Button disabled={busy || !canOrder || !lines.length} onClick={submitOrder}>{busy ? uiText("Placing…") : uiText(orderAttempt.current ? "Replay exact request" : "Confirm Order")}</Button>
             </DialogFooter>
-            {result && <div className="mt-3 space-y-3 rounded-md border p-3 text-sm">
-              <p className="font-medium">{uiText("Order")} {result.order.orderNumber} {uiText("confirmed.")}</p>
-              <div><p className="font-medium">{uiText("KOT (kitchen copy, no price)")}</p><ul className="list-disc pl-5">{result.kot.map((k, i) => <li key={i}>{k.name} × {k.qty}</li>)}</ul></div>
-              <div><p className="font-medium">{uiText("Receipt")}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>
-                <p>{uiText("Subtotal:")} {formatInr(Number(result.receipt.subtotal))}</p>
-                <p>{uiText("VAT:")} {formatInr(Number(result.receipt.taxAmount))}{result.receipt.vat.rates.length ? " (" + result.receipt.vat.rates.map((r) => `${r.ratePercent}%: ${formatInr(Number(r.vatAmount))}`).join(", ") + ")" : ""}</p>
-                <p className="font-medium">{uiText("Total:")} {formatInr(Number(result.receipt.totalAmount))}</p>
-                {result.receipt.currency && <p className="text-sm">{uiText("Payable in")} {result.receipt.currency.tenderCurrencyCode}: <strong>{result.receipt.currency.tenderCurrencyAmount}</strong> ({uiText("rate")} TSh {result.receipt.currency.fxRateToInr})</p>}
-              </div>
-              <p className="text-xs text-muted-foreground">{uiText("Inventory deducted:")} {result.inventoryDeducted.map((d) => `${d.qtyDeducted}`).join(", ") || uiText("none (no BOM configured)")}</p>
-              {result.whatsapp.attempted && <p className={result.whatsapp.sent ? "text-sm" : "text-sm text-destructive"}>{result.whatsapp.sent ? uiText("WhatsApp thank-you sent.", "WhatsApp Thank You bhej diya.") : uiText("WhatsApp thank-you was not sent:", "WhatsApp Thank You nahi bheja:") + " " + result.whatsapp.error}</p>}
-            </div>}
+
           </DialogContent>
         </Dialog>}
         </div>
       </PageHeader>
 
       {!allowed ? <p role="alert">{uiText("POS / Cashier permission is required.")}</p> : <ShiftHandoverGate branchId={orderBranchId} pendingHandover={shiftStatus.pendingHandover} loading={shiftStatus.loading} error={shiftStatus.error} onRetry={shiftStatus.reload} onAccepted={shiftStatus.reload}><>
+        {pendingScopeMessage && <p role="alert">{uiText(pendingScopeMessage)}</p>}
+        <PosLifecyclePanel refreshToken={lifecycleRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} operatingConcept={operatingConcept} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current} menuOptions={menuOptions} menuLoading={menuLoading} menuError={menuError} currencyCodes={["INR", ...currencyRates.map(rate => rate.currencyCode).filter(code => code !== "INR")]} pendingIntent={pendingLifecycle} acquireMutation={kind => {
+          if (!mounted.current || !canOrder || visibilityBusy || visibilityInFlight.current || visibilityUnknown || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return false;
+          return acquireMutation(kind);
+        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={reloadOrders} />
         {menuError && <p role="alert" className="mb-4 text-destructive">{uiText(menuError)} {uiText("Reload the page to reload the branch menu.")}</p>}
         {error && !open && <p role="alert" className="mb-4 text-destructive">{uiText(error)}</p>}
+            {result && <div role="status" className="mt-3 space-y-3 rounded-md border p-3 text-sm">
+              <p className="font-medium">{uiText("Order")} {result.order.orderNumber} {result.order.status === "OPEN" ? uiText("opened and sent to production.") : uiText("confirmed.")}</p>
+              {result.tickets?.map(ticket => <div key={ticket.ticketNumber}><p className="font-medium">{ticket.ticketType} — {ticket.ticketNumber}</p><ul className="list-disc pl-5">{ticket.lines.map((line, i) => <li key={i}>{line.name} × {line.qty}</li>)}</ul></div>)}
+              {!result.tickets?.length && !!result.kot.length && <div><p className="font-medium">{uiText("KOT (kitchen copy, no price)")}</p><ul className="list-disc pl-5">{result.kot.map((k, i) => <li key={i}>{k.name} × {k.qty}</li>)}</ul></div>}
+              {result.receipt && <div><p className="font-medium">{uiText("Receipt")} {result.receipt.receiptNumber}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>
+                <p>{uiText("Subtotal:")} {formatInr(Number(result.receipt.subtotal))}</p>
+                <p>{uiText("VAT:")} {formatInr(Number(result.receipt.taxAmount))}{result.receipt.vat.rates.length ? " (" + result.receipt.vat.rates.map((r) => `${r.ratePercent}%: ${formatInr(Number(r.vatAmount))}`).join(", ") + ")" : ""}</p>
+                <p className="font-medium">{uiText("Total:")} {formatInr(Number(result.receipt.totalAmount))}</p>
+                {result.receipt.currency && <p className="text-sm">{uiText("Payable in")} {result.receipt.currency.tenderCurrencyCode}: <strong>{result.receipt.currency.tenderCurrencyAmount}</strong> ({uiText("rate")} TSh {result.receipt.currency.fxRateToInr})</p>}
+              </div>}
+              <p className="text-xs text-muted-foreground">{result.order.status === "PAID" && result.order.flow === "PRODUCTION_FIRST" ? uiText("No additional stock deducted at settlement; stock was already posted with the KOT/BOT tickets.") : result.order.status === "OPEN" ? <>{uiText("Inventory posted at ticket dispatch:")} {result.inventoryDeducted.map((d) => `${d.qtyDeducted}`).join(", ") || uiText("none (no BOM configured)")}</> : <>{uiText("Inventory deducted:")} {result.inventoryDeducted.map((d) => `${d.qtyDeducted}`).join(", ") || uiText("none (no BOM configured)")}</>}</p>
+              {result.whatsapp?.attempted && <p className={result.whatsapp.sent ? "text-sm" : "text-sm text-destructive"}>{result.whatsapp.sent ? uiText("WhatsApp thank-you sent.", "WhatsApp Thank You bhej diya.") : uiText("WhatsApp thank-you was not sent:", "WhatsApp Thank You nahi bheja:") + " " + result.whatsapp.error}</p>}
+            </div>}
         {visibilityMessage && <p role="status" className="mb-3 text-sm">{uiText(visibilityMessage)}</p>}
         {ordersError && <p role="alert" className="mb-3 text-destructive">{uiText(ordersError)}</p>}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -305,10 +405,25 @@ function ScopedPos() {
             </DialogFooter>
           </DialogContent>
         </Dialog>}
+        <Dialog open={!!openOrderTarget} onOpenChange={(value) => { if (!value && !busy && !openOrderAttempt.current) { setOpenOrderTarget(null); setOpenOrderLines([]); } }}>
+          <DialogContent><DialogHeader><DialogTitle>{uiText(openOrderMode === "ADD" ? "Add items" : "Settle order")}</DialogTitle><DialogDescription>{uiText(openOrderMode === "ADD" ? "New lines validate and post their stock once, then dispatch fresh KOT/BOT tickets." : "Settlement records tender, creates the receipt and marks the already-posted order PAID without deducting stock again.")}</DialogDescription></DialogHeader>
+            <p className="text-sm font-medium">{openOrderTarget?.orderNumber}</p>
+            {pendingScopeMessage && <p role="alert">{uiText(pendingScopeMessage)}</p>}
+            {openOrderTarget && openOrderTarget.branchId !== orderBranchId && <p role="alert">{uiText(`Select ${branches.find(branch => branch.id === openOrderTarget.branchId)?.name ?? openOrderTarget.branchId} as the explicit branch before updating this order. Its menu, shift and payment context must match.`)}</p>}
+            {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
+            <fieldset disabled={mutationLocked || !canOrder || openOrderTarget?.branchId !== orderBranchId}>
+            {openOrderMode === "ADD" ? <div className="space-y-2">
+              {openOrderLines.map((line, index) => <div key={index} className="flex gap-2"><select className={inputClass} value={line.menuItemId} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, menuItemId: event.target.value } : row))}>{menuOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><input className={inputClass + " w-20"} type="number" min={1} max={500} value={line.qty} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, qty: Math.max(1, Number(event.target.value) || 1) } : row))} /><Button variant="outline" onClick={() => setOpenOrderLines(current => current.filter((_, i) => i !== index))}>{uiText("Remove")}</Button></div>)}
+              <Button variant="outline" disabled={!menuOptions.length} onClick={() => setOpenOrderLines(current => [...current, { menuItemId: menuOptions[0]?.id ?? "", qty: 1 }])}>{uiText("Add Item Line")}</Button>
+            </div> : <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-xs"><span>{uiText("Tender")}</span><select className={inputClass} value={tenderType} onChange={event => setTenderType(event.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></select></label><label className="space-y-1 text-xs"><span>{uiText("Payment currency")}</span><select className={inputClass} value={tenderCurrencyCode} onChange={event => setTenderCurrencyCode(event.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map(rate => <option key={rate.id} value={rate.currencyCode}>{rate.currencyCode}</option>)}</select></label></div>}
+            </fieldset>
+            <DialogFooter><Button variant="outline" disabled={busy || !!openOrderAttempt.current} onClick={() => { if (!orderInFlight.current && !openOrderAttempt.current) setOpenOrderTarget(null); }}>{uiText("Cancel")}</Button><Button disabled={busy || !canOrder || openOrderTarget?.branchId !== orderBranchId || (openOrderMode === "ADD" && !openOrderLines.length)} onClick={mutateOpenOrder}>{busy ? uiText("Saving…") : uiText(openOrderAttempt.current ? "Replay exact request" : openOrderMode === "ADD" ? "Add items" : "Settle order")}</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Card>
           <CardContent className="pt-5">
             {loading ? <p>{uiText("Loading today's orders…")}</p> : ordersError || visibilityUnknown ? <p>{uiText("Order list unavailable. Reload orders to verify current access.")}</p> : <Table>
-              <TableHeader><TableRow><TableHead>{uiText("Order #")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Channel")}</TableHead><TableHead>{uiText("Counter")}</TableHead><TableHead>{uiText("Table")}</TableHead><TableHead>{uiText("Amount")}</TableHead><TableHead>{uiText("Tender")}</TableHead><TableHead>{uiText("Time")}</TableHead><TableHead>{uiText("Status")}</TableHead>{isOwner && <TableHead>{uiText("Visibility")}</TableHead>}</TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{uiText("Order #")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Channel")}</TableHead><TableHead>{uiText("Counter")}</TableHead><TableHead>{uiText("Table")}</TableHead><TableHead>{uiText("Amount")}</TableHead><TableHead>{uiText("Tender")}</TableHead><TableHead>{uiText("Time")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Actions")}</TableHead>{isOwner && <TableHead>{uiText("Visibility")}</TableHead>}</TableRow></TableHeader>
               <TableBody>
                 {orders.map((o) => <TableRow key={o.id}>
                   <TableCell className="font-medium">{o.orderNumber}</TableCell>
@@ -320,6 +435,7 @@ function ScopedPos() {
                   <TableCell>{o.tenderType}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</TableCell>
                   <TableCell><Badge variant={o.status === "VOIDED" ? "destructive" : "success"}>{o.status}</Badge></TableCell>
+                  <TableCell>{o.status === "OPEN" && o.operatingConcept === "CONVENTIONAL" && o.channel === "DINE_IN" ? <div className="flex gap-1"><Button size="sm" variant="outline" disabled={mutationLocked || visibilityBusy || visibilityUnknown} onClick={() => beginOpenOrder(o, "ADD")}>{uiText("Add items")}</Button><Button size="sm" disabled={mutationLocked || visibilityBusy || visibilityUnknown} onClick={() => beginOpenOrder(o, "SETTLE")}>{uiText("Settle order")}</Button></div> : "—"}</TableCell>
                   {isOwner && <TableCell><div className="flex flex-wrap items-center gap-2"><Badge variant={o.ownerOnly ? "warning" : "outline"}>{uiText(o.ownerOnly ? "Owner-only" : "Staff-visible")}</Badge><Button size="sm" variant="outline" disabled={visibilityBusy || visibilityUnknown || busy} onClick={() => { setVisibilityTarget(o); setVisibilityReason(""); setVisibilityMessage(""); }}>{uiText(o.ownerOnly ? "Restore staff visibility" : "Make Owner-only")}</Button></div></TableCell>}
                 </TableRow>)}
               </TableBody>

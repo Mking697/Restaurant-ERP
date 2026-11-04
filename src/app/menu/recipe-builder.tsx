@@ -14,7 +14,7 @@ export function RecipeBuilder({ item, recipe, items, materials, branches, branch
   item: MenuItemRow | null; recipe: BomRow[]; items: MenuItemRow[]; materials: RawMaterialRow[]; branches: { id: string; name: string }[]; branchId: string; owner: boolean; onClose: () => void; onSaved: () => Promise<void>;
 }) {
   const uiText = useUiCopy();
-  const [metadata, setMetadata] = React.useState({ name: item?.name ?? "", branchId: item?.branchId ?? branchId, category: item?.category ?? "", price: item?.price ?? "0", outputUnit: item?.outputUnit ?? "portion", isSemiFg: item?.isSemiFg ?? false });
+  const [metadata, setMetadata] = React.useState({ name: item?.name ?? "", branchId: item?.branchId ?? branchId, category: item?.category ?? "", price: item?.price ?? "0", outputUnit: item?.outputUnit ?? "portion", productionStation: item?.productionStation ?? "KITCHEN", isSemiFg: item?.isSemiFg ?? false });
   const [rows, setRows] = React.useState<IngredientDraft[]>(() => recipe.length ? recipe.map(row => ({ key: row.id, componentType: row.componentType, componentId: row.rawMaterialId ?? row.componentMenuItemId ?? "", quantity: row.qtyPerUnit, search: "", locked: row.lockedByHq && !owner })) : [newRow()]);
   const [recipeYield, setRecipeYield] = React.useState("1");
   const [busy, setBusy] = React.useState(false);
@@ -37,7 +37,7 @@ export function RecipeBuilder({ item, recipe, items, materials, branches, branch
     } catch (err) { setError(err instanceof Error ? err.message : uiText("Invalid recipe", "Recipe sahi nahi hai")); return; }
     submitting.current = true; setBusy(true);
     try {
-      await requestJson(item ? "/api/bom-recipes" : "/api/menu-items", { method: item ? "PUT" : "POST", body: JSON.stringify(item ? { menuItemId: item.id, branchId: item.branchId, components } : { ...metadata, components }) });
+      await requestJson(item ? "/api/bom-recipes" : "/api/menu-items", { method: item ? "PUT" : "POST", body: JSON.stringify(item ? { menuItemId: item.id, branchId: item.branchId, productionStation: metadata.productionStation, components } : { ...metadata, components }) });
       if (!alive.current) return;
       await onSaved();
       if (alive.current) onClose();
@@ -56,6 +56,7 @@ export function RecipeBuilder({ item, recipe, items, materials, branches, branch
       <div className="sm:col-span-2"><Field label={uiText("Dish / Semi-FG name", "Dish / Semi-FG ka naam")}><input required maxLength={120} disabled={!!item} className={inputClass} value={metadata.name} onChange={e => setMetadata({ ...metadata, name: e.target.value })} /></Field></div>
       <Field label={uiText("Branch")}><select required className={inputClass} disabled={!!item || !owner} value={metadata.branchId} onChange={e => { setMetadata({ ...metadata, branchId: e.target.value }); setRows([newRow()]); }}><option value="">{uiText("Select branch")}</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></Field>
       <Field label={uiText("Item type", "Item ka type")}><select className={inputClass} disabled={!!item} value={metadata.isSemiFg ? "SEMI_FG" : "DISH"} onChange={e => setMetadata({ ...metadata, isSemiFg: e.target.value === "SEMI_FG", outputUnit: e.target.value === "SEMI_FG" ? "kg" : "portion" })}><option value="DISH">{uiText("Sellable dish", "Bechne wali dish")}</option><option value="SEMI_FG">{uiText("Semi-FG base", "Semi-FG base")}</option></select></Field>
+      <Field label={uiText("Production station")}><select className={inputClass} value={metadata.productionStation} onChange={e => setMetadata({ ...metadata, productionStation: e.target.value as "KITCHEN" | "BAR" })}><option value="KITCHEN">{uiText("Kitchen (KOT)")}</option><option value="BAR">{uiText("Bar (BOT)")}</option></select></Field>
       <Field label={uiText("Category", "Category")}><input disabled={!!item} className={inputClass} value={metadata.category} onChange={e => setMetadata({ ...metadata, category: e.target.value })} /></Field>
       <Field label={uiText("Selling price (₹)", "Bechne ki keemat (₹)")}><input required disabled={!!item} type="number" min="0" step="0.01" className={inputClass} value={metadata.price} onChange={e => setMetadata({ ...metadata, price: e.target.value })} /></Field>
       <Field label={uiText("Output unit", "Taiyar item ki unit")}><input required disabled={!!item} maxLength={20} list="recipe-output-units" className={inputClass} value={metadata.outputUnit} onChange={e => setMetadata({ ...metadata, outputUnit: e.target.value })} /><datalist id="recipe-output-units">{["portion", "kg", "ltr", "pcs"].map(unit => <option key={unit} value={unit} />)}</datalist></Field>

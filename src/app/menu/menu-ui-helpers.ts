@@ -1,5 +1,5 @@
 export type ComponentType = "RAW_MATERIAL" | "SEMI_FG";
-export interface MenuItemRow { id: string; branchId: string; name: string; category: string; price: string; outputUnit: string; isActive: boolean; isSemiFg: boolean; isSellable: boolean; }
+export interface MenuItemRow { id: string; branchId: string; name: string; category: string; price: string; outputUnit: string; productionStation: "KITCHEN" | "BAR"; isActive: boolean; isSemiFg: boolean; isSellable: boolean; }
 export interface RawMaterialRow { id: string; name: string; unit: string; category: string; }
 export interface BomRow { id: string; branchId: string; menuItemId: string; componentType: ComponentType; rawMaterialId: string | null; componentMenuItemId: string | null; qtyPerUnit: string; lockedByHq: boolean; }
 export interface IngredientDraft { key: string; componentType: ComponentType; componentId: string; quantity: string; search: string; locked: boolean; }

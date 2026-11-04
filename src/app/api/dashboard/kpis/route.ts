@@ -1,6 +1,7 @@
 import { and, eq, gte, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { posOrders } from "@/db/schema/pos";
+import { posSaleTime } from "@/lib/server/pos-reporting";
 import { inventoryStock, nightVarianceEntries } from "@/db/schema/inventory";
 import { taskInstances } from "@/db/schema/tasks";
 import { requireIdentity } from "@/lib/server/auth";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     if (actor.role === "SUPER_ADMIN" || actor.moduleAccess.includes("MIS_PERFORMANCE")) {
       scores = await listMisScores(db, actor, { branchId: scope });
     } else misReason = "MIS_PERFORMANCE access required to read MIS scores";
-    const orders = await db.select({ branchId: posOrders.branchId, createdAt: posOrders.createdAt, channel: posOrders.channel, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(scope ? eq(posOrders.branchId, scope) : undefined, eq(posOrders.status, "COMPLETED"), gte(posOrders.createdAt, month.start), lt(posOrders.createdAt, month.end), operationalOrderVisibility(actor)));
+    const orders = await db.select({ branchId: posOrders.branchId, saleAt: posSaleTime, channel: posOrders.channel, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(scope ? eq(posOrders.branchId, scope) : undefined, or(eq(posOrders.status, "PAID"), eq(posOrders.status, "COMPLETED")), gte(posSaleTime, month.start), lt(posSaleTime, month.end), operationalOrderVisibility(actor)));
     const results = await Promise.all(branches.map(async (branch) => {
       const stock = await db.select().from(inventoryStock).where(eq(inventoryStock.branchId, branch.id));
       const inventory = computeInventoryValue(stock, valuationRates);
@@ -38,8 +39,8 @@ export async function GET(request: Request) {
       const latestCash = cash.find((r) => r.branchId === branch.id);
       const food = await branchFoodCost(actor, branch.id, { start: month.start, end: now }, costingRates);
       const sales = orders.filter((o) => o.branchId === branch.id);
-      const revenueToday = Number(sumMoneyInr(sales.filter((o) => o.createdAt >= today.start && o.createdAt <= now).map((o) => o.totalAmount)));
-      const revenueMtd = Number(sumMoneyInr(sales.filter((o) => o.createdAt <= now).map((o) => o.totalAmount)));
+      const revenueToday = Number(sumMoneyInr(sales.filter((o) => o.saleAt >= today.start && o.saleAt <= now).map((o) => o.totalAmount)));
+      const revenueMtd = Number(sumMoneyInr(sales.filter((o) => o.saleAt <= now).map((o) => o.totalAmount)));
       return {
         branchId: branch.id, branchName: branch.name, revenueToday, revenueMtd,
         revenueTodayInr: revenueToday.toFixed(2), revenueMtdInr: revenueMtd.toFixed(2),
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       };
     }));
     const channels = new Map<string, string[]>();
-    for (const row of orders.filter((o) => o.createdAt <= now)) channels.set(row.channel, [...channels.get(row.channel) ?? [], row.totalAmount]);
+    for (const row of orders.filter((o) => o.saleAt <= now)) channels.set(row.channel, [...channels.get(row.channel) ?? [], row.totalAmount]);
     return json({ branches: results, channelSplit: [...channels].map(([channel, amounts]) => ({ channel, revenueInr: Number(sumMoneyInr(amounts)) })), compiled: scope === null, timezone: "Africa/Dar_es_Salaam", asOf: now.toISOString() });
   });
 }

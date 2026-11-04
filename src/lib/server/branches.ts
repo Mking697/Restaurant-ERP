@@ -1,5 +1,6 @@
 import { HttpError } from "./permissions";
 import { string } from "./http";
+import { branchConcept } from "./pos-order-policy";
 export function branchInput(input: Record<string, unknown>) {
   const name = string(input.name, "name"); const code = string(input.code, "code", 30);
   if (!/^[A-Za-z0-9_-]+$/.test(code)) throw new HttpError(400, "Invalid branch code");
@@ -18,5 +19,6 @@ export function branchInput(input: Record<string, unknown>) {
     if (!/^\d{1,3}(\.\d{1,2})?$/.test(value) || Number(value) < 0 || Number(value) > 100) throw new HttpError(400, "Invalid VAT rate override");
     vatRatePercent = Number(value).toFixed(2);
   }
-  return { name, code, address, lat: String(lat), lng: String(lng), geofenceRadiusM, vatRatePercent };
+  const operatingConcept = branchConcept(input.operatingConcept);
+  return { name, code, address, lat: String(lat), lng: String(lng), geofenceRadiusM, vatRatePercent, operatingConcept };
 }

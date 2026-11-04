@@ -2,6 +2,8 @@ import { boolean, check, index, numeric, pgEnum, pgTable, text, timestamp, uniqu
 import { sql } from "drizzle-orm";
 import { branches } from "./platform";
 
+export const productionStationEnum = pgEnum("production_station", ["KITCHEN", "BAR"]);
+
 export const menuItems = pgTable(
   "menu_items",
   {
@@ -13,6 +15,7 @@ export const menuItems = pgTable(
     category: text("category").notNull().default(""),
     outputUnit: text("output_unit").notNull().default("portion"),
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    productionStation: productionStationEnum("production_station").notNull().default("KITCHEN"),
     isActive: boolean("is_active").notNull().default(true),
     // Semi-FG (base gravy/sauce/marinade): own recipe, not sold directly to a
     // customer. isSellable false keeps it off the customer menu while it can

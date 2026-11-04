@@ -1,0 +1,102 @@
+{
+  "target": "127.0.0.1:5441/restaurant_erp_gap024_qa_20261104",
+  "orderDetail": {
+    "receipts": 1,
+    "close_actions": 1,
+    "close_events": 1
+  },
+  "orderedMigrationCount": 40,
+  "state": {
+    "orders": [
+      {
+        "id": "e114c452-8f50-48d1-aad7-3a442553ea89",
+        "order_number": "ORD-1793763801165-e114",
+        "table_no": "QA-T5",
+        "status": "PAID",
+        "service_status": "CLOSED",
+        "revision": 3,
+        "total_amount": "150.00",
+        "cogs_amount": "100.00",
+        "closed_at": "2026-11-04T03:51:14.815Z"
+      },
+      {
+        "id": "10a665b4-39b8-415e-905d-595fbb9e473d",
+        "order_number": "ORD-1793783919783-10a6",
+        "table_no": "QA-FINAL",
+        "status": "PAID",
+        "service_status": "CLOSED",
+        "revision": 3,
+        "total_amount": "100.00",
+        "cogs_amount": "50.00",
+        "closed_at": "2026-11-04T09:38:47.826Z"
+      }
+    ],
+    "drafts": [
+      {
+        "id": "ed14ca9c-912a-45a5-aaef-bdac68a58ee0",
+        "status": "DISPATCHED",
+        "revision": 2,
+        "order_id": "e114c452-8f50-48d1-aad7-3a442553ea89"
+      },
+      {
+        "id": "77ea38c8-057e-43af-b342-cb146f2840eb",
+        "status": "DISPATCHED",
+        "revision": 2,
+        "order_id": "10a665b4-39b8-415e-905d-595fbb9e473d"
+      }
+    ],
+    "tickets": [
+      {
+        "id": "23139cd1-3baf-4b41-836e-c4c41c330cfb",
+        "station": "KITCHEN",
+        "status": "SERVED",
+        "revision": 4,
+        "snapshot_lines": [
+          {
+            "qty": 1,
+            "name": "QA Burger G24",
+            "menuItemId": "g24-browser-4a051db9-88fc-4a32-ac40-d2f4accc54e7",
+            "orderLineId": "95746812-735b-4d0a-8bdd-5db2950320a2"
+          }
+        ]
+      },
+      {
+        "id": "25239291-db86-4867-bbeb-394c51417c19",
+        "station": "BAR",
+        "status": "SERVED",
+        "revision": 4,
+        "snapshot_lines": [
+          {
+            "qty": 1,
+            "name": "QA Juice G24",
+            "menuItemId": "g24-browser-284ddfdd-51d4-4e65-bad6-527961d1933c",
+            "orderLineId": "c7fac199-c498-4c5c-bfd2-208ec1660821"
+          }
+        ]
+      },
+      {
+        "id": "572cb998-f673-4aac-921d-ff2dd1239b47",
+        "station": "KITCHEN",
+        "status": "SERVED",
+        "revision": 4,
+        "snapshot_lines": [
+          {
+            "qty": 1,
+            "name": "QA Burger G24",
+            "menuItemId": "g24-browser-4a051db9-88fc-4a32-ac40-d2f4accc54e7",
+            "orderLineId": "0407d392-6634-4445-b763-9b54fcff7161"
+          }
+        ]
+      }
+    ],
+    "stock": [
+      {
+        "qty_on_hand": "19.250",
+        "lots": "19.250"
+      }
+    ],
+    "receipts": 2,
+    "actions": 15,
+    "events": 15
+  }
+}

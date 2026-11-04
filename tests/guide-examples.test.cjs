@@ -8,7 +8,7 @@ const { GUIDE_MODULES } = require('../src/lib/guide-content.ts');
 const { GUIDE_EXAMPLES, getGuideExample } = require('../src/lib/guide-examples.ts');
 
 test('every module has a practical scenario, four steps and expected result in both languages', () => {
-  assert.equal(GUIDE_MODULES.length, 17);
+  assert.equal(GUIDE_MODULES.length, 18);
   assert.deepEqual(Object.keys(GUIDE_EXAMPLES).sort(), GUIDE_MODULES.map(m => m.exampleKey ?? m.route).sort());
   for (const module of GUIDE_MODULES) {
     const key = module.exampleKey ?? module.route;
@@ -112,7 +112,7 @@ test('visibility guidance separates operational confidentiality from actual reco
   const vat = GUIDE_MODULES.find(module => module.exampleKey === '/accounts-vat');
   const cash = GUIDE_MODULES.find(module => module.module === 'CASH_DROP');
   assert.equal(vat.module, 'OFFICIAL_SALES_REPORTS');
-  assert.equal(GUIDE_MODULES.length, 17);
+  assert.equal(GUIDE_MODULES.length, 18);
   for (const language of ['en', 'hinglish']) {
     const chapterText = module => {
       const chapter = language === 'en' ? module : module.hinglish;

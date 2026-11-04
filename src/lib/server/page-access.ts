@@ -11,6 +11,7 @@ const RULES: Array<[string, ModuleKey[]]> = [
  ["/menu", ["MENU_BOM"]],
  ["/purchase", ["PURCHASE_INDENT", "PURCHASE_ORDER"]],
  ["/inventory", ["INVENTORY"]], ["/pos", ["POS_CASHIER"]],
+ ["/kitchen", ["POS_KITCHEN", "POS_CASHIER"]],
  ["/warehouse", ["INVENTORY"]],
  ["/cash-drop", ["CASH_DROP"]], ["/accounts", ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"]],
  ["/admin/settings/shifts", ["SHIFT_MANAGEMENT"]],
@@ -28,7 +29,7 @@ export function canOpenPath(user: Identity, path: string) {
 // No mock business records are exposed as if persisted and branch-isolated.
 // Enable each remaining route only after its DB-backed acceptance is complete.
 export function isPersistedPath(path: string) {
- const persisted = ["/", "/guide", "/dashboard", "/reports", "/ho-stock-review", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/admin/settings/business-policy", "/cash-drop"];
+ const persisted = ["/", "/guide", "/dashboard", "/reports", "/ho-stock-review", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/kitchen", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/admin/settings/business-policy", "/cash-drop"];
  // Report details share the real-data implementation; do not classify other
  // arbitrary nested routes as persisted. Purchase labels its remaining
  // quality-result/return/refund limitations beside those specific actions.

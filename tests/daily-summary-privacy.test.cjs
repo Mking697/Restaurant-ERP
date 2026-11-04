@@ -10,7 +10,8 @@ const ts = require('typescript');
 function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'Branch A' }]) {
   const sent = [], claims = new Set(), cache = {};
   const table = (name, columns) => ({ _table: name, ...Object.fromEntries(columns.map(key => [key, { kind: 'column', key }])) });
-  const value = (row, operand) => operand?.kind === 'column' ? row[operand.key] : operand;
+  const value = (row, operand) => operand?.kind === 'column' ? row[operand.key]
+    : operand?.kind === 'saleTime' ? (value(row, operand.status) === 'PAID' ? value(row, operand.settledAt) ?? value(row, operand.createdAt) : value(row, operand.createdAt)) : operand;
   const compare = (left, right, fn) => row => {
     const a = value(row, left), b = value(row, right);
     // SQL comparisons involving NULL are not true. Numeric stock is returned as
@@ -19,13 +20,16 @@ function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'B
   };
   const sql = (strings, ...operands) => {
     if (strings.join('') === 'count(*)' && operands.length === 0) return { kind: 'count' };
+    if (strings.join('') === "case when  = 'PAID' then coalesce(, ) else  end" && operands.length === 4) {
+      return { kind: 'saleTime', status: operands[0], settledAt: operands[1], createdAt: operands[2], mapWith() { return this; } };
+    }
     if (strings.length === 2 && strings[0] === '' && strings[1].trim() === '> 0' && operands.length === 1) {
       return compare(operands[0], 0, (a, b) => a > b);
     }
     assert.fail(`Unsupported SQL expression: ${strings.join('?')}`);
   };
   const branches = table('branches', ['id', 'name']);
-  const posOrders = table('orders', ['id', 'branchId', 'status', 'createdAt', 'ownerOnly']);
+  const posOrders = table('orders', ['id', 'branchId', 'status', 'createdAt', 'settledAt', 'ownerOnly']);
   const taskInstances = table('tasks', ['id', 'branchId', 'status']);
   const shiftHandovers = table('handovers', ['id', 'branchId', 'status']);
   const users = table('users', ['name', 'phoneE164', 'role', 'branchId', 'status']);
@@ -77,7 +81,7 @@ function harness(orders, contacts, stock = [], branchRows = [{ id: 'a', name: 'B
   };
   function load(name) {
     if (name in dependencies) return dependencies[name];
-    assert.ok(['./daily-summary', './task-notifications', './whatsapp-triggers', './business-calendar'].includes(name), `Unexpected dependency: ${name}`);
+    assert.ok(['./daily-summary', './task-notifications', './whatsapp-triggers', './business-calendar', './pos-reporting'].includes(name), `Unexpected dependency: ${name}`);
     if (cache[name]) return cache[name];
     const mod = { exports: {} }; cache[name] = mod.exports;
     const filename = path.join(__dirname, '../src/lib/server', name + '.ts');

@@ -18,6 +18,9 @@ export type StockMovementInput = {
   qtyDelta: bigint; // signed millis (3-decimal fixed point, same unit as production-quantity.ts's quantity())
   movementType: StockMovementType;
   sourceType: string;
+  // Multiple dispatches may belong to one order; retain its sourceId while
+  // giving each dispatch its own deduplication identity.
+  sourceEventId?: string;
   sourceId: string;
   actorId: string;
 } & ({ rawMaterialId: string; menuItemId?: undefined } | { menuItemId: string; rawMaterialId?: undefined });
@@ -34,7 +37,7 @@ function signedDecimal(millis: bigint): string {
 export async function postStockMovement(tx: Executor, input: StockMovementInput): Promise<void> {
   if (input.qtyDelta === 0n) return; // nothing moved, nothing to record
   const itemId = input.rawMaterialId ?? input.menuItemId!;
-  const idempotencyKey = `${input.sourceType}:${input.sourceId}:${itemId}`;
+  const idempotencyKey = `${input.sourceType}:${input.sourceEventId ?? input.sourceId}:${itemId}`;
   await tx
     .insert(stockMovements)
     .values({

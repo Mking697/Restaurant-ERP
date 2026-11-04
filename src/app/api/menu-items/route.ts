@@ -6,6 +6,7 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, numeric, string } from "@/lib/server/http";
 import { assertModule, branchScope, hasModule, HttpError } from "@/lib/server/permissions";
 import { lockRecipeBranch, OUTPUT_UNITS, replaceRecipe } from "@/lib/server/recipe-write";
+import { productionStation } from "@/lib/server/pos-order-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ const columns = {
   name: menuItems.name,
   category: menuItems.category,
   price: menuItems.price,
+  productionStation: menuItems.productionStation,
   isActive: menuItems.isActive,
   isSemiFg: menuItems.isSemiFg,
   isSellable: menuItems.isSellable,
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
       const name = string(input.name, "name");
       const category = input.category === undefined || input.category === "" ? "" : string(input.category, "category", 80);
       const price = numeric(input.price, "price");
+      const station = productionStation(input.productionStation);
       if (price.split(".")[0].length > 8 || (price.split(".")[1]?.length ?? 0) > 2) throw new HttpError(400, "Price supports at most 8 digits and 2 decimals");
       for (const field of ["isSemiFg", "isSellable"] as const) if (input[field] !== undefined && typeof input[field] !== "boolean") throw new HttpError(400, `Invalid ${field}`);
       const isSemiFg = input.isSemiFg === undefined ? false : input.isSemiFg as boolean;
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
       if (!(OUTPUT_UNITS as readonly string[]).includes(outputUnit)) throw new HttpError(400, "Invalid output unit");
       await lockRecipeBranch(tx, branchId);
       const id = randomUUID();
-      await tx.insert(menuItems).values({ id, branchId, name, category, price, isSemiFg, isSellable, outputUnit });
+      await tx.insert(menuItems).values({ id, branchId, name, category, price, productionStation: station, isSemiFg, isSellable, outputUnit });
       if (input.components !== undefined) await replaceRecipe(tx, actor, branchId, id, input.components);
       const [row] = await tx.select(columns).from(menuItems).where(eq(menuItems.id, id));
       return row;

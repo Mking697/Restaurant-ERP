@@ -19,7 +19,7 @@ export async function readStockRecipe(tx: Executor, branchId: string, menuItemId
   return tx.select().from(bomRecipes).where(and(eq(bomRecipes.branchId, branchId), inArray(bomRecipes.menuItemId, menuItemIds)));
 }
 
-export async function deductStock(tx: Executor, branchId: string, required: Requirements, source: { type: string; id: string; actorId: string }) {
+export async function deductStock(tx: Executor, branchId: string, required: Requirements, source: { type: string; id: string; actorId: string; eventId?: string }) {
   const rawIds = [...required.raw.keys()].sort(), semiIds = [...required.semiFg.keys()].sort();
   // Validate the direct Semi-FG component catalog. Never inspect its embedded
   // recipe or silently substitute raw materials when its stock is missing.
@@ -61,7 +61,7 @@ export async function deductStock(tx: Executor, branchId: string, required: Requ
     // wired — flagged limitation, not silently claimed as complete.
     await postStockMovement(tx, {
       branchId, rawMaterialId: id, qtyDelta: -required.raw.get(id)!,
-      movementType: "PRODUCTION_CONSUME", sourceType: source.type, sourceId: source.id, actorId: source.actorId,
+      movementType: "PRODUCTION_CONSUME", sourceType: source.type, sourceId: source.id, sourceEventId: source.eventId, actorId: source.actorId,
     });
   }
   for (const id of semiIds) {
@@ -73,7 +73,7 @@ export async function deductStock(tx: Executor, branchId: string, required: Requ
     // qtyOnHand update above. See src/lib/server/stock-ledger.ts.
     await postStockMovement(tx, {
       branchId, menuItemId: id, qtyDelta: -required.semiFg.get(id)!,
-      movementType: "SEMI_FG_CONSUME", sourceType: source.type, sourceId: source.id, actorId: source.actorId,
+      movementType: "SEMI_FG_CONSUME", sourceType: source.type, sourceId: source.id, sourceEventId: source.eventId, actorId: source.actorId,
     });
   }
   return {

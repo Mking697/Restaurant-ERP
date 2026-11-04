@@ -150,7 +150,11 @@ export async function endShiftAndHandover(tx: Executor, actor: Identity, branchI
   const next = currentIndex >= 0 ? defs[(currentIndex + 1) % defs.length] : defs.find((d) => isWithin(currentIstTime(), d.startTime, d.endTime));
   if (!next) throw new HttpError(409, "No shift window covers the current time");
 
-  const tenders = await tx.select({ tenderType: posOrders.tenderType, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.shiftRunId, run.id), eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED")));
+  // Keep the legacy COMPLETED query separate from new PAID rows so old
+  // in-memory transaction harnesses and existing persisted sales remain valid.
+  const legacyTenders = await tx.select({ tenderType: posOrders.tenderType, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.shiftRunId, run.id), eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED")));
+  const paidTenders = await tx.select({ tenderType: posOrders.tenderType, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.shiftRunId, run.id), eq(posOrders.branchId, branchId), eq(posOrders.status, "PAID")));
+  const tenders = [...legacyTenders, ...paidTenders];
   // Physical cash is carried forward at its accepted COUNTED value, including
   // any prior shortage/excess. Electronic tenders are receipts for this run
   // only, not a drawer balance: never add incoming CARD/UPI/OTHER again.

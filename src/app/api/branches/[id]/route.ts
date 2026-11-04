@@ -16,6 +16,7 @@ export async function PATCH(request: Request, context: Context) { return api(asy
   const [existing] = await tx.select().from(branches).where(eq(branches.id, id)); if (!existing) throw new HttpError(404, "Branch not found");
   const input = await body(request); const values = branchInput({ ...existing, ...input });
   if (actor.role !== "SUPER_ADMIN" && values.code !== existing.code) throw new HttpError(403, "Only owner may change branch code");
+  if (actor.role !== "SUPER_ADMIN" && values.operatingConcept !== existing.operatingConcept) throw new HttpError(403, "Only owner may change operating concept");
   const [row] = await tx.update(branches).set({ ...values, updatedAt: new Date() }).where(eq(branches.id, id)).returning(); return row;
 }); return json({ branch }); }); }
 export async function DELETE(request: Request, context: Context) { return api(async () => { const { id } = await context.params; await mutate(request, async (tx, actor) => {

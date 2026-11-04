@@ -1,0 +1,54 @@
+{
+  "orders": [
+    {
+      "id": "3451d78d-3774-4691-85d9-20dd8356108c",
+      "branch_id": "g23-browser-83aa1510-dine",
+      "order_number": "ORD-1793727265100-3451",
+      "status": "PAID",
+      "total_amount": "250.00",
+      "cogs_amount": "60.00",
+      "cogs_complete": true,
+      "receipt_count": 1,
+      "settlement_count": 1,
+      "ledger_cost": "60.00"
+    },
+    {
+      "id": "7aac6530-a10f-47c3-8469-fb72e4be1b47",
+      "branch_id": "g23-browser-83aa1510-fast",
+      "order_number": "ORD-1793728126420-7aac",
+      "status": "PAID",
+      "total_amount": "100.00",
+      "cogs_amount": "25.00",
+      "cogs_complete": true,
+      "receipt_count": 1,
+      "settlement_count": 0,
+      "ledger_cost": "25.00"
+    },
+    {
+      "id": "3cb75bcf-2856-407a-92a7-fa1c4b47a690",
+      "branch_id": "g23-browser-83aa1510-dine",
+      "order_number": "ORD-1793728151057-3cb7",
+      "status": "PAID",
+      "total_amount": "150.00",
+      "cogs_amount": "35.00",
+      "cogs_complete": true,
+      "receipt_count": 1,
+      "settlement_count": 1,
+      "ledger_cost": "35.00"
+    }
+  ],
+  "stocks": [
+    {
+      "branch_id": "g23-browser-83aa1510-dine",
+      "qty_on_hand": "9.050",
+      "batch_balance": "9.050",
+      "ledger_reconciled": true
+    },
+    {
+      "branch_id": "g23-browser-83aa1510-fast",
+      "qty_on_hand": "9.750",
+      "batch_balance": "9.750",
+      "ledger_reconciled": true
+    }
+  ]
+}
