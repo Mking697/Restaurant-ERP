@@ -1,6 +1,6 @@
 # GAP-024 local verification — November 4, 2026
 
-State: VERIFIED_LOCAL for the owner-approved GAP-024 scope. Not production-released; no commit/push or production migration/deployment authorization.
+State: DONE for the owner-approved GAP-024 scope; production released November 4, 2026. Exact revision/migration/alias/smoke evidence: `docs/gap023-024-release.md`.
 
 ## Verified gates
 
@@ -32,8 +32,8 @@ Persisted draft save/edit/cancel without inventory or financial posting; atomic 
 - Closed history and immutable ticket preview showed the saved name/quantity and SENT/START/READY/SERVE revisions. Actual Print / reprint UI created the isolated ticket-only iframe document, with no prices/tender/customer data. Browser print was invoked; physical printer/device delivery is not verified.
 - Evidence: `02-final-served-ticket.png`, `03-ticket-only-print.html`, `04-browser-db-readback.json`, and full test/build/compiled HTTP/compatibility logs in `docs/gap024-evidence/`. Earlier `01-conventional-open.png` records the initial conventional flow.
 
-## Cleanup and remaining release gate
+## Local cleanup and subsequent production release
 
 Dedicated compiled QA server stopped. Guarded database dropped with zero GAP-024 databases remaining, then only `restaurant-gap024-qa` and its inspected named volume `restaurant_gap024_qa_20261104` were removed. Other Docker containers were preserved. Both `.next-gap024-dev` and `.next-gap024-final` outputs were removed; default `.next` preserved. `tsconfig.json` and `next-env.d.ts` restored to original references and verified diff-clean.
 
-Tracker and standing checkpoint now record VERIFIED_LOCAL, not DONE. No configured lint script exists, so no lint pass is claimed. Production migration, commit/push/deployment and real provider sends were not performed. Release requires separate approval for GAP-023/024, authorized live ordered migration/watermark preflight, then exact deployed revision and authenticated readback. Formal proforma/final-invoice identity (GAP-025), split payments, refunds, automatic restock, booking and physical-printer integration remain outside this approved scope.
+Tracker and standing checkpoint now record DONE after the owner's separate November 4 release approval. Feature commit `7a8d790defbf0a66985799acbef985ebca8b9e50`, READY deployment/production alias, live 0038/0039 migration/readback and authenticated read-only HTTP/browser smoke are verified in `docs/gap023-024-release.md`. No configured lint script exists, so no lint pass is claimed. No real provider sends or production business fixtures were used. Formal proforma/final-invoice identity (GAP-025), split payments, refunds, automatic restock, booking and physical-printer integration remain outside this approved scope.

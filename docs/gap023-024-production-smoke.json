@@ -1,0 +1,65 @@
+{
+  "origin": "https://restaurant-erp-tau.vercel.app",
+  "expectedSha": "7a8d790defbf0a66985799acbef985ebca8b9e50",
+  "authenticatedReadOnly": true,
+  "checks": [
+    {
+      "path": "/api/auth/me",
+      "status": 200,
+      "identityMatched": true
+    },
+    {
+      "path": "/api/branches",
+      "status": 200,
+      "branchDefaultsPreserved": true
+    },
+    {
+      "path": "/api/pos/orders",
+      "status": 200,
+      "visibleScopeVerified": true
+    },
+    {
+      "path": "/api/pos/lifecycle?includeClosed=true",
+      "status": 200,
+      "lifecycleSchemaAndAuthority": true
+    },
+    {
+      "path": "/api/pos/kitchen?station=ALL&includeServed=true",
+      "status": 200,
+      "preparationAuthority": true
+    },
+    {
+      "path": "/pos",
+      "status": 200
+    },
+    {
+      "path": "/kitchen",
+      "status": 200
+    },
+    {
+      "path": "/login",
+      "anonymous": true,
+      "status": 200
+    },
+    {
+      "path": "/pos",
+      "anonymous": true,
+      "status": 307
+    },
+    {
+      "path": "/kitchen",
+      "anonymous": true,
+      "status": 307
+    },
+    {
+      "path": "/api/pos/lifecycle",
+      "anonymous": true,
+      "status": 401
+    },
+    {
+      "path": "/api/pos/kitchen",
+      "anonymous": true,
+      "status": 401
+    }
+  ]
+}

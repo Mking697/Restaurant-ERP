@@ -1,8 +1,8 @@
 # GAP-023 — local acceptance evidence
 
 Date: November 3, 2026
-Status: VERIFIED_LOCAL, not production-released
-Baseline: main `6a6a5be`; feature changes remain uncommitted.
+Status: DONE; production released November 4, 2026. Release addendum: `docs/gap023-024-release.md`.
+Local acceptance baseline: main `6a6a5be`. Released feature commit: `7a8d790defbf0a66985799acbef985ebca8b9e50`.
 Final exercised Next production build ID: `D-m5LUIHUaRsdHuAn_uJ_`.
 
 ## Approved delivery contract
@@ -14,7 +14,7 @@ The owner explicitly approved continuing the current branch-wise sequencing for 
 - Only Owner changes branch concept. Existing branches default FAST_FOOD. Existing orders retain their admitted concept, even after the branch setting changes.
 - One shared database with branch isolation remains the approved architecture. A future Fast Food sequencing change requires a separate reviewed change; no runtime payment-order switch is claimed.
 
-This later approval supersedes the older same-sequence policy for this delivery. It does not authorize commit/push, production migration, deployment or real provider sends.
+This later approval supersedes the older same-sequence policy for this delivery. That initial implementation approval did not authorize release. The owner separately authorized commit/push and production migration/deployment on November 4, 2026; real provider sends remain outside release acceptance.
 
 ## Implemented paths
 
@@ -60,7 +60,7 @@ Dedicated PostgreSQL 17 container, host `127.0.0.1:5440`, database `restaurant_e
 
 A first unapplied candidate genuinely failed with PostgreSQL 55P04: it set a new PAID enum default before the transaction committed. Only that unapplied candidate was removed/regenerated. The final migration preserves the legacy COMPLETED direct-insert default; explicit lifecycle writers choose OPEN/PAID after commit. The prior applied migration chain was not rewritten.
 
-Production ordered hashes and migration watermark have NOT been re-read in this session. That remains a required release preflight, not something established by local replay.
+Release preflight on November 4 freshly verified all 38 production ordered SQL hashes against immutable committed LF bytes, classified/preserved the three historical timestamp overrides and checked both new timestamps above the live watermark. Authorized 0038/0039 apply and independent 40-row readback passed; see `docs/gap023-024-release.md`.
 
 ### Real HTTP + database acceptance
 
@@ -82,12 +82,12 @@ Owned isolated browser and synthetic QA Owner; no real account credentials or cu
 
 Permanent non-secret artifacts: `docs/gap023-evidence/` contains full unit/HTTP/build logs, browser readback JSON and four screenshots (added BOT, uncertain settlement, final receipt, Fast Food PAID).
 
-## Cleanup and remaining release gate
+## Historical local cleanup and subsequent production release
 
 - Dedicated QA server stopped; port 3123 confirmed closed.
 - Dedicated GAP-023 container and its exact anonymous data volume removed. Docker mount/unmount events tied that volume to the recorded GAP-023 container before removal; unrelated containers/volumes were left intact.
 - Fresh-install proof database was dropped. Removing the dedicated volume also removes all kept/failed-run/browser fixture databases and sessions.
 - Browser QA cookie cleared, isolated `.next-gap023-qa` removed, and `tsconfig.json` / `next-env.d.ts` restored with no git diff.
-- No commit, push, production database write, deploy or real provider message occurred.
+- During the November 3 local QA checkpoint no commit/push/production write/deploy/provider send occurred. Subsequent authorized release on November 4 is recorded in `docs/gap023-024-release.md`.
 
-GAP-023 stays active as VERIFIED_LOCAL until an authorized release plus exact production revision/migration/readback and safe smoke evidence. P4 follow-ups remain separate: GAP-024 fuller preparation/table lifecycle and cancellation; GAP-025 immutable final/proforma invoice/reprint identity; GAP-026 partial/split payment allocation; subsequent manager void, visual menu, tokens and real provider work. No kitchen device/printer integration or actual card/mobile-money gateway execution is implied by recording a tender. Current legacy platform labels are manual labels, not Tanzania provider integrations.
+GAP-023 is DONE after the authorized release, exact production revision/migration/readback and authenticated read-only smoke. GAP-024 preparation/table lifecycle is separately released. P4 follow-ups remain separate: GAP-025 immutable final/proforma invoice/reprint identity; GAP-026 partial/split payment allocation; subsequent manager void, visual menu, tokens and real provider work. No kitchen device/printer integration or actual card/mobile-money gateway execution is implied by recording a tender. Current legacy platform labels are manual labels, not Tanzania provider integrations.

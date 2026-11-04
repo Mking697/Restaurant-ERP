@@ -822,54 +822,15 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 - Concrete proof scenario: Concurrent issue requests never reuse number or overconsume claim value. Applying the same vendor credit via both settlement and invoice allocation rejects; canceled document keeps its number and audit trail.
 - Business improvement: Client ka formal Debit Note document aur vendor-credit reconciliation complete hoga, bina existing claim amount ko double-count kiye.
 
-### GAP-023 - Distinct Fast Food and Conventional operating workflows
 
-Status: VERIFIED_LOCAL
-Coverage: COMPLETE (owner-approved local scope; production release pending) | Phase: P4 | Depends on: GAP-001, GAP-002 (shared database approved; GAP-003 physical split superseded)
-
-Owner approval — November 3, 2026: owner explicitly approved continuing the current branch-wise flow for now: FAST_FOOD is payment-first; CONVENTIONAL DINE_IN dispatches Kitchen KOT / Bar BOT before payment and remains OPEN until full settlement. Conventional non-dine-in retains payment-first behavior. Stock is posted exactly once at each ticket dispatch, including additional lines; settlement must not deduct stock again. This later approval supersedes the October 31 same-sequence decision for this delivery. A future client-requested Fast Food sequencing change is a separate reviewed change, not an automatic switch or promised configuration feature. Shared database/branch isolation remains approved. Existing legacy platform channel labels do not imply real provider integration. Implementation/local disposable verification is authorized; commit/push, production migration and deployment are NOT authorized by this continuation.
-
-Current checkpoint — November 3, 2026: approved GAP-023 implementation and local acceptance are complete, uncommitted and NOT production-released. Full suite 550/550, TypeScript, actual production build (ID `D-m5LUIHUaRsdHuAn_uJ_`), Drizzle check/no-drift generation, fresh/legacy-upgrade/no-op migration proofs and 275/275 real HTTP/PostgreSQL assertions passed. Real browser verified Fast Food PAID/KOT/receipt, Conventional OPEN/KOT/BOT, extra-item dispatch, locked unknown settlement and exact replay with visible receipt; SQL readback confirms one receipt/settlement and stock/lot/ledger/captured-cost agreement. Evidence: `docs/gap023-verification.md` and eight non-secret artifacts in `docs/gap023-evidence/`. Dedicated QA server/container/data volume and isolated build output were removed; generated Next config is diff-clean. No real provider sends or production writes. Production ordered migration lineage/watermark must be re-read before any authorized release. GAP remains active VERIFIED_LOCAL until release plus production readback/safe smoke, not moved to Done.
-
-Source: S1 billing Scenarios 1 and 2; E07, E10.
-
-Acceptance: approved concept config enforces payment-first Fast Food vs kitchen-first Conventional sequence, relevant role/table/counter screens and approved database boundary. Preserve existing historical completed orders. Tests prove both sequences cannot skip required gates and that shared code does not silently collapse their distinct behavior.
-
-#### Implemented current-project integration (local acceptance verified)
-
-- Current-project reuse: existing `src/app/api/pos/orders/route.ts`, POS `ScopedPos`, `requireOperableShift`, authenticated `mutate` and branch/module/visibility guards remain the transport and authorization seams.
-- Implemented data/server change: additive branch concept and menu station snapshots, OPEN/PAID states beside legacy COMPLETED/VOIDED, durable actor/order/action/payload-bound attempts, tickets and one receipt per order in `src/db/schema/pos.ts`; shared `pos-orders.ts` posts each dispatch's stock/COGS and records full settlement without reposting. Migration `0038_mysterious_rage.sql` was generated/applied only to disposable PostgreSQL. Legacy COMPLETED default stays preserved to avoid PostgreSQL's unsafe new-enum-value use within a migration transaction; explicit lifecycle writes select OPEN/PAID.
-- Implemented API/UI fit: POST `/api/pos/orders`, `/api/pos/orders/[id]/lines`, `/api/pos/orders/[id]/settle`; `/pos` displays tickets/receipts outside closed dialogs, original order concept controls actions, and writes require the target branch context. Branch admin exposes Owner-only concept changes; Menu/BOM and branch cloning preserve Kitchen/Bar routing. Unknown outcomes lock exact intent and permit explicit replay only.
-- Compatibility / rollout: shared DB remains approved; no physical split or parallel legacy bypass. Full paid readers retain COMPLETED rows, PAID is attributed to settlement time/current collection shift, and OPEN contributes no paid revenue. Overnight tables remain visible. Current live privacy is enforced before cached responses. Original and added stock events retain their order source but have separate dedupe identities. No historical tax/cost/posting timestamps are fabricated. Guide and offline process map distinguish this local overlay from released code.
-- Concrete proof scenario: concurrent create/add/settle yields one admitted write; insufficient/expired required raw stock rolls back all effects; changing recipe/rates/concept does not reprice dispatched COGS or strand an OPEN table; original plus extra stock deductions reconcile with ledger/lots; lost settlement acknowledgment replays one receipt without stock deduction; collection belongs to the settling shift. Real HTTP/PostgreSQL 275/275 plus browser/readback evidence above.
-- Business improvement: Fast Food counter aur Conventional table/bar apna approved flow follow karte hain; cashier extra items aur settlement safely kar sakta hai, bina duplicate tickets/stock/receipt aur wrong-day/shift collection ke. Future sequence changes require review. GAP-024 fuller preparation/cancellation, GAP-025 invoice identity/reprints and GAP-026 part/split allocations remain separate pending work.
-
-### GAP-024 - Open-order, table and KOT lifecycle
-
-Status: VERIFIED_LOCAL
-Coverage: FULL for the owner-approved local scope | Phase: P4 | Depends on: GAP-013, GAP-023
-Source: S1 KOT sequence; S2 pre-order/table and preparation; E07.
-
-Acceptance: approved draft/open -> sent-to-kitchen -> ready/served -> invoiced/closed transitions persist with table/order references and KOT history. Add/edit/resend/cancel behavior is explicit; stock reservation/deduction and release occur at defined events exactly once, including concurrent cashier/kitchen operations. Printing/reprinting a KOT must not deduct stock again. Do not invent table reservations if the client only requires table assignment.
-
-Owner-approved delivery boundary (November 4, 2026): `docs/gap024-contract.md` governs this implementation. Drafts post nothing; dispatch uses GAP-023 stock/COGS and payment sequencing. Preparation/service is separate from financial status. Final full settlement uses the existing receipt, not the separate GAP-025 official-invoice/proforma identity scope. Cancellation is unpaid manager cancellation with reason, preserved history and NO automatic restock/refund; no reservations/booking, partial-line cancellation, split payment or physical-printer integration is claimed.
-
-Local verification: full suite 603/603, TypeScript and production build passed; final compiled-server real HTTP/PostgreSQL acceptance 648/648 plus unchanged GAP-023 compatibility 275/275; migration fresh/legacy preservation, 40 ordered hashes/timestamps and no-op 17/17. Browser exercised draft save/dispatch, preparation, READY/SERVED, settlement, automatic lifecycle refresh, close/history and ticket-only print document. Commit-then-lost-ack, later rejected replay and byte-identical successful replay preserved one close event/action and one receipt; stock/lots/COGS stayed unchanged after dispatch. Evidence: `docs/gap024-verification.md` and `docs/gap024-evidence/`. Dedicated QA database/container/volume/build outputs removed; generated config diff-clean. No production access/migration, provider sends, commit/push or deployment. Keep active until approved release/readback; not DONE.
-
-#### Current-project integration blueprint (IMPLEMENTED locally)
-
-- Current-project reuse: Existing `createPosOrder`, add-lines/settlement, `mutate` authority lock and stock/COGS posting remain the admission boundary; current branch menu, shift gate, privacy and receipt views are retained.
-- Implemented data/server change: Additive `0039_luxuriant_black_tom` plus matching schema/snapshot/journal; persisted revisioned drafts, immutable ticket snapshots and append-only lifecycle action receipts/events. Draft dispatch is atomic, stale actions reject and exact replay returns the original acknowledgment only after live authorization.
-- Implemented API/UI fit: `/pos` Drafts / Tables / Service and `/kitchen` Kitchen/Bar queue; draft create/edit/dispatch/cancel, lifecycle/kitchen lists, ticket snapshot/action and order CLOSE/CANCEL routes under `/api/pos`. Separate POS_KITCHEN preparation permission never implies cashier access or financial/customer disclosure.
-- Compatibility / rollout: Legacy missing preparation/snapshots remain explicitly unknown, never reconstructed from today's catalog. Existing direct New Order/Add items/Settle stay valid, respect closed/cancelled gates and refresh lifecycle without remounting unresolved intents. Payment-first versus Conventional dine-in dispatch-first policy is unchanged.
-- Concrete proof scenario: Concurrent dispatch/retry admits once; stale draft edits and unauthorized/hidden replays reject with no SQL changes. Reprint, preparation, service closure and settlement never repeat stock/COGS. Unknown then rejected replay stays quarantined; successful exact acknowledgment unlocks without a second action.
-- Business improvement: Kitchen aur Bar ko real pending queue, cashier ko editable drafts/open-table service flow aur safe retry milta hai; duplicate tickets, stock deductions aur receipts se protection rehti hai.
 
 ### GAP-025 - Proforma and final invoice identity/linkage
 
 Status: PENDING
 Coverage: PARTIAL | Phase: P4 | Depends on: GAP-023, GAP-024
 Source: S1 invoice generation/link receipt to invoice; S2 proforma then payment; E07, E11.
+
+Planning checkpoint — November 4, 2026: GAP-023/024 dependencies are production-released. Inspected current receipt/tax/ticket/branding seams and recorded the proposed immutable-document/numbering/cutover slice in `docs/gap025-plan.md`. Implementation remains PENDING until the owner confirms that plan and the numbering/seller-identity boundaries; no fiscal compliance, historical backfill or new tax policy is assumed.
 
 Acceptance: distinguish pre-order/proforma, official invoice and KOT identities and numbering; finalization captures approved totals/tax and links the source order. A proforma is not posted as a completed sale. Reprints preserve issued values and tax identity; legacy completed orders migrate without duplicates. Resolve historical tax-snapshot behavior for the new invoice lifecycle rather than reconstructing issued amounts from current settings.
 
@@ -1177,6 +1138,49 @@ Verified completed blocks move here with the evidence template; do not copy
 them while leaving an active duplicate. Previously shipped foundation
 remains documented in section 2 and historical `CLAUDE.md` records, not
 falsely relabeled as newly completed GAP items.
+
+### GAP-024 - Open-order, table and KOT lifecycle
+
+Status: DONE (production released November 4, 2026)
+Coverage: COMPLETE for the owner-approved released scope | Phase: P4 | Depends on: GAP-013, GAP-023
+Source: S1 KOT sequence; S2 pre-order/table and preparation; E07.
+
+Acceptance: approved draft/open -> sent-to-kitchen -> ready/served -> invoiced/closed transitions persist with table/order references and KOT history. Add/edit/resend/cancel behavior is explicit; stock reservation/deduction and release occur at defined events exactly once, including concurrent cashier/kitchen operations. Printing/reprinting a KOT must not deduct stock again. Do not invent table reservations if the client only requires table assignment.
+
+Owner-approved delivery boundary (November 4, 2026): `docs/gap024-contract.md` governs this implementation. Drafts post nothing; dispatch uses GAP-023 stock/COGS and payment sequencing. Preparation/service is separate from financial status. Final full settlement uses the existing receipt, not the separate GAP-025 official-invoice/proforma identity scope. Cancellation is unpaid manager cancellation with reason, preserved history and NO automatic restock/refund; no reservations/booking, partial-line cancellation, split payment or physical-printer integration is claimed.
+
+Local verification: full suite 603/603, TypeScript and production build passed; final compiled-server real HTTP/PostgreSQL acceptance 648/648 plus unchanged GAP-023 compatibility 275/275; migration fresh/legacy preservation, 40 ordered hashes/timestamps and no-op 17/17. Browser exercised draft save/dispatch, preparation, READY/SERVED, settlement, automatic lifecycle refresh, close/history and ticket-only print document. Commit-then-lost-ack, later rejected replay and byte-identical successful replay preserved one close event/action and one receipt; stock/lots/COGS stayed unchanged after dispatch. Evidence: `docs/gap024-verification.md` and `docs/gap024-evidence/`. Dedicated QA database/container/volume/build outputs removed; generated config diff-clean. The owner subsequently authorized release: production feature commit `7a8d790defbf0a66985799acbef985ebca8b9e50`, READY Vercel deployment `dpl_8ekmpeJ67ikdkCcpdsCmfwSx93Eg`, live migration 0039/readback and authenticated read-only API/browser smoke are verified. See `docs/gap023-024-release.md`. No production sale/payment/stock fixture or provider send was used.
+
+#### Current-project integration blueprint (IMPLEMENTED and released)
+
+- Current-project reuse: Existing `createPosOrder`, add-lines/settlement, `mutate` authority lock and stock/COGS posting remain the admission boundary; current branch menu, shift gate, privacy and receipt views are retained.
+- Implemented data/server change: Additive `0039_luxuriant_black_tom` plus matching schema/snapshot/journal; persisted revisioned drafts, immutable ticket snapshots and append-only lifecycle action receipts/events. Draft dispatch is atomic, stale actions reject and exact replay returns the original acknowledgment only after live authorization.
+- Implemented API/UI fit: `/pos` Drafts / Tables / Service and `/kitchen` Kitchen/Bar queue; draft create/edit/dispatch/cancel, lifecycle/kitchen lists, ticket snapshot/action and order CLOSE/CANCEL routes under `/api/pos`. Separate POS_KITCHEN preparation permission never implies cashier access or financial/customer disclosure.
+- Compatibility / rollout: Legacy missing preparation/snapshots remain explicitly unknown, never reconstructed from today's catalog. Existing direct New Order/Add items/Settle stay valid, respect closed/cancelled gates and refresh lifecycle without remounting unresolved intents. Payment-first versus Conventional dine-in dispatch-first policy is unchanged.
+- Concrete proof scenario: Concurrent dispatch/retry admits once; stale draft edits and unauthorized/hidden replays reject with no SQL changes. Reprint, preparation, service closure and settlement never repeat stock/COGS. Unknown then rejected replay stays quarantined; successful exact acknowledgment unlocks without a second action.
+- Business improvement: Kitchen aur Bar ko real pending queue, cashier ko editable drafts/open-table service flow aur safe retry milta hai; duplicate tickets, stock deductions aur receipts se protection rehti hai.
+
+### GAP-023 - Distinct Fast Food and Conventional operating workflows
+
+Status: DONE (production released November 4, 2026)
+Coverage: COMPLETE (owner-approved released scope) | Phase: P4 | Depends on: GAP-001, GAP-002 (shared database approved; GAP-003 physical split superseded)
+
+Owner approval — November 3, 2026: owner explicitly approved continuing the current branch-wise flow for now: FAST_FOOD is payment-first; CONVENTIONAL DINE_IN dispatches Kitchen KOT / Bar BOT before payment and remains OPEN until full settlement. Conventional non-dine-in retains payment-first behavior. Stock is posted exactly once at each ticket dispatch, including additional lines; settlement must not deduct stock again. This later approval supersedes the October 31 same-sequence decision for this delivery. A future client-requested Fast Food sequencing change is a separate reviewed change, not an automatic switch or promised configuration feature. Shared database/branch isolation remains approved. Existing legacy platform channel labels do not imply real provider integration. That initial continuation authorized local implementation/verification only. The owner separately authorized commit/push and production migration/deployment on November 4, 2026.
+
+Release checkpoint — November 4, 2026: feature commit `7a8d790defbf0a66985799acbef985ebca8b9e50` was pushed to main and Vercel production deployment `dpl_8ekmpeJ67ikdkCcpdsCmfwSx93Eg` is READY on the verified production alias. Live Neon has 40 migrations including 0038/0039; original ordered SQL history and business data were preserved. Full suite 603/603, TypeScript/build, 275/275 GAP-023 and 648/648 GAP-024 compiled HTTP/PostgreSQL checks, migration 17/17 and local browser stock/receipt/replay proof passed. Production authenticated read-only API/browser and anonymous protection smoke passed without business fixtures or provider sends. Local history: `docs/gap023-verification.md`, `docs/gap023-evidence/`. Exact release/readback and limitations: `docs/gap023-024-release.md`.
+
+Source: S1 billing Scenarios 1 and 2; E07, E10.
+
+Acceptance: approved concept config enforces payment-first Fast Food vs kitchen-first Conventional sequence, relevant role/table/counter screens and approved database boundary. Preserve existing historical completed orders. Tests prove both sequences cannot skip required gates and that shared code does not silently collapse their distinct behavior.
+
+#### Implemented current-project integration (released)
+
+- Current-project reuse: existing `src/app/api/pos/orders/route.ts`, POS `ScopedPos`, `requireOperableShift`, authenticated `mutate` and branch/module/visibility guards remain the transport and authorization seams.
+- Implemented data/server change: additive branch concept and menu station snapshots, OPEN/PAID states beside legacy COMPLETED/VOIDED, durable actor/order/action/payload-bound attempts, tickets and one receipt per order in `src/db/schema/pos.ts`; shared `pos-orders.ts` posts each dispatch's stock/COGS and records full settlement without reposting. Migration `0038_mysterious_rage.sql` was proven on disposable PostgreSQL and applied to the authorized production Neon database. Legacy COMPLETED default stays preserved to avoid PostgreSQL's unsafe new-enum-value use within a migration transaction; explicit lifecycle writes select OPEN/PAID.
+- Implemented API/UI fit: POST `/api/pos/orders`, `/api/pos/orders/[id]/lines`, `/api/pos/orders/[id]/settle`; `/pos` displays tickets/receipts outside closed dialogs, original order concept controls actions, and writes require the target branch context. Branch admin exposes Owner-only concept changes; Menu/BOM and branch cloning preserve Kitchen/Bar routing. Unknown outcomes lock exact intent and permit explicit replay only.
+- Compatibility / rollout: shared DB remains approved; no physical split or parallel legacy bypass. Full paid readers retain COMPLETED rows, PAID is attributed to settlement time/current collection shift, and OPEN contributes no paid revenue. Overnight tables remain visible. Current live privacy is enforced before cached responses. Original and added stock events retain their order source but have separate dedupe identities. No historical tax/cost/posting timestamps are fabricated. Guide and offline process map describe the released approved flow.
+- Concrete proof scenario: concurrent create/add/settle yields one admitted write; insufficient/expired required raw stock rolls back all effects; changing recipe/rates/concept does not reprice dispatched COGS or strand an OPEN table; original plus extra stock deductions reconcile with ledger/lots; lost settlement acknowledgment replays one receipt without stock deduction; collection belongs to the settling shift. Real HTTP/PostgreSQL 275/275 plus browser/readback evidence above.
+- Business improvement: Fast Food counter aur Conventional table/bar apna approved flow follow karte hain; cashier extra items aur settlement safely kar sakta hai, bina duplicate tickets/stock/receipt aur wrong-day/shift collection ke. Future sequence changes require review. GAP-024 preparation/cancellation is separately released; GAP-025 invoice identity/reprints and GAP-026 part/split allocations remain pending.
 
 ### GAP-022 - HO acknowledgment of branch receipt and stock close
 

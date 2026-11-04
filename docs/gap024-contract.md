@@ -1,6 +1,6 @@
 # GAP-024 implementation contract (approved local delivery)
 
-Owner approved preceding six-point plan, November 4, 2026. This is the initial implementation contract; parent reconciles it with executed evidence. No production release/commit authorization. GAP-023 is local VERIFIED_LOCAL dependency, not released.
+Owner approved preceding six-point plan, November 4, 2026. This is the historical initial local implementation contract. The owner subsequently authorized commit/push and production release of GAP-023/024; completed release evidence and current status: `docs/gap023-024-release.md`. Business scope below is unchanged.
 
 ## Behavior and bounds
 
