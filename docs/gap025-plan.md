@@ -1,6 +1,6 @@
 # GAP-025 — proposed proforma and final document slice
 
-Planning started November 4, 2026 after the authorized production release of GAP-023/024. Owner approved implementation and subsequently explicitly selected commit/push, production migration and deploy in the release confirmation. Status: IN_PROGRESS: independent release review reopened acceptance for full-POS-unmount uncertainty retention and partial-fixture-setup cleanup. Fix, independently review and rerun the affected gates before applying the prepared migration or pushing main. Scope: `docs/gap025-contract.md`; evidence: `docs/gap025-verification.md`. No production change has been applied at this checkpoint.
+Planning started November 4, 2026 after the authorized production release of GAP-023/024. Owner approved implementation and subsequently explicitly selected commit/push, production migration and deploy in the release confirmation. Status: DONE for the approved internal-document scope: both review blockers fixed/re-reviewed, current-artifact gates passed, production migration applied/read back, feature pushed and exact-SHA Vercel alias plus authenticated read-only smoke verified. Scope: `docs/gap025-contract.md`; evidence: `docs/gap025-verification.md` and `docs/gap025-release.md`. Fiscal compliance and physical printer delivery remain explicitly outside scope.
 
 ## Current code inspected
 

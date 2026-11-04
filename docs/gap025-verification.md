@@ -1,6 +1,6 @@
 # GAP-025 — local verification and release boundary
 
-Status: VERIFIED_LOCAL; authorized production schema applied and independently read back. Application commit/push/deployment and production smoke are pending at this checkpoint.
+Status: DONE for the owner-approved internal-document scope; production schema, pushed feature SHA, Vercel Ready/public alias binding and authenticated read-only browser/API smoke are verified. Release record: `gap025-release.md`.
 
 ## Release review checkpoint
 
@@ -14,7 +14,7 @@ Current retained evidence: `gap025-evidence/gap025-final-fixed-tests.log`, `gap0
 
 Production migration was authorized and applied atomically under existing advisory lock with exact database/40-row ledger/watermark/absent-schema guards. All historical committed-LF hashes matched ordered-prefix digest `62bad5f1d943af056597c416860be360`; original ledger digest `bbf631936adaf6a6bfb66899a18111e2` preserved. Branch/menu/order/line/receipt/draft fingerprints unchanged inside transaction. Independent readback: 41 migrations; candidate SHA256 `3d03457c0d1b1a2ed48dec6a45b735ef53953b5057f368188ca67b68c84ef8ca`, timestamp `1793790465948`; document/request tables and two nullable snapshot columns exist; no generated documents/requests, sequence uncalled at 1, production orders/receipts still zero. Tracking row inserted in the same transaction so Git-triggered migrate does not replay DDL. Target: Neon `wild-glade-34334923` / `br-plain-poetry-a1151jyf` / `neondb`.
 
-Remaining release gates: commit/push, exact-SHA Vercel Ready/public alias binding, authenticated read-only smoke and temporary-session cleanup. No production business fixtures.
+Release gates completed: feature commit `48c7f85a327e6ee480d50cee8e58c850fd3f0970` matches remote main; Vercel `dpl_4AQyPcf1VuXnkmZS37DSXzMndkYT` READY and public alias/source binding verified. Authenticated read-only documents/lifecycle/orders, absent-target 404, anonymous 401 and hydrated POS panel passed. Temporary production session deleted/read back absent and browser cookie cleared/read back absent. Independent post-smoke counts: 41 migrations; orders/receipts/drafts/documents/requests all zero. No production business fixtures. Actual production artifacts: `gap025-production-deployment.json`, `gap025-production-smoke.json`. A later documentation-only HEAD/deployment is verified separately rather than recursively rewriting this record.
 
 A subsequent release build compiled but its TypeScript/page-data phase exceeded the tool deadline and ended with EPIPE; it is not a successful release build. The earlier successful build listed below remains historical local evidence only.
 
@@ -52,5 +52,5 @@ Migration candidate is additive `0040_gap025_pos_documents.sql`. Fresh/legacy/no
 - TIN/VRN remain null/unverified, and all output says INTERNAL SALES DOCUMENT — NOT A FISCAL RECEIPT. No TRA/EFD integration or legal-compliance claim.
 - Real browser print action and generated invoice-only content were verified. Physical printer/OS spooler delivery is NOT verified. A post-print screenshot capture timed out; the HTML and JSON were written before that capture failed. Do not claim a final screenshot exists.
 - No split/partial payment, automatic refund/restock, historical mass conversion or changed tax rules.
-- Owner subsequently approved commit/push, production migration and deployment. Schema is applied/read back; application release remains pending until SHA/alias/smoke gates pass. Protected CLAUDE.md checkpoint update was blocked by an expired approval prompt and was not retried or bypassed; this report and gaps.md are current.
+- Owner-approved schema and application release completed; details in `gap025-release.md`. Protected CLAUDE.md checkpoint update was blocked by an expired approval prompt and was not retried or bypassed; this report and gaps.md are current.
 - Test server/session cleanup and stopped-container readback are recorded in `gap025-evidence/05-cleanup.log` after teardown. The stopped disposable QA database is retained for inspection, not deleted.

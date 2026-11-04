@@ -1,0 +1,15 @@
+{
+  "productionSessionReadback": "absent",
+  "productionCookieReadback": "absent",
+  "productionMigrations": 41,
+  "productionOrders": 0,
+  "productionReceipts": 0,
+  "productionDrafts": 0,
+  "productionDocuments": 0,
+  "productionDocumentRequests": 0,
+  "qaServerConnection": "rejected after stop",
+  "disposableReleaseQaContainer": "stopped and removed",
+  "originalForensicQaContainer": "retained stopped",
+  "qaBrowserCookieReadback": "absent",
+  "source": "Independent Neon SQL readback, CDP cookie readback, Docker/HTTP terminal checks"
+}

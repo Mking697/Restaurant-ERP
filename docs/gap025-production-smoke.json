@@ -1,0 +1,19 @@
+{
+  "identityBound": true,
+  "documentsStatus": 200,
+  "documents": 0,
+  "scope": "actual",
+  "limit": 200,
+  "lifecycleStatus": 200,
+  "ordersStatus": 200,
+  "absentDocumentStatus": 404,
+  "anonymousDocumentsStatus": 401,
+  "businessMutations": 0,
+  "hydratedPos": {
+    "path": "/pos",
+    "documentsPanel": true,
+    "internalDisclaimer": true,
+    "historyHeading": true,
+    "recoveryOwnerReady": true
+  }
+}

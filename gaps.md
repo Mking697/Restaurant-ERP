@@ -824,29 +824,6 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 
 
-### GAP-025 - Proforma and final invoice identity/linkage
-
-Status: IN_PROGRESS
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-023, GAP-024
-Source: S1 invoice generation/link receipt to invoice; S2 proforma then payment; E07, E11.
-
-Release authorization and reopened acceptance: owner subsequently explicitly selected GAP-025 commit/push, production migration and deployment in the release clarification. Independent review then found full-page-unmount uncertainty loss and partial-setup fixture-cleanup defects. Fix and re-review both and rerun current-artifact gates before release; this later authorization supersedes the original local-only boundary, not the safety requirements.
-
-Historical pre-review local verification: 635/635 unit tests, 178 real HTTP/PostgreSQL checks, 275 GAP-023 and 648 GAP-024 compatibility checks, TypeScript/build, browser exact replay and invoice-only print passed. Database readback confirms no additional payment/stock/revenue effects. QA sessions revoked and server/container stopped. Evidence and limits: `docs/gap025-verification.md`. Still active pending separately authorized release; no physical-printer delivery or TRA/EFD compliance claim.
-
-Implementation approved — November 4, 2026: owner confirmed the five-point internal proforma/final-document plan with "haa Contineu kro". Implementation and isolated local verification are authorized under `docs/gap025-contract.md`; numbering is branch-labelled PF/INV + EAT year + permanent sequence. Existing payment/stock/tax policy stays unchanged. No TRA/EFD compliance claim, historical backfill, commit/push or production migration/deployment is authorized for this gap.
-
-Acceptance: distinguish pre-order/proforma, official invoice and KOT identities and numbering; finalization captures approved totals/tax and links the source order. A proforma is not posted as a completed sale. Reprints preserve issued values and tax identity; legacy completed orders migrate without duplicates. Resolve historical tax-snapshot behavior for the new invoice lifecycle rather than reconstructing issued amounts from current settings.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/app/api/pos/orders/route.ts` receipt/`vatInvoiceSummary` construction, saved order/line price fields in `src/db/schema/pos.ts`, and `src/lib/server/vat.ts` policy helpers reuse karein.
-- Proposed data/server change: PROPOSED: immutable document header/lines by kind PROFORMA/FINAL, scoped numbering, source lifecycle/order reference and complete issued name/price/effective-tax/currency snapshots. Persist new final financial amounts at issue; VAT summary/report readers must use issued evidence for the new path and explicitly label unsupported legacy reconstruction.
-- Proposed API/UI fit: POS issue/preview/reprint views distinguish proforma from final tax invoice and KOT; proposed issue/read handlers have permission and operational/official visibility contracts. Proforma creates no completed sale; finalization maps to existing financial projection once.
-- Compatibility / rollout: Current posOrders do not fully persist all live menu/branch tax details used in receipt output. Do not fabricate historical tax snapshots or rewrite old invoice values; approved cutover labels old-data limitations while new issued documents are reproducible.
-- Concrete proof scenario: Issue invoice, then change menu name/price/branch VAT setting: reprint remains identical. Duplicate issue/finalization reserves one number and produces one completed-sale projection.
-- Business improvement: Proforma, final invoice aur receipt ki identity/linkage clear hogi aur old invoice today ke menu/tax settings se badlegi nahi.
-
 ### GAP-026 - POS payment receipts and invoice allocation
 
 Status: PENDING
@@ -1142,6 +1119,27 @@ Verified completed blocks move here with the evidence template; do not copy
 them while leaving an active duplicate. Previously shipped foundation
 remains documented in section 2 and historical `CLAUDE.md` records, not
 falsely relabeled as newly completed GAP items.
+
+### GAP-025 - Proforma and final invoice identity/linkage
+
+Status: DONE (production released November 4, 2026)
+Coverage: COMPLETE for the owner-approved internal-document scope | Phase: P4 | Depends on: GAP-023, GAP-024
+Source: S1 invoice generation/link receipt to invoice; S2 proforma then payment; E07, E11.
+
+Acceptance: distinguish pre-order/proforma, official invoice and KOT identities and numbering; finalization captures approved totals/tax and links the source order. A proforma is not posted as a completed sale. Reprints preserve issued values and tax identity; legacy completed orders migrate without duplicates. Resolve historical tax-snapshot behavior for the new invoice lifecycle rather than reconstructing issued amounts from current settings.
+
+Owner-approved delivery boundary: immutable INTERNAL PROFORMA/FINAL only under `docs/gap025-contract.md`; no TRA/EFD/fiscal-compliance claim or invented TIN/VRN. Existing configured tax rates, payment sequencing, stock and receipt accounting remain unchanged. Legacy uncaptured names/codes stay NULL/unavailable; no historical backfill. Browser-realm retry recovery survives SPA route unmount/remount, not hard reload/tab closure/browser restart. Physical printer delivery, split payment/refund and provider sends are outside this release.
+
+Release proof: feature commit `48c7f85a327e6ee480d50cee8e58c850fd3f0970` pushed to main; Vercel `dpl_4AQyPcf1VuXnkmZS37DSXzMndkYT` READY, production alias bound to exact source. Authorized Neon main/neondb has 41 migrations with unchanged historical ledger and candidate 0040 tracked atomically. Full suite 646/646; TypeScript/build/Drizzle pass; compiled HTTP/PostgreSQL 178/178 plus GAP-023 compatibility 275/275 and GAP-024 648/648; fresh/legacy/no-op migration 25/25; actual browser route-remount/exact replay and unchanged financial/stock fingerprint. Both independent review blockers were fixed with RED/GREEN and independent PASS re-reviews. Authenticated production read-only APIs and hydrated POS panel passed; no production business fixture or provider send. Temporary session/cookie removed and read back absent; production orders/receipts/drafts/documents/requests remain zero. Evidence: `docs/gap025-release.md`, `docs/gap025-verification.md`, production JSON artifacts and `docs/gap025-evidence/`.
+
+#### Current-project integration blueprint (IMPLEMENTED and released)
+
+- Current-project reuse: existing create/dispatch/full-settlement transaction, VAT policy, branch/privacy/module guards, shift gate and receipt projection remain authoritative.
+- Implemented data/server change: additive `0040_gap025_pos_documents`, coherent schema/snapshot/journal, immutable JSON snapshots, two nullable legacy line-identity columns, permanent global number sequence and actor/source/revision/body-bound request journal.
+- Implemented API/UI fit: `/api/pos/documents` list/read/proforma issue and `/pos` financial history/preview/reprint, separate from price-free kitchen tickets. POS_KITCHEN does not grant financial-document access. FINAL is created inside existing full-payment admission, never by a second financial posting.
+- Compatibility / rollout: snapshots preserve original line/seller/VAT/FX evidence; uncaptured legacy stays honest. VAT-summary product code uses captured evidence, with explicit legacy fallback. Exact replay reauthorizes live target/privacy before returning original acknowledgment.
+- Concrete proof scenario: menu/seller/tax changes leave old snapshots unchanged; concurrent/retried requests return the same identity; dropped acknowledgment, later rejected replay and full route remount retain quarantine until exact success. Reprint adds no payment/stock/revenue.
+- Business improvement: Estimate, final document aur receipt ki identity/linkage clear hai; reprint current menu/settings se nahi badalta aur duplicate posting nahi hoti.
 
 ### GAP-024 - Open-order, table and KOT lifecycle
 
