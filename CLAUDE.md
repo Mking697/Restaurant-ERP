@@ -55,26 +55,31 @@ IDs within a phase are identifiers, not a substitute for dependency ordering.
 - P3 procurement/branch controls: COMPLETE for the recorded owner-approved scopes (GAP-015 through GAP-022). GAP-020/021/022 are production-released with live migration/readback and browser/HTTP/PostgreSQL proof; GAP-015 through GAP-019 retain their explicitly documented limited-scope/deferred caveats. Tax/accounting and other deferred work remains visible in `gaps.md` and is not silently counted as delivered.
 - GAP-020/021/022 production checkpoint (November 2-3, 2026): GAP-020 EOD reporting, GAP-021 RAW min/max replenishment and GAP-022 exact-revision HO review are DONE and moved to the `gaps.md` Done register. Feature commit `4547c18` was released through production feature revision `4981bb5fa4c9750ff30ab452657459bb0e179143`; current production documentation revision is `43cfbd89d1b670f2258a861e3a9de79439348502`. Vercel production is Ready at `https://restaurant-erp-tau.vercel.app`. Live Neon project `wild-glade-34334923`, branch `br-plain-poetry-a1151jyf`, has 38 migrations and readback confirms `eod_stock_reports`, `reorder_suggestions` and `ho_stock_review_subjects`. Full suite 507/507, targeted real HTTP/PostgreSQL checks (34/34 GAP-020; 50/50 shared GAP-021/022), TypeScript, production build, Drizzle/migration replay and browser workflows passed. RAW-only replenishment, no provider message and no automatic approval/PO/payment remain explicit boundaries.
 - P3 Procurement/branch controls active IDs: none. P4 production checkpoint (November 4, 2026): GAP-023 and GAP-024 are DONE for their owner-approved scopes and moved to the gaps.md Done register. Feature commit `7a8d790defbf0a66985799acbef985ebca8b9e50`, Vercel production deployment `dpl_8ekmpeJ67ikdkCcpdsCmfwSx93Eg` READY and public alias/source binding verified. Authorized Neon main/neondb has 40 migrations; all 38 original ordered SQL hashes match committed LF bytes, historical tracking timestamps were preserved, and 0038/0039 live schema/readback passed. Full suite 603/603, TypeScript/build, compiled HTTP/PostgreSQL 648/648 plus compatibility 275/275, migration 17/17 and local browser/replay/stock proof passed; production authenticated read-only API/browser and anonymous protection smoke passed without business fixtures. Temporary auth session/cookie/token removed. Six branches retain FAST_FOOD defaults until Owner deliberately assigns concepts; kitchen staff require explicit POS_KITCHEN. Evidence and limitations: `docs/gap023-024-release.md`, each GAP verification/evidence folder. Next/current implementation: GAP-025 IN_PROGRESS; owner explicitly confirmed the internal proforma/final-document plan on November 4. Approved local contract and disjoint ownership: `docs/gap025-contract.md`. Implement/verify locally; no GAP-025 production migration/deploy or commit/push authorization. No actual provider delivery, physical printer, split payment, automatic restock/refund or fiscal-system integration is claimed.
-- P4 POS/client workflows: GAP-025 DONE/production-released (see Done index). GAP-026 through GAP-029, GAP-032 VERIFIED_LOCAL (local tests/build/migration proof, not yet committed/released). GAP-030/031 BLOCKED (owner confirmed no delivery platform in use; parked until a real provider exists).
-- P5 Shift cash custody: GAP-033 through GAP-036 VERIFIED_LOCAL.
-- P6 Community/loyalty/QR: GAP-037 through GAP-041 VERIFIED_LOCAL.
+- P4 POS/client workflows: GAP-025 through GAP-029, GAP-032 DONE/production-released (see Done index). GAP-030/031 BLOCKED (owner confirmed no delivery platform in use; parked until a real provider exists).
+- P5 Shift cash custody: GAP-033 through GAP-036 DONE/production-released (see Done index).
+- P6 Community/loyalty/QR: GAP-037 through GAP-041 DONE/production-released (see Done index).
 - P7 Full client UAT/release: GAP-042 PENDING — requires the client's own real browser walkthrough/signoff; cannot be completed unilaterally.
 
-### Batch checkpoint — November 5, 2026
+### Batch release checkpoint — November 5, 2026
 
-GAP-026 through GAP-041 (16 gaps: POS payments/void/menu-images/token-sequences,
-shift opening float/summary/drawer-cash/HO-cash-dispatch, WhatsApp opt-out,
-customer registry/reward-ledger/QR-membership/repeat-ordering) were all built,
-tested and VERIFIED_LOCAL across prior sessions and this one, but had
-accumulated UNCOMMITTED on disk (migrations 0041-0051, new schema/lib/API/UI
-files). Full regression at this checkpoint: `npm test` 729/729, `tsc --noEmit`
-clean, `next build` clean. User approved committing all of it together in
-this session (no push/production migration/deploy authorized yet — commit
-only). Evidence per gap: `docs/gapNNN-verification.md`. GAP-042 remains the
-only unresolved item; it requires the client's direct participation and
+GAP-026 through GAP-041 (14 released gaps; GAP-030/031 remain BLOCKED, not part of
+this release) were committed (`23f7ebf`), pushed to `main`, and auto-deployed by
+Vercel. Vercel's production `buildCommand` ran `db:migrate` before `next build`,
+applying migrations 0041-0051 to Neon project `wild-glade-34334923` automatically
+(migration count 40 -> 52). Readback confirmed every new/altered table exists
+(`pos_payments`, `pos_order_reversals`, `pos_token_sequences`, `branch_expenses`,
+`ho_cash_dispatches`, `whatsapp_opt_outs`, `customers`, `reward_events`,
+`customer_qr_tokens`) and pre-existing business data is unchanged (6 branches,
+0 `pos_orders`, 0 `customers`). Production alias `https://restaurant-erp-tau.vercel.app`
+confirmed live (login HTTP 200). All 14 entries moved to `gaps.md` section 6
+Done register with this release proof; full detail per gap is in each
+`docs/gapNNN-verification.md`. GAP-042 remains the only unresolved item; it
+requires the client's direct participation (real browser UAT + signoff) and
 cannot be closed by implementation work alone.
 
 ### Done ID index
+
+- GAP-026 through GAP-041 (14 gaps; GAP-030/031 remain BLOCKED, not released) - DONE and production-released November 5, 2026. See the Batch release checkpoint above for the shared release proof, and `gaps.md` section 6 Done register for each gap's full individual entry/evidence.
 
 - GAP-001 (Confirm business policies and acceptance contract) - DONE October 31, 2026, decision-only. Fourteen policy decisions recorded via direct owner clarification (HO approval mix, vendor approval authority, partial-receipt shortages, shift cash custody unchanged, cost/yield override split, part+split payment both approved, branch-level void/refund, Tanzania EAT/TSh as single source of truth, hard-block expired stock, same KOT sequence for both concepts, actual cutting-yield tracking approved, no delivery platform currently, WhatsApp consent/unsubscribe required). Evidence: `gaps.md` section 6 Done register.
 - GAP-002 (Resolve separate database/workflow architecture) - DONE October 31, 2026, decision-only. Owner explicitly chose to KEEP the existing shared database with strengthened branch/concept filtering, an explicit scope change from the client sheet's literal "separate database" wording. GAP-003 (physical DB split) is therefore SUPERSEDED, not implemented. Evidence: `gaps.md` section 6 Done register.
