@@ -54,6 +54,7 @@ function route(actor, tx, check = false) {
     '@/db/client': { db: tx }, '@/db/schema/platform': { branches }, 'drizzle-orm': require('drizzle-orm'),
     '@/lib/server/auth': { requireIdentity: auth, mutate: async (request, action) => { mutations++; return action(tx, await auth()); } },
     '@/lib/server/branch-deletion': helper(), '@/lib/server/branches': {},
+    '@/lib/server/branches-branding': require('../src/lib/server/branches-branding.ts'),
     '@/lib/server/http': require('../src/lib/server/http.ts'), '@/lib/server/permissions': require('../src/lib/server/permissions.ts'),
   };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { module, exports: module.exports, require: name => { assert.ok(dependencies[name], name); return dependencies[name]; }, URL });

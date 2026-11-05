@@ -27,7 +27,12 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   };
   return hasCurrentModule(user, ...(groups[href] ?? [module]));
 }
-function Logo() { return <RestaurantBrand />; }
+function Logo() {
+  const selected = useSelectedBranchId();
+  const { branches } = useBranches();
+  const branch = selected !== "all" && selected !== "__no_branch__" ? branches.find(row => row.id === selected) : undefined;
+  return <RestaurantBrand name={branch?.brandName || undefined} logoUrl={branch?.brandLogoUrl ?? undefined} />;
+}
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/ho-stock-review": "HO Stock Review", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer",

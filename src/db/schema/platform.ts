@@ -27,6 +27,15 @@ export const branches = pgTable(
     geofenceRadiusM: integer("geofence_radius_m").notNull().default(50),
     isTemplate: boolean("is_template").notNull().default(false),
     clonedFromId: text("cloned_from_id"),
+    // Per-branch brand override (e.g. a chain running two distinct brands,
+    // like a Fast Food chain + a separately-branded Dine-in Bar, under one
+    // shared ERP). Null means "use the global Restaurant Branding settings"
+    // — same optional-override convention as vatRatePercent above. Stored as
+    // base64 PNG (same convention as settings.RESTAURANT_LOGO), not a Blob
+    // URL — logos are small (<=128KB post-normalize) and this avoids a new
+    // storage dependency.
+    brandName: text("brand_name"),
+    brandLogo: text("brand_logo"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

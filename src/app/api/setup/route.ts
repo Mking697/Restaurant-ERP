@@ -18,7 +18,11 @@ export async function GET() { return api(async () => { const rows = await db.sel
 export async function POST(request: Request) { return api(async () => {
   assertSameOrigin(request);
   const input = await body(request, BRANDING_BODY_BYTES);
-  const branding = await brandingInput(input, true);
+  // brandingInput's own strict field-whitelist only accepts {restaurantName,
+  // logo} — scope it to those two keys, not the whole setup payload (which
+  // also legitimately carries name/email/password), or every real setup
+  // attempt 400s with "Unexpected field: name".
+  const branding = await brandingInput({ restaurantName: input.restaurantName, logo: input.logo }, true);
   const name = string(input.name, "name"); const emailValue = email(input.email);
   if (!validPassword(input.password)) throw new HttpError(400, "Password must have at least 12 characters and at most 256 UTF-8 bytes");
   const passwordHash = await hashPassword(input.password);

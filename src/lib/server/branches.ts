@@ -1,6 +1,7 @@
 import { HttpError } from "./permissions";
 import { string } from "./http";
 import { branchConcept } from "./pos-order-policy";
+import { normalizeLogo } from "./branding-input";
 export function branchInput(input: Record<string, unknown>) {
   const name = string(input.name, "name"); const code = string(input.code, "code", 30);
   if (!/^[A-Za-z0-9_-]+$/.test(code)) throw new HttpError(400, "Invalid branch code");
@@ -20,5 +21,21 @@ export function branchInput(input: Record<string, unknown>) {
     vatRatePercent = Number(value).toFixed(2);
   }
   const operatingConcept = branchConcept(input.operatingConcept);
-  return { name, code, address, lat: String(lat), lng: String(lng), geofenceRadiusM, vatRatePercent, operatingConcept };
+  // brandName is an OPTIONAL per-branch override of the global Restaurant
+  // Branding name (e.g. a chain running two distinct brands under one ERP).
+  // undefined preserves the existing value on edit; null/"" clears it back
+  // to "use the global branding name" — same convention as vatRatePercent.
+  let brandName: string | null | undefined = undefined;
+  if (input.brandName !== undefined) {
+    if (input.brandName === null || input.brandName === "") brandName = null;
+    else if (typeof input.brandName === "string" && input.brandName.trim().length <= 100 && !/[\x00-\x1f\x7f]/.test(input.brandName)) brandName = input.brandName.trim();
+    else throw new HttpError(400, "Invalid brand name");
+  }
+  return { name, code, address, lat: String(lat), lng: String(lng), geofenceRadiusM, vatRatePercent, operatingConcept, ...(brandName === undefined ? {} : { brandName }) };
+}
+/** Mirrors brandingInput's logo handling (undefined = unchanged, null = clear, object = replace), reusing the same strict PNG/JPEG/WebP decode+resize pipeline. */
+export async function branchLogoInput(value: unknown): Promise<string | undefined> {
+  if (value === undefined) return undefined;
+  if (value === null) return "";
+  return normalizeLogo(value);
 }

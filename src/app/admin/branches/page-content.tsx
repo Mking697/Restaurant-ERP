@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { requestJson, useCurrentUser } from "@/lib/current-user";
 import { notifyBranchesChanged, useBranches, type BranchRecord } from "@/lib/current-branch";
+import { type LogoUpload } from "@/components/branding-fields";
 const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 export default function BranchesAdminPage() {
   const uiText = useUiCopy();
@@ -17,6 +18,8 @@ export default function BranchesAdminPage() {
   const owner = actor.role === "SUPER_ADMIN";
   const allowed = actor.ready && actor.authenticated && actor.status === "Active" && !actor.error && (owner || actor.role === "BRANCH_MANAGER");
   const [editing, setEditing] = React.useState<BranchRecord | null>(null);
+  const [logo, setLogo] = React.useState<LogoUpload | null | undefined>(undefined);
+  const [logoReading, setLogoReading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -24,7 +27,7 @@ export default function BranchesAdminPage() {
   const [cloneError, setCloneError] = React.useState("");
   const [cloneBusy, setCloneBusy] = React.useState(false);
   React.useEffect(() => { setEditing(null); setMessage(""); setCloning(null); setCloneError(""); }, [actor.id, actor.role, actor.branchId]);
-  function create() { setError(""); setMessage(""); setEditing({ id: "", code: "", name: "", address: "", lat: "0", lng: "0", geofenceRadiusM: 50, vatRatePercent: null, operatingConcept: "FAST_FOOD" }); }
+  function create() { setError(""); setMessage(""); setLogo(undefined); setEditing({ id: "", code: "", name: "", address: "", lat: "0", lng: "0", geofenceRadiusM: 50, vatRatePercent: null, operatingConcept: "FAST_FOOD", brandName: null, brandLogoUrl: null }); }
   function openClone() { setMessage(""); setCloneError(""); setCloning({ sourceBranchId: "", code: "", name: "", address: "", lat: "0", lng: "0", geofenceRadiusM: 50, operatingConcept: "FAST_FOOD" }); }
   async function saveClone(event: React.FormEvent) {
     event.preventDefault(); if (!cloning || !allowed || !owner) return;
@@ -41,10 +44,10 @@ export default function BranchesAdminPage() {
     event.preventDefault(); if (!editing || !allowed) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      const { id, ...fields } = editing;
-      const data = await requestJson<{ branch: BranchRecord }>(id ? `/api/branches/${encodeURIComponent(id)}` : "/api/branches", { method: id ? "PATCH" : "POST", body: JSON.stringify(fields) });
+      const { id, brandLogoUrl, ...fields } = editing;
+      const data = await requestJson<{ branch: BranchRecord }>(id ? `/api/branches/${encodeURIComponent(id)}` : "/api/branches", { method: id ? "PATCH" : "POST", body: JSON.stringify({ ...fields, ...(logo === undefined ? {} : { logo }) }) });
       await requestJson(`/api/branches/${encodeURIComponent(data.branch.id)}`);
-      notifyBranchesChanged(); setEditing(null); setMessage("Branch saved and read back from database.");
+      notifyBranchesChanged(); setEditing(null); setLogo(undefined); setMessage("Branch saved and read back from database.");
     } catch (err) { setError(err instanceof Error ? err.message : "Save failed"); }
     finally { setBusy(false); }
   }
@@ -55,7 +58,7 @@ export default function BranchesAdminPage() {
     {(error || loadError) && <p role="alert" className="mb-4 text-destructive">{error || loadError}</p>}
     {message && <p role="status" className="mb-4">{uiText(message)}</p>}
     <Card><CardContent className="pt-5">{loading ? <p>{uiText("Loading branches…")}</p> : <Table><TableHeader><TableRow><TableHead>{uiText("Code")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Operating concept")}</TableHead><TableHead>{uiText("Address")}</TableHead><TableHead>{uiText("Coordinates")}</TableHead><TableHead>{uiText("Geofence")}</TableHead><TableHead>{uiText("VAT rate", "VAT rate")}</TableHead><TableHead>{uiText("Action")}</TableHead></TableRow></TableHeader><TableBody>
-      {branches.map(branch => <TableRow key={branch.id}><TableCell>{branch.code}</TableCell><TableCell>{branch.name}</TableCell><TableCell>{branch.operatingConcept === "CONVENTIONAL" ? uiText("Conventional") : uiText("Fast food")}</TableCell><TableCell>{branch.address || "—"}</TableCell><TableCell>{branch.lat}, {branch.lng}</TableCell><TableCell>{branch.geofenceRadiusM} {uiText(" m")}</TableCell><TableCell>{branch.vatRatePercent ? `${branch.vatRatePercent}%` : uiText("Default (18%)", "Default (18%)")}</TableCell><TableCell>{allowed && <Button size="sm" variant="ghost" onClick={() => { setError(""); setMessage(""); setEditing({ ...branch }); }}>{uiText("Edit")}</Button>}</TableCell></TableRow>)}
+      {branches.map(branch => <TableRow key={branch.id}><TableCell>{branch.code}</TableCell><TableCell>{branch.name}</TableCell><TableCell>{branch.operatingConcept === "CONVENTIONAL" ? uiText("Conventional") : uiText("Fast food")}</TableCell><TableCell>{branch.address || "—"}</TableCell><TableCell>{branch.lat}, {branch.lng}</TableCell><TableCell>{branch.geofenceRadiusM} {uiText(" m")}</TableCell><TableCell>{branch.vatRatePercent ? `${branch.vatRatePercent}%` : uiText("Default (18%)", "Default (18%)")}</TableCell><TableCell>{allowed && <Button size="sm" variant="ghost" onClick={() => { setError(""); setMessage(""); setLogo(undefined); setEditing({ ...branch }); }}>{uiText("Edit")}</Button>}</TableCell></TableRow>)}
     </TableBody></Table>}{!loading && !loadError && !branches.length && <p>{uiText("No branches yet.")}</p>}</CardContent></Card>
     <Dialog open={!!editing && allowed} onOpenChange={open => { if (!open && !busy) setEditing(null); }}><DialogContent><DialogHeader><DialogTitle>{editing?.id ? uiText("Edit Branch") : uiText("New Branch")}</DialogTitle><DialogDescription>{uiText("Changes are saved to PostgreSQL. New branches start empty.")}</DialogDescription></DialogHeader>
       {editing && <form onSubmit={save}><fieldset disabled={busy} className="space-y-3">
@@ -67,6 +70,17 @@ export default function BranchesAdminPage() {
         <Field label={uiText("Geofence radius (metres)")}><input required type="number" step={1} min={1} max={10000} className={inputClass} value={editing.geofenceRadiusM} onChange={event => setEditing({ ...editing, geofenceRadiusM: Number(event.target.value) })} /></Field>
         <Field label={uiText("Operating concept")}><select disabled={!owner} className={inputClass} value={editing.operatingConcept} onChange={event => setEditing({ ...editing, operatingConcept: event.target.value as BranchRecord["operatingConcept"] })}><option value="FAST_FOOD">{uiText("Fast food — payment first")}</option><option value="CONVENTIONAL">{uiText("Conventional — dine-in production first")}</option></select></Field>
         <Field label={uiText("VAT rate override % (optional, blank = default 18%)", "VAT rate override % (optional, blank = default 18%)")}><input type="number" step="0.01" min={0} max={100} placeholder="18.00" className={inputClass} value={editing.vatRatePercent ?? ""} onChange={event => setEditing({ ...editing, vatRatePercent: event.target.value === "" ? null : event.target.value })} /></Field>
+        <Field label={uiText("Brand name override (optional, blank = use global Restaurant Branding)", "Brand naam override (optional, khali = global Restaurant Branding use hoga)")}><input disabled={!owner} maxLength={100} placeholder={uiText("e.g. Flying Elephant", "jaise Flying Elephant")} className={inputClass} value={editing.brandName ?? ""} onChange={event => setEditing({ ...editing, brandName: event.target.value === "" ? null : event.target.value })} /></Field>
+        {owner && <label className="block space-y-1 text-xs font-medium"><span>{uiText("Brand logo override (optional)", "Brand logo override (optional)")}</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" disabled={logoReading} onChange={async event => {
+            const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
+            if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 1048576 || !file.size) { setError(uiText("Choose PNG, JPEG or WebP up to 1 MB. SVG is not allowed.", "PNG, JPEG ya WebP chunein, 1 MB tak. SVG allowed nahi hai.")); return; }
+            setLogoReading(true);
+            try { const data = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = () => reject(new Error("read")); reader.readAsDataURL(file); }); setLogo({ type: file.type, data }); }
+            catch { setError(uiText("Could not read this image. Choose another file.", "Image padh nahi paaye. Doosri file chunein.")); }
+            finally { setLogoReading(false); }
+          }} className="block w-full min-w-0 text-sm" /></label>}
+        {owner && (() => { const preview = logo ? `data:${logo.type};base64,${logo.data}` : logo === null ? null : editing.brandLogoUrl; return preview ? <div className="flex items-center gap-3"><img src={preview} alt={uiText("Logo preview", "Logo ka preview")} className="size-16 rounded border object-contain" /><button type="button" disabled={logoReading} className="text-sm underline" onClick={() => setLogo(null)}>{uiText("Remove override (use global logo)", "Override hatayein (global logo use hoga)")}</button></div> : null; })()}
         {allowed && owner && editing.id && !loading && !loadError && branches.some(branch => branch.id === editing.id) && <DeletionReadiness key={JSON.stringify([actor.id, actor.role, actor.branchId, actor.moduleAccess, editing.id])} branchId={editing.id} />}
         <div className="flex gap-2"><Button type="submit">{busy ? uiText("Saving…") : uiText("Save")}</Button><Button type="button" variant="outline" onClick={() => setEditing(null)}>{uiText("Cancel")}</Button></div>
       </fieldset></form>}
