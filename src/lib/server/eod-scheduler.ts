@@ -8,6 +8,7 @@ import type { Identity } from "./permissions";
 const scheduledActor: Identity = {
   id: "system:eod-scheduler",
   name: "EOD scheduler",
+  email: "",
   phoneE164: "",
   role: "SUPER_ADMIN",
   branchId: null,

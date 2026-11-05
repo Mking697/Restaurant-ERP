@@ -1,6 +1,6 @@
 import { MODULE_KEYS, type ModuleKey } from "../moduleAccess";
 export type Role = "SUPER_ADMIN" | "CENTRAL_STORE_MGR" | "BRANCH_MANAGER" | "CASHIER" | "KITCHEN_STAFF" | "ACCOUNTANT";
-export interface Identity { id: string; name: string; phoneE164: string; role: Role; branchId: string | null; moduleAccess: string[]; status: "Active" | "Inactive"; }
+export interface Identity { id: string; name: string; email: string; phoneE164: string; role: Role; branchId: string | null; moduleAccess: string[]; status: "Active" | "Inactive"; }
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function assertOwner(user: Identity) { if (user.role !== "SUPER_ADMIN") throw new HttpError(403, "Owner access required"); }
 export function hasModule(user: Identity, key: ModuleKey) { return user.role === "SUPER_ADMIN" || user.moduleAccess.includes(key); }
@@ -36,6 +36,6 @@ export function assertDelegation(actor: Identity, target: Pick<Identity, "id" | 
   if (!target.branchId || !["BRANCH_MANAGER", "CASHIER", "KITCHEN_STAFF", "ACCOUNTANT"].includes(target.role)) throw new HttpError(403, "Cannot manage HQ roles");
   if (target.moduleAccess.some(key => !actor.moduleAccess.includes(key))) throw new HttpError(403, "Cannot delegate unheld grants");
 }
-export function safeUser(user: Identity & { createdAt?: Date; reportingManagerId?: string }) {
-  return { id: user.id, name: user.name, phoneE164: user.phoneE164, role: user.role, branchId: user.branchId, moduleAccess: user.moduleAccess, status: user.status, reportingManagerId: user.reportingManagerId ?? "", createdAt: user.createdAt };
+export function safeUser(user: Omit<Identity, "email" | "phoneE164"> & { email?: string | null; phoneE164?: string | null; createdAt?: Date; reportingManagerId?: string }) {
+  return { id: user.id, name: user.name, email: user.email ?? "", phoneE164: user.phoneE164 ?? "", role: user.role, branchId: user.branchId, moduleAccess: user.moduleAccess, status: user.status, reportingManagerId: user.reportingManagerId ?? "", createdAt: user.createdAt };
 }

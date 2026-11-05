@@ -3,12 +3,15 @@ import { users, roleEnum } from "@/db/schema/auth";
 import { branches } from "@/db/schema/platform";
 import { employees } from "@/db/schema/workforce";
 import type { Executor } from "./auth";
-import { phone, string } from "./http";
+import { email, phone, string } from "./http";
 import { assertDelegation, HttpError, validateGrants, type Identity, type Role } from "./permissions";
 import { hashPassword, validPassword } from "./password";
 export async function userInput(tx: Executor, actor: Identity, input: Record<string, unknown>, existing?: typeof users.$inferSelect) {
   const merged = { ...existing, ...input };
-  const name = string(merged.name, "name"); const phoneE164 = phone(merged.phoneE164);
+  const name = string(merged.name, "name"); const emailValue = email(merged.email);
+  // Phone is now optional (WhatsApp staff-reminder target only, not login) —
+  // only validated/normalized when actually provided, never required.
+  const phoneE164 = merged.phoneE164 ? phone(merged.phoneE164) : null;
   if (!roleEnum.enumValues.includes(merged.role as Role)) throw new HttpError(400, "Invalid role");
   const role = merged.role as Role;
   const status = merged.status ?? "Active"; if (status !== "Active" && status !== "Inactive") throw new HttpError(400, "Invalid status");
@@ -38,5 +41,5 @@ export async function userInput(tx: Executor, actor: Identity, input: Record<str
     const owners = await tx.select({ id: users.id, status: users.status }).from(users).where(eq(users.role, "SUPER_ADMIN"));
     if (!owners.some(user => user.id !== existing.id && user.status === "Active")) throw new HttpError(409, "Cannot remove the last active owner");
   }
-  return { name, phoneE164, role, status, branchId, moduleAccess, reportingManagerId, passwordHash, deactivatedAt: status === "Inactive" ? existing?.deactivatedAt ?? new Date() : null };
+  return { name, email: emailValue, phoneE164, role, status, branchId, moduleAccess, reportingManagerId, passwordHash, deactivatedAt: status === "Inactive" ? existing?.deactivatedAt ?? new Date() : null };
 }

@@ -58,6 +58,15 @@ export function phone(value: unknown) {
   if (/^\+[1-9]\d{7,14}$/.test(result)) return result; // Existing API clients.
   throw new HttpError(400, "Enter a valid Tanzanian mobile number");
 }
+// Login identity. Plain format check only (no deliverability/MX lookup) —
+// matches this project's existing phone() convention of shape-validating,
+// never contacting an external service during a request. Always lower-cased
+// so "Owner@X.com" and "owner@x.com" are the same account/unique row.
+export function email(value: unknown): string {
+  const result = string(value, "email", 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result)) throw new HttpError(400, "Enter a valid email address");
+  return result;
+}
 export function numeric(value: unknown, field: string, fallback = "0"): string {
   const result = value === undefined ? fallback : String(value);
   if (!/^\d{1,9}(\.\d{1,3})?$/.test(result)) throw new HttpError(400, `Invalid ${field}`);

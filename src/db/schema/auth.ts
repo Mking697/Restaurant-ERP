@@ -21,7 +21,16 @@ export const users = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
-    phoneE164: text("phone_e164").notNull().unique(), // WhatsApp identity, zero-login
+    // Login identity. Nullable only because 2 pre-existing production rows
+    // predate this feature and need a one-time manual backfill (see
+    // docs/gap-email-login-verification.md) — every row the app itself ever
+    // creates (setup/admin-create) is forced to supply one.
+    email: text("email").unique(),
+    // No longer the login identity (see `email` above) — optional contact
+    // number used ONLY as a WhatsApp staff-reminder/escalation target
+    // (task-notifications.ts, purchase-notifications.ts). Nullable because
+    // it is now optional at account creation.
+    phoneE164: text("phone_e164").unique(),
     role: roleEnum("role").notNull(),
     branchId: text("branch_id").references(() => branches.id), // null for SUPER_ADMIN/CENTRAL_STORE_MGR
     passwordHash: text("password_hash"), // only for web dashboard logins (HQ/managers)

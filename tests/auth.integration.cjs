@@ -23,20 +23,20 @@ async function request(path, cookie='', method='GET', input, expected=200){
  assert.equal(response.status,expected,path+': '+JSON.stringify(data));
  return {data,cookie:response.headers.get('set-cookie')?.split(';')[0]||cookie};
 }
-async function login(user,password){return (await request('/api/auth/login','','POST',{phoneE164:user.phoneE164,password})).cookie;}
+async function login(user,password){return (await request('/api/auth/login','','POST',{email:user.email,password})).cookie;}
 (async()=>{
  const ownerId=randomUUID(), pass=randomBytes(24).toString('hex'); fixtureIds.push(ownerId);
- const phone='+918'+String(Date.now()).slice(-9);
+ const ownerEmail='qa-owner-'+run+'@test.local';
  try {
-  await pool.query('insert into users (id,name,phone_e164,role,password_hash,module_access) values ($1,$2,$3,$4,$5,$6)',[ownerId,'QA Owner '+run,phone,'SUPER_ADMIN',await hashPassword(pass),[]]);
-  const owner=await login({phoneE164:phone.slice(3)},pass); passed('ten-digit login resolves existing +91 account and issues session cookie');
+  await pool.query('insert into users (id,name,email,role,password_hash,module_access) values ($1,$2,$3,$4,$5,$6)',[ownerId,'QA Owner '+run,ownerEmail,'SUPER_ADMIN',await hashPassword(pass),[]]);
+  const owner=await login({email:ownerEmail},pass); passed('email login resolves existing account and issues session cookie');
   await request('/api/auth/me','', 'GET',undefined,401); passed('anonymous me denied');
   const a=(await request('/api/branches',owner,'POST',{name:'QA A '+run,code:'QA-A-'+run.slice(0,12)} ,201)).data.branch; branchIds.push(a.id);
   const b=(await request('/api/branches',owner,'POST',{name:'QA B '+run,code:'QA-B-'+run.slice(0,12)},201)).data.branch; branchIds.push(b.id);
   passed('owner creates two persisted branches');
-  let phoneCounter=0;
+  let emailCounter=0;
   async function createUser(role,branchId,grants,cookie=owner){
-   const user=(await request('/api/users',cookie,'POST',{name:'QA '+role+' '+run,phoneE164:'+917'+String(Date.now()+phoneCounter++).slice(-9),password:pass,role,branchId,moduleAccess:grants},201)).data.user;
+   const user=(await request('/api/users',cookie,'POST',{name:'QA '+role+' '+run,email:'qa-'+role.toLowerCase()+'-'+(Date.now()+emailCounter++)+'-'+run+'@test.local',password:pass,role,branchId,moduleAccess:grants},201)).data.user;
    fixtureIds.push(user.id);return user;
   }
   const manager=await createUser('BRANCH_MANAGER',a.id,['INVENTORY','TASKS_RECURRING']);
@@ -46,7 +46,7 @@ async function login(user,password){return (await request('/api/auth/login','','
   const ownBranches=(await request('/api/branches',mc)).data.branches; assert.deepEqual(ownBranches.map(x=>x.id),[a.id]);
   await request('/api/branches?branchId='+b.id,mc,'GET',undefined,403);passed('branch admin sees only own branch; foreign branch request denied');
   const child=await createUser('KITCHEN_STAFF',a.id,['INVENTORY'],mc); passed('branch admin creates own-branch user with held grant');
-  const invalid={name:'QA forbidden',phoneE164:'+916'+String(Date.now()).slice(-9),password:pass,role:'CASHIER',branchId:b.id,moduleAccess:[]};
+  const invalid={name:'QA forbidden',email:'qa-forbidden-'+Date.now()+'-'+run+'@test.local',password:pass,role:'CASHIER',branchId:b.id,moduleAccess:[]};
   await request('/api/users',mc,'POST',invalid,403);
   await request('/api/users',mc,'POST',{...invalid,branchId:a.id,moduleAccess:['REPORTS']},403);
   await request('/api/users',mc,'POST',{...invalid,role:'SUPER_ADMIN',branchId:null},403);

@@ -2,18 +2,18 @@
 import * as React from "react";
 import { type ModuleKey } from "@/lib/moduleAccess";
 export interface CurrentUser {
-  id: string; name: string; phone: string; phoneE164: string; role: string;
+  id: string; name: string; email: string; phone: string; phoneE164: string; role: string;
   branch: string; branchId: string | null; moduleAccess: ModuleKey[];
   status: "Active" | "Inactive"; ready: boolean; authenticated: boolean; error: string | null;
 }
 const anonymous: CurrentUser = {
-  id: "", name: "", phone: "", phoneE164: "", role: "ANONYMOUS", branch: "", branchId: null,
+  id: "", name: "", email: "", phone: "", phoneE164: "", role: "ANONYMOUS", branch: "", branchId: null,
   moduleAccess: [], status: "Inactive", ready: false, authenticated: false, error: null,
 };
-export type SessionUser = Pick<CurrentUser, "id" | "name" | "phoneE164" | "role" | "branchId" | "status"> & { moduleAccess: readonly string[] };
+export type SessionUser = Pick<CurrentUser, "id" | "name" | "email" | "phoneE164" | "role" | "branchId" | "status"> & { moduleAccess: readonly string[] };
 export function verifiedCurrentUser(user: SessionUser): CurrentUser {
   // Explicit allowlist: no password hash, token/version, or arbitrary DTO fields.
-  return { id: user.id, name: user.name, phoneE164: user.phoneE164, phone: user.phoneE164,
+  return { id: user.id, name: user.name, email: user.email, phoneE164: user.phoneE164, phone: user.phoneE164,
     role: user.role, branchId: user.branchId, branch: user.branchId ?? "All branches",
     moduleAccess: [...user.moduleAccess] as ModuleKey[], status: user.status, ready: true, authenticated: true, error: null };
 }

@@ -4,7 +4,7 @@ import { RestaurantBrand } from "@/components/branding-provider";
 import Link from "next/link";
 import { PreferencesControls } from "@/components/preferences-controls";
 import { useTranslation } from "@/lib/i18n";
-import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, Clock, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, Clock, SlidersHorizontal, KeyRound, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -80,7 +80,7 @@ export function AppShell({ children, activeHref }: { children: React.ReactNode; 
             {!owner && !branches.length && <option value={selected}>{loading ? t("Loading branch…", "Branch load ho rahi hai…") : user.branchId ? t("Own branch", "Apni branch") : t("No branch assigned", "Branch assign nahi hai")}</option>}
           </select>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm"><PreferencesControls /><span className="hidden sm:inline">{user.name}</span><Link href="/guide" className="flex items-center gap-1"><BookOpenCheck className="size-4" />{t("Guide", "Guide")}</Link><Button variant="outline" size="sm" disabled={loggingOut} onClick={logout}>{t("Log out", "Logout karein")}</Button></div>
+        <div className="flex flex-wrap items-center gap-3 text-sm"><PreferencesControls /><span className="hidden sm:inline">{user.name}</span><Link href="/account/change-password" className="flex items-center gap-1"><KeyRound className="size-4" />{t("Change password", "Password badlein")}</Link><Link href="/guide" className="flex items-center gap-1"><BookOpenCheck className="size-4" />{t("Guide", "Guide")}</Link><Button variant="outline" size="sm" disabled={loggingOut} onClick={logout}>{t("Log out", "Logout karein")}</Button></div>
       </header>
       {(error || branchError) && <p role="alert" className="p-3 text-sm text-destructive">{error || branchError}</p>}
       <main className="flex-1 overflow-x-hidden bg-background p-3 sm:p-4 md:p-6">{children}</main>
