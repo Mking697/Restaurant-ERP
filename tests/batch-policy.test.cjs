@@ -37,6 +37,17 @@ test('quality accepts batch evidence, rejects imaginary dates and keeps historic
  const line=parseQualityInput({...old,lines:[{id:'line',qtyFailed:'0',batchNo:'real',nonExpiring:true,evidence:'manufacturer spec'}]}).lines[0];
  assert.equal(line.batchNo,'real'); assert.equal(line.nonExpiring,true); assert.equal(line.evidence,'manufacturer spec');
 });
+test('sumBatchQty sums real lot remainders with exact bigint decimal math, never floating point',()=>{
+ const {sumBatchQty}=require('../src/lib/server/batch-policy.ts');
+ // 0.1+0.2 style drift: naive Number() summation of these 30 rows does not
+ // land exactly on "3.000" in IEEE-754 — this is the regression this test
+ // guards against (see reconciliationLots' EXACT-match requirement, which a
+ // one-thousandth drift here would wrongly fail or misclassify).
+ const rows=Array.from({length:30},()=>({qtyRemaining:'0.100'}));
+ assert.equal(sumBatchQty(rows),'3.000');
+ assert.equal(sumBatchQty([{qtyRemaining:'2.125'},{qtyRemaining:'0.875'}]),'3.000');
+ assert.equal(sumBatchQty([]),'0.000');
+});
 test('unknown expiry is held; explicit non-expiring requires Owner evidence; dates are real calendar dates',()=>{
  const {parseBatchInput,batchDisposition}=require('../src/lib/server/batch-policy.ts');
  assert.equal(parseBatchInput({},false).expiryStatus,'UNKNOWN');

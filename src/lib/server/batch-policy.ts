@@ -25,6 +25,14 @@ export function text(value: unknown, field: string, max = 200): string {
 export function fields(input: Record<string, unknown>, allowed: string[]) {
   if (Object.keys(input).some(key => !allowed.includes(key))) throw new HttpError(400, "Unexpected field");
 }
+// Exact bigint sum of real lot remainders — never JS floating point, same
+// "never use floating-point math for stock" rule as production-quantity.ts.
+// A naive Number()-based sum can drift at the 3rd decimal across enough
+// rows, which would make reconciliationLots' EXACT-match check below wrongly
+// reject (or, worse, silently misclassify) a genuinely exact difference.
+export function sumBatchQty(rows: { qtyRemaining: string }[]): string {
+  return decimal(rows.reduce((sum, row) => sum + quantity(row.qtyRemaining, true), 0n));
+}
 export function reconciliationLots(onHand: string, batchQty: string, values: unknown, evidenceValue: unknown) {
   const evidence = text(evidenceValue, "evidence", 2000);
   if (evidence.length < 3) throw new HttpError(400, "Evidence is required");

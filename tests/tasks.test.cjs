@@ -77,6 +77,20 @@ test('completing already-assigned recurring task by its own TASKS_RECURRING gran
   assert.throws(() => assertCanComplete(recurringGrantHolder, { assignedToId: 'someone-else', type: 'ONE_TIME' }), { status: 403 });
 });
 
+test('a global (branchId=null) recurring definition can only be managed by Owner, never a branch-scoped grant holder', () => {
+  const { updateRecurringStatus } = load();
+  const fakeTx = (row) => ({
+    select: () => ({ from: () => ({ where: async () => (row ? [row] : []) }) }),
+  });
+  const globalDef = { id: 'r1', branchId: null, status: 'Active' };
+  return (async () => {
+    await assert.rejects(
+      () => updateRecurringStatus(fakeTx(globalDef), manager, 'r1', { status: 'Paused' }),
+      { status: 403 }
+    );
+  })();
+});
+
 test('exported task routes reject anonymous reads and CSRF-less writes before any DB access', async () => {
   const Module = require('node:module'), path = require('node:path');
   const originalLoad = Module._load;

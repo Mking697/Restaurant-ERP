@@ -10,7 +10,7 @@ const {hashPassword} = require('../src/lib/server/password.ts');
 const target = new URL(process.env.BASE_URL || 'http://localhost:3000');
 assert.ok(['localhost','127.0.0.1'].includes(target.hostname) && target.protocol === 'http:' && target.pathname === '/' && !target.username && !target.password && !target.search && !target.hash, 'Only plain loopback HTTP allowed');
 assert.equal(process.env.PGHOST,'127.0.0.1'); assert.equal(process.env.PGPORT,'5436');
-assert.match(process.env.PGDATABASE || '', /^(restaurant_erp_local|restaurant_erp_workforce_qa_\d{8})$/);
+assert.match(process.env.PGDATABASE || '', /^(restaurant_erp_local|restaurant_erp_\w+_qa_\d{8})$/);
 const pool = new Pool({host:process.env.PGHOST,port:Number(process.env.PGPORT),user:process.env.PGUSER,password:process.env.PGPASSWORD,database:process.env.PGDATABASE,ssl:false});
 const origin = target.origin;
 const run = randomUUID();
@@ -74,11 +74,41 @@ async function login(user,password){return (await request('/api/auth/login','','
   const page=await fetch(origin+'/inventory',{redirect:'manual'});assert.equal(page.status,307);assert.ok(page.headers.get('location').includes('/login'));passed('anonymous direct page URL redirected');
   const forbiddenPage=await fetch(origin+'/admin/users',{headers:{cookie:sc}});const forbiddenHTML=await forbiddenPage.text();assert.ok(forbiddenHTML.includes('Access denied'));assert.ok(!forbiddenHTML.includes('QA Owner '+run));passed('direct forbidden page does not render user table');
   const ownerDTO=(await request('/api/auth/me',owner)).data.user;assert.equal('passwordHash' in ownerDTO,false);assert.equal('tokenVersion' in ownerDTO,false);passed('HTTP identity DTO has no credential material');
+  // GAP: self-service change-password (POST /api/auth/change-password) had zero automated
+  // regression coverage before this — only manually driven once (see
+  // docs/email-login-change-password-verification.md). Codify that same real flow here so a
+  // future change can't silently regress CSRF, old-password verification, tokenVersion-bump
+  // session revocation or the "stay logged in on your own request" re-issue.
+  const cpStaff=await createUser('CASHIER',a.id,['POS_CASHIER']);
+  const cpPass='initial-change-pw-'+run;
+  await pool.query('update users set password_hash=$1 where id=$2',[await hashPassword(cpPass),cpStaff.id]);
+  const cpOld=await login(cpStaff,cpPass);
+  const noOrigin=await fetch(origin+'/api/auth/change-password',{method:'POST',headers:{cookie:cpOld,'content-type':'application/json'},body:JSON.stringify({oldPassword:cpPass,newPassword:'new-change-pw-'+run+'-x',confirmPassword:'new-change-pw-'+run+'-x'})});
+  assert.equal(noOrigin.status,403);passed('change-password rejects a cross-origin/CSRF request without touching the password');
+  await request('/api/auth/change-password',cpOld,'POST',{oldPassword:'totally-wrong-password',newPassword:'new-change-pw-'+run+'-y',confirmPassword:'new-change-pw-'+run+'-y'},401);passed('change-password rejects the wrong current password');
+  await request('/api/auth/change-password',cpOld,'POST',{oldPassword:cpPass,newPassword:'short',confirmPassword:'short'},400);passed('change-password rejects a too-short new password');
+  await request('/api/auth/change-password',cpOld,'POST',{oldPassword:cpPass,newPassword:'new-change-pw-'+run+'-z',confirmPassword:'different-confirm-'+run},400);passed('change-password rejects a mismatched confirmation');
+  await request('/api/auth/me',cpOld,'GET',undefined,200);passed('change-password: failed attempts leave the current session usable');
+  const cpNewPassword='new-change-pw-'+run+'-final';
+  const cpResult=await request('/api/auth/change-password',cpOld,'POST',{oldPassword:cpPass,newPassword:cpNewPassword,confirmPassword:cpNewPassword});
+  const cpNew=cpResult.cookie;
+  assert.notEqual(cpNew,cpOld);passed('change-password issues a fresh session cookie, distinct from the old one');
+  await request('/api/auth/me',cpOld,'GET',undefined,401);passed('change-password revokes the OLD session immediately (tokenVersion bump)');
+  await request('/api/auth/me',cpNew,'GET',undefined,200);passed('change-password keeps the requesting client logged in via the freshly issued session');
+  await request('/api/auth/login','','POST',{email:cpStaff.email,password:cpPass},401);passed('change-password: the OLD password no longer logs in');
+  await login(cpStaff,cpNewPassword);passed('change-password: the NEW password logs in successfully');
   console.log('RESULT '+count+' real integration checks passed');
  } finally {
   await pool.query('delete from sessions where user_id = any($1::text[])',[fixtureIds]);
-  await pool.query('delete from inventory_stock where branch_id = any($1::text[])',[branchIds]);
-  await pool.query('delete from users where id = any($1::text[])',[fixtureIds]);
+   // batch_movements.actor_id FK's to users (added after this cleanup was last touched) —
+   // delete it before users or the user DELETE fails closed with an FK violation and every
+   // fixture below it is left stranded (same lesson as this project's own migrations skill:
+   // a new table referencing an entity already deleted here needs the same DELETE added).
+   await pool.query('delete from batch_movements where actor_id = any($1::text[])',[fixtureIds]);
+   await pool.query('delete from inventory_stock where branch_id = any($1::text[])',[branchIds]);
+   // stock_batches.branch_id also FK's to branches — same new-table/old-cleanup gap as above.
+   await pool.query('delete from stock_batches where branch_id = any($1::text[])',[branchIds]);
+   await pool.query('delete from users where id = any($1::text[])',[fixtureIds]);
   await pool.query('delete from branches where id = any($1::text[])',[branchIds]);
   await pool.query('delete from raw_materials where id = any($1::text[]) and name=$2',[[...new Set(materialIds)],'QA Ingredient '+run]);
   await pool.end(); console.log('QA fixtures cleaned');

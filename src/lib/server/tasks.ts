@@ -191,13 +191,30 @@ export async function listRecurring(tx: Executor, actor: Identity, branchQuery: 
   return { recurring: rows };
 }
 
+// branchScope(actor, requested) treats a null `requested` as "no filter
+// restriction" (the right meaning for a query-param scope), which is the
+// WRONG check for verifying ownership of one specific resource whose own
+// branchId happens to be null (a global, branchId=null definition, per this
+// table's own "null = global, cloned into branches" comment) — passing null
+// through branchScope would silently let any non-Owner TASKS_RECURRING
+// holder in ANY branch pause/resume a global definition that fans out to
+// every branch's task generation, not just their own. Only an Owner
+// (SUPER_ADMIN) may manage a global definition; a branch-scoped definition
+// still uses the normal branchScope ownership check.
+function assertRecurringOwnership(actor: Identity, branchId: string | null) {
+  if (branchId === null) {
+    if (actor.role !== "SUPER_ADMIN") throw new HttpError(403, "Owner access required for a global recurring task");
+    return;
+  }
+  branchScope(actor, branchId);
+}
 export async function updateRecurringStatus(tx: Executor, actor: Identity, id: string, input: Record<string, unknown>) {
   if (!hasModule(actor, "TASKS_RECURRING")) throw new HttpError(403, "Module access required");
   allowedFields(input, ["status"]);
   const status = enumField(input.status, "status", recurringStatusEnum.enumValues);
   const [row] = await tx.select().from(recurringTaskDefinitions).where(eq(recurringTaskDefinitions.id, id));
   if (!row) throw new HttpError(404, "Recurring task not found");
-  branchScope(actor, row.branchId);
+  assertRecurringOwnership(actor, row.branchId);
   await tx.update(recurringTaskDefinitions).set({ status }).where(eq(recurringTaskDefinitions.id, id));
   return { recurring: await recurringDTO(tx, id) };
 }

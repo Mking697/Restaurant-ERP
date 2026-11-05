@@ -153,3 +153,17 @@ test('expireOldEarns settles ONLY the FIFO-remaining portion of an aged-out lot,
   assert.equal(again.length, 0);
   assert.notEqual(newEarn.id, oldEarn.id);
 });
+
+test('expireOldEarns takes the SAME per-customer advisory lock as redeemPoints/reverseEarnForOrder (audit fix: it used to skip it)', async () => {
+  const { earnPoints, expireOldEarns } = load();
+  const tx = memoryTx({ pos_orders: [order('o9', '5000.00')], customers: [customer] });
+  const earn = await earnPoints(tx, actor, branchId, customer.id, 'o9');
+  tx.rows.reward_events.find(e => e.id === earn.id).expiresAt = new Date(Date.now() - 1000);
+
+  const executedSql = [];
+  const originalExecute = tx.execute.bind(tx);
+  tx.execute = async (query) => { executedSql.push(query); return originalExecute(query); };
+
+  await expireOldEarns(tx, actor, branchId, customer.id);
+  assert.equal(executedSql.length, 1, 'expireOldEarns must acquire the per-customer advisory lock exactly like redeemPoints does');
+});

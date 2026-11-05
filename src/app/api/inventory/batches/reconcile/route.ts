@@ -6,7 +6,7 @@ import { creditLocatedBatch } from "@/lib/server/stock-batches";
 import { mutate } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertOwner, HttpError } from "@/lib/server/permissions";
-import { fields, reconciliationLots } from "@/lib/server/batch-policy";
+import { fields, reconciliationLots, sumBatchQty } from "@/lib/server/batch-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
       const batchRows = await tx.select({ qtyRemaining: stockBatches.qtyRemaining }).from(stockBatches)
         .where(and(branchId ? eq(stockBatches.branchId, branchId) : eq(stockBatches.warehouseId, warehouseId!), eq(stockBatches.rawMaterialId, rawMaterialId)));
-      const batchQty = batchRows.reduce((sum, row) => sum + Number(row.qtyRemaining), 0).toFixed(3);
+      const batchQty = sumBatchQty(batchRows);
 
       const lots = reconciliationLots(qtyOnHand, batchQty, input.lots, input.evidence);
       const sourceId = randomUUID();

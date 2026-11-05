@@ -133,6 +133,15 @@ export async function reverseEarnForOrder(tx: Executor, actor: Identity, branchI
 // that was already reversed/expired, is simply skipped; the unique index
 // on reversesEventId is the backstop against ever double-expiring one lot.
 export async function expireOldEarns(tx: Executor, actor: Identity, branchId: string, customerId: string, now = new Date()) {
+  // Must take the SAME per-customer advisory lock as redeemPoints/
+  // reverseEarnForOrder — without it, a concurrent redeemPoints call could
+  // commit between this function's own event read and its EXPIRE insert,
+  // leaving the computed "remaining" lot size stale (computed against a
+  // balance that no longer reflects the just-committed redemption) and
+  // posting an EXPIRE for more points than the lot actually still has,
+  // corrupting the ledger's balance even though the unique index on
+  // reversesEventId prevents double-expiring the SAME lot twice.
+  await lockCustomerRewards(tx, customerId);
   const events = await allEvents(tx, customerId);
   const reversedIds = new Set(events.filter((e) => e.type === "REVERSE" && e.reversesEventId).map((e) => e.reversesEventId));
   const lots = events.filter((e) => e.type === "EARN" && !reversedIds.has(e.id)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
