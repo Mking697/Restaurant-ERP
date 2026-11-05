@@ -33,3 +33,4 @@ export * from "./stock-review";
 export * from "./customers";
 export * from "./rewards";
 export * from "./customer-qr";
+export * from "./central-purchase";

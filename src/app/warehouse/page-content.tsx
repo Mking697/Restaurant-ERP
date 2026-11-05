@@ -2,6 +2,7 @@
 import { useUiCopy } from "@/lib/ui-copy";
 import * as React from "react";
 import { CentralStockPanel } from "./central-stock-panel";
+import { CentralPurchasePanel } from "./central-purchase-panel";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { PendingWorkWidget } from "@/components/pending-work-widget";
@@ -166,7 +167,7 @@ export default function WarehousePage() {
     {!allowed ? <p role="alert">{uiText("Inventory permission is required.")}</p> : <>
       {error && <p role="alert" className="mb-4 text-destructive">{uiText(error)}</p>}{message && <p role="status" className="mb-4">{uiText(message)}</p>}
       <Tabs defaultValue="transfers">
-        <TabsList><TabsTrigger value="transfers">{uiText("Stock Transfers")}</TabsTrigger><TabsTrigger value="warehouses">{uiText("Warehouses")}</TabsTrigger></TabsList>
+        <TabsList><TabsTrigger value="transfers">{uiText("Stock Transfers")}</TabsTrigger><TabsTrigger value="warehouses">{uiText("Warehouses")}</TabsTrigger><TabsTrigger value="central-purchase">{uiText("Central Purchase")}</TabsTrigger></TabsList>
 
         <TabsContent value="transfers">
           <Card><CardContent className="pt-5">
@@ -201,6 +202,10 @@ export default function WarehousePage() {
             </TableBody></Table>
             {!loading && !warehouses.length && <p>{uiText("No warehouses yet — create a Central warehouse and a Branch warehouse per branch.")}</p>}
           </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="central-purchase">
+          <CentralPurchasePanel key={scopeKey} warehouses={centralWarehouses} materials={materials} />
         </TabsContent>
       </Tabs>
     </>}

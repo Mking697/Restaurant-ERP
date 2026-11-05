@@ -379,6 +379,13 @@
       "when": 1793890830602,
       "tag": "0053_faithful_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793904332678,
+      "tag": "0054_first_impossible_man",
+      "breakpoints": true
     }
   ]
 }

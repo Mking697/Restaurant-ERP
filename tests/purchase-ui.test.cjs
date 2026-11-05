@@ -44,7 +44,7 @@ async function pageHarness(options = {}) {
     'lucide-react': Object.fromEntries(['Plus', 'Check', 'X', 'Upload', 'PackageCheck', 'FlaskConical', 'Trash2'].map(k => [k, k])),
   };
   for (const [path, names] of Object.entries({
-    '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'],
+    '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/button': ['Button'],
     '@/components/ui/card': ['Card', 'CardContent'], '@/components/ui/table': ['Table', 'TableBody', 'TableCell', 'TableHead', 'TableHeader', 'TableRow'],
     '@/components/ui/badge': ['Badge'], '@/components/ui/tabs': ['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'],
     '@/components/ui/dialog': ['Dialog', 'DialogContent', 'DialogDescription', 'DialogFooter', 'DialogHeader', 'DialogTitle', 'DialogTrigger'],
