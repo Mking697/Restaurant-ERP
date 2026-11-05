@@ -2,6 +2,7 @@
 import * as React from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
@@ -75,6 +76,7 @@ function TasksScope({ selected }: { selected: string }) {
     <PageHeader title={t("Tasks & Checklists", "Tasks & Checklists")}
       description={t("Checklist is a recurring task — assign once, new occurrences follow the frequency. Delegation is one-time and priority-based; the doer marks it Done from their own dashboard.",
         "Checklist hi recurring task hai — ek baar assign karo, frequency ke hisaab se naye occurrence bante hain. Delegation one-time, priority-based hai. Doer apne dashboard se Done karega.")} />
+    <PendingWorkWidget />
     {error && <p role="alert" className="mb-3 text-destructive">{error}</p>}
     <Tabs defaultValue={canRecurring ? "recurring" : "delegation"}>
       <TabsList>

@@ -11,7 +11,7 @@ import { RevenueTrendChart, BranchRevenueBarChart, ChannelSplitPieChart } from "
 import { useSelectedBranchId } from "@/lib/current-branch";
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { formatInr, formatPercent } from "@/lib/utils";
-import { TrendingUp, TrendingDown, AlertTriangle, Trophy, Boxes, BookOpenCheck, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Trophy, Boxes, BookOpenCheck, ArrowRight, Activity } from "lucide-react";
 
 interface BranchKpi {
   branchId: string; branchName: string;
@@ -26,6 +26,8 @@ interface BranchKpi {
 }
 interface KpisResponse { branches: BranchKpi[]; channelSplit: { channel: string; revenueInr: number }[]; compiled: boolean; asOf: string }
 interface TrendResponse { trend: { date: string; label: string; revenueInr: string; orderCount: number }[] }
+interface ActivityEvent { type: string; at: string; actorName: string; branchName: string; summary: string }
+interface ActivityResponse { events: ActivityEvent[] }
 
 function errMsg(err: unknown, fallback: string) {
   return err instanceof RequestJsonError ? err.message : err instanceof Error ? err.message : fallback;
@@ -45,6 +47,7 @@ function DashboardContent() {
   const isSingleBranch = selectedBranchId !== "all" && selectedBranchId !== "__no_branch__";
   const [kpis, setKpis] = React.useState<KpisResponse | null>(null);
   const [trend, setTrend] = React.useState<TrendResponse["trend"]>([]);
+  const [activity, setActivity] = React.useState<ActivityEvent[]>([]);
   const [loadError, setLoadError] = React.useState("");
 
   React.useEffect(() => {
@@ -55,6 +58,7 @@ function DashboardContent() {
     setLoadError("");
     requestJson<KpisResponse>(`/api/dashboard/kpis${branchQuery}`, { signal: controller.signal }).then((data) => { if (active) setKpis(data); }).catch((err) => { if (active) setLoadError(errMsg(err, "Could not load dashboard KPIs")); });
     if (canReadTrend) requestJson<TrendResponse>(`/api/reports/sales-trend${branchQuery}${branchQuery ? "&" : "?"}days=14`, { signal: controller.signal }).then((data) => { if (active) setTrend(data.trend); }).catch((err) => { if (active) setLoadError(errMsg(err, "Revenue trend unavailable")); });
+    requestJson<ActivityResponse>(`/api/dashboard/activity${branchQuery}`, { signal: controller.signal }).then((data) => { if (active) setActivity(data.events); }).catch(() => { if (active) setActivity([]); });
     return () => { active = false; controller.abort(); };
   }, [selectedBranchId, isSingleBranch, canReadTrend]);
 
@@ -235,6 +239,41 @@ function DashboardContent() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Activity className="size-4 text-primary" />{uiText("Recent activity — last 7 days")}</CardTitle>
+          <CardDescription>{uiText("Every action below comes from its own module's saved record (sale, void, indent, GRN, stock count, shift close, payroll, expense, task, leave) — nothing here is a separate log.", "Neeche har action uske apne module ke saved record se aata hai (sale, void, indent, GRN, stock count, shift close, payroll, expense, task, leave) — yeh koi alag log nahi hai.")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activity.length ? (
+            <div className="max-h-[480px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{uiText("When")}</TableHead>
+                    <TableHead>{uiText("Who")}</TableHead>
+                    <TableHead>{uiText("Branch")}</TableHead>
+                    <TableHead>{uiText("What")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activity.map((e, i) => (
+                    <TableRow key={`${e.type}:${e.at}:${i}`}>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{new Date(e.at).toLocaleString("en-TZ", { timeZone: "Africa/Dar_es_Salaam", dateStyle: "short", timeStyle: "short" })}</TableCell>
+                      <TableCell className="font-medium">{e.actorName}</TableCell>
+                      <TableCell>{e.branchName}</TableCell>
+                      <TableCell>{e.summary}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{uiText(kpis ? "No activity recorded in the last 7 days." : "Loading real records…")}</p>
+          )}
         </CardContent>
       </Card>
     </AppShell>

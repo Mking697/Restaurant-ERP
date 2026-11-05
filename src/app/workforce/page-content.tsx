@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useCurrentUser, hasCurrentModule } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 import { useTranslation } from "@/lib/i18n";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Field, inputClass, Panel } from "./live-ui";
 import EmployeesPanel from "./employees-panel";
 import AttendancePanel from "./attendance-panel";
@@ -27,6 +28,7 @@ function WorkforceScope({ selected }: {selected:string}) {
     {error && <p role="alert" className="mb-3 text-destructive">{error}</p>}
     {!payroll && !attendance && !leaves ? <p role="alert">{t("Workforce permission is required.", "Workforce permission chahiye.")}</p> : <>
       <div className="mb-4 max-w-sm"><Field label={t("Branch", "Branch")}><select className={inputClass} disabled={actor.role !== "SUPER_ADMIN" || selected !== "all"} value={branchId === "__no_branch__" ? "" : branchId} onChange={e => setChoice(e.target.value)}><option value="">{t("Select one branch", "Ek branch chuno")}</option>{branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field></div>
+      <PendingWorkWidget />
       <Tabs key={branchId} defaultValue={defaultTab}><TabsList>{payroll && <TabsTrigger value="employees">{t("Employees", "Employees")}</TabsTrigger>}{attendance && <TabsTrigger value="attendance">{t("Daily attendance", "Roz ki attendance")}</TabsTrigger>}{leaves && <TabsTrigger value="leaves">{t("Leave requests", "Chhutti requests")}</TabsTrigger>}{payroll && <TabsTrigger value="payroll">{t("Payroll", "Payroll")}</TabsTrigger>}</TabsList>
         {branchId && branchId !== "__no_branch__" ? <>{payroll && <TabsContent value="employees"><EmployeesPanel branchId={branchId} /></TabsContent>}{attendance && <TabsContent value="attendance"><AttendancePanel branchId={branchId} /></TabsContent>}{leaves && <TabsContent value="leaves"><LeavesPanel branchId={branchId} /></TabsContent>}{payroll && <TabsContent value="payroll"><PayrollPanel branchId={branchId} /></TabsContent>}</> : <Panel>{t("Select a branch to load its records.", "Records load karne ke liye ek branch chuno.")}</Panel>}
       </Tabs>

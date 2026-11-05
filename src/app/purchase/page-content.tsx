@@ -4,6 +4,7 @@ import { useUiCopy } from "@/lib/ui-copy";
 import * as React from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -508,6 +509,7 @@ export default function PurchasePage() {
           </DialogContent>
         </Dialog>
       </PageHeader>
+      <PendingWorkWidget />
 
       <Tabs defaultValue="indents">
         <TabsList>

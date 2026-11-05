@@ -2,6 +2,7 @@
 import * as React from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,6 +40,7 @@ function AccountsScope({ selected }: { selected: string }) {
   const refunds = hasCurrentModule(actor, "VENDOR_REFUNDS");
   const any = pnl || petty || recon || vat || refunds;
   return <><PageHeader title={t("Accounts", "Accounts")} description={t("Saved expenses, finalized payroll costs and expected refund/credit claims (not money received). Demonstration tabs remain labelled separately.", "Saved expenses, final payroll costs aur expected refund/credit claims (paisa receive nahi hua). Demo tabs alag label kiye gaye hain.")} />
+    <PendingWorkWidget />
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!any ? <p role="alert">{t("Accounts permission is required.", "Accounts permission chahiye.")}</p> : <>
       {pnl && <div className="mb-4 grid max-w-xl gap-3 sm:grid-cols-2"><Field label={t("Branch", "Branch")}><select className={inputClass} value={validBranch ? branchId : ""} disabled={actor.role !== "SUPER_ADMIN" || selected !== "all"} onChange={e => setChoice(e.target.value)}><option value="">{t("Select one branch", "Ek branch chuno")}</option>{branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></Field><Field label={t("Month", "Mahina")}><input className={inputClass} type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>}

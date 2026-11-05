@@ -1,0 +1,168 @@
+===== purchase-indent =====
+HI SUMMARY: Branch raw materials ke liye internal demand raise karta hai — abhi vendor ya PO involve nahi hota.
+ -- Steps & Conditions
+   * "Raise Indent" click karo.
+   * Branch select karo, 1-50 line items (material + quantity) enter karo.
+   * "Raise" click karo — indent DRAFT status mein save hota hai.
+   * DRAFT indent sirf ek draft hai, abhi approval queue mein nahi hai.
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== purchase-submit-approval =====
+HI SUMMARY: DRAFT indent submit karne par do independent checks chalte hain — quantity spike aur value threshold — fir auto-approve hota hai ya Owner ko jaata hai.
+ -- Steps
+   * DRAFT row par "Submit for Approval" click karo.
+   * System automatically decide karta hai APPROVED (free path) ya PENDING_APPROVAL (Owner review zaroori).
+ -- Check 1 — Quantity Spike
+   * Har material ke liye last 30 din ke actually-posted GRNs (status APPROVED, yaani real quality-passed receipts) ka rolling average compute hota hai.
+   * Kam se kam 3 samples zaroori hain, warna "no real baseline" hota hai — tab indent automatically PENDING_APPROVAL ho jaata hai, average kabhi fabricate nahi hota.
+   * Agar requested qty average se 25% zyada ho, to spike flag trigger hota hai -> PENDING_APPROVAL, aur exact spike% (jaise +40.5%) save hota hai.
+ -- Check 2 — Value Threshold (Owner-Configurable)
+   * Agar Owner ne Business Policy mein TSh value threshold set kiya ho, indent ki estimated value (latest locked vendor rate x requested qty) calculate hoti hai.
+   * Agar kisi material ka locked rate missing ho, estimate "unknown" treat hoti hai aur fail-closed hoti hai — matlab PENDING_APPROVAL force hota hai, unknown cost par silently auto-approve kabhi nahi hota.
+   * Agar estimated value threshold ke equal ya zyada ho, to PENDING_APPROVAL ho jaata hai.
+   * Jo bhi check trigger ho, PENDING_APPROVAL ho jaata hai — sirf jab dono checks clear hon tab auto-APPROVED hota hai.
+ EXAMPLE: "Paneer" ka 30-day average 20kg/order hai (5 samples). Indent 30kg request karta hai — 30 > 20x1.25=25, spike detect hota hai (+50% average se zyada) -> PENDING_APPROVAL, value threshold enabled ho ya na ho.
+
+===== purchase-approve-indent =====
+HI SUMMARY: PENDING_APPROVAL indent sirf Owner review karta hai — branch manager ya requester kabhi nahi.
+ -- Steps & Conditions
+   * "Approve" ya "Reject" button sirf SUPER_ADMIN ko PENDING_APPROVAL rows par dikhta hai.
+   * Sirf Owner approve/reject kar sakta hai — branch manager ya requester khud kabhi nahi (GAP-016 mandatory HO approval rule).
+   * Approved indent "APPROVED" status mein chala jaata hai, aur ab usi par PO raise ho sakta hai.
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== purchase-po-create =====
+HI SUMMARY: Approved indent ke against PO banana (Store purchase) ya free-standing General purchase ke roop mein.
+ -- Steps — Store Purchase
+   * "New Purchase" click karo, "General purchase" checkbox unchecked rakho.
+   * Branch, Vendor select karo; "Full indent ID" enter karo aur "Look up approved indent" karo (latest 200 approved indents dropdown mein pehle se dikhte hain; purane ke liye full-ID lookup chahiye).
+   * Approved indent select karne par sab materials/quantities locked dikhte hain (indent se exactly match hona chahiye) — har line ke liye rate (TSh/unit) enter karo.
+   * "Create (Step 1: Buy)" click karo.
+ -- Steps — General Purchase
+   * "General purchase" checkbox check karo.
+   * Branch, Vendor, Item description, Amount (TSh) enter karo.
+   * "Create (Step 1: Buy)" click karo.
+ -- Conditions
+   * Store purchase ke liye APPROVED indent zaroori hai; General purchase ke saath indent allowed nahi hai.
+   * PO ke materials aur quantities approved indent se exactly match hona chahiye, aggregate mein compare hota hai duplicate lines sahit.
+   * Vendor APPROVED status mein hona chahiye — DRAFT ya SUSPENDED vendor ke liye PO bilkul nahi ban sakta (server-side hard enforce, UI se bypass nahi ho sakta).
+   * Agar vendor kisi specific branch/category tak restricted hai, to scope ke bahar PO reject ho jaata hai.
+   * General Purchase value gate (GAP-016): agar Owner ne threshold set kiya hai aur general purchase value usse equal/zyada ho, to pehle alag "General Purchase HO Approvals" request APPROVED honi chahiye (uska generalPurchaseRequestId pass karna hoga) — general-purchase flag se yeh review skip nahi ho sakta.
+   * PO creation se status "CREATED" set hota hai aur linked indent (agar ho) "PO_RAISED" ho jaata hai.
+ EXAMPLE: Indent mein "Aata" 50kg + "Namak" 5kg approved tha. PO banate waqt rate Aata TSh45/kg, Namak TSh20/kg daala gaya. PO Amount = 50x45 + 5x20 = TSh2350.
+
+===== purchase-upload-bill =====
+HI SUMMARY: Vendor ka physical bill optional record ke roop mein attach karna — actual 3-way-match invoice step alag hai.
+ -- Steps & Conditions
+   * PO row mein, "Upload Bill (optional)" ke under file (PDF/PNG/JPEG/WEBP) choose karo — automatically upload ho jaata hai.
+   * Bill ek baar upload ho gaya to re-upload allow nahi hai (assertPoNotBilled).
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== purchase-material-received =====
+HI SUMMARY: Vendor ka saaman aane par GRN banta hai jo Quality Check ke liye ready hota hai — ek PO multiple deliveries mein split ho sakta hai.
+ -- Steps & Conditions
+   * "Mark Material Received" click karo (ya "Receive Remaining" agar already PARTIALLY_RECEIVED hai).
+   * System har PO line ki outstanding quantity compute karta hai (ordered minus already-received sabhi prior GRNs mein), aur ek PENDING GRN banta hai.
+   * GRN ab "GRN/Quality" tab mein quality check ke liye dikhta hai.
+   * Jo PO line fully received ho gayi, usko dobara receive karne ki koshish nahi ho sakti.
+   * Agar kisi line mein real shortage ho (jaise 100kg order, 80kg aaya), to PO status "PARTIALLY_RECEIVED" ho jaata hai; sab lines fully receive hone par status "RECEIVED" ho jaata hai.
+   * Fully-received PO par dobara receive karne ki koshish 409 error deti hai.
+   * Yeh step sirf GRN banata hai — stock yahan kabhi post nahi hota, stock sirf Quality Check par post hota hai.
+ EXAMPLE: PO mein 100kg "Dal" order kiya gaya. Pehli receive mein sirf 70kg mila (vendor shortage) — GRN1 bana qtyReceived=70, PO status "PARTIALLY_RECEIVED". Kuch din baad baaki 30kg aata hai — "Receive Remaining" se GRN2 banta hai qtyReceived=30 (outstanding = 100-70=30), PO status "RECEIVED".
+
+===== purchase-grn-quality =====
+HI SUMMARY: Received material par PASS/PARTIAL/FAIL verdict dena aur correct accepted quantity inventory mein post karna.
+ -- Steps
+   * "GRN/Quality" tab mein, pending GRN par "Quality Check" click karo.
+   * Result choose karo: PASS / PARTIAL / FAIL.
+   * PARTIAL mein har line ki "Failed quantity" enter karo (received se kam, 0 se zyada).
+   * Store purchase (raw material) aur FAIL ke alawa result ke liye, har accepted line ke liye batch reference aur original expiry date enter karo (ya non-expiring + evidence, Owner-only).
+   * Quality note likho — FAIL/PARTIAL ke liye kam se kam 3 characters zaroori hain.
+   * Finalize karne ke liye "Save quality" click karo.
+ -- Conditions
+   * PASS -> kisi bhi line ki failed qty 0 se zyada nahi ho sakti.
+   * FAIL -> saari lines fully failed hoti hain (accepted=0).
+   * PARTIAL -> kam se kam ek line part-failed honi chahiye, aur kam se kam ek line part-accepted honi chahiye (full-pass ya full-fail par PARTIAL mark nahi kiya ja sakta).
+   * Quality check ke liye PURCHASE_ORDER module zaroori hai; store purchase ke liye INVENTORY module bhi zaroori hai (general purchase ko sirf PURCHASE_ORDER chahiye).
+   * Quality decision atomic hai — accepted stock (qtyReceived minus qtyFailed) inventory + stock-ledger + expiry batches mein same transaction mein post hota hai, all-or-nothing.
+   * General purchase quality decision save karta hai lekin inventory mein kabhi post nahi karta (yeh stock bilkul nahi hai).
+   * Ek baar quality decision save hone ke baad edit nahi ho sakta — exact same request repeat karna safe "replay" no-op hai, lekin same GRN par alag decision reject ho jaata hai ("already finalized with a different decision").
+   * FAIL/PARTIAL automatically Vendor Return claim queue karta hai — yeh khud trigger hota hai, manual action ki zaroorat nahi.
+ EXAMPLE: GRN mein 50kg "Tamatar" received hua. Quality check mein 5kg spoiled nikla -> result "PARTIAL", failed qty = 5kg. Accepted = 45kg inventory mein post hota hai, batch banta hai (batchNo aur expiry enter kiya gaya). 5kg ka vendor claim auto-queue hota hai.
+
+===== purchase-invoice-match =====
+HI SUMMARY: Vendor ka invoice record karna aur automatically PO total, GRN accepted value, aur adjusted invoice amount se compare karna.
+ -- Steps
+   * Jab PO fully "RECEIVED" ho jaaye (har GRN quality-checked ho), "4. Invoice & Payment" click karo.
+   * Invoice number, amount enter karo; optional tax adjustment (+/-), agar diya ho to reason bhi likhna zaroori hai.
+   * Invoice document attach karo (optional upload), "Record invoice" click karo — system auto-match karta hai.
+ -- Conditions
+   * Ek PO par invoice sirf ek baar record ho sakta hai.
+   * PO ke saare GRNs ka quality pehle se recorded hona chahiye (koi PENDING GRN na bache), warna "incomplete accepted value" treat hota hai.
+   * 3-way match formula: GRN accepted value (sum of (qtyReceived-qtyFailed) x rateOrdered) vs Invoice (adjusted) (invoice.amount + taxAdjustmentInr).
+   * PO total alag se dikhaya jaata hai lekin sirf informational hai — PO total aur GRN accepted value mein genuine difference normal hai jab quality mein kuch qty fail hui ho.
+   * Tolerance TSh1.00 hai — usse zyada difference "Mismatch" hai aur payment THREE_WAY_LOCKED ho jaata hai (reconcile hone tak approve/paid nahi ho sakta).
+   * Match hone par payment status "PENDING" se start hota hai.
+ EXAMPLE: PO total TSh2350 tha. GRN mein 5kg fail hua (Tamatar @ TSh30), isliye GRN accepted value PO total se kam hai — yeh normal hai. Vendor invoice TSh2200 tha. Agar GRN accepted value bhi TSh2200 (±TSh1) ho, to "Matched" dikhata hai.
+
+===== purchase-payment =====
+HI SUMMARY: Accounts matched invoice approve karta hai, phir actual payment evidence record karta hai — exact amount, ek baar hi per match.
+ -- Steps
+   * Agar match "Matched" hai aur status "PENDING" hai, "Approve payment" click karo (Accounts-only).
+   * Status "APPROVED" hone par, Payment Method (Bank Transfer/Cash/Cheque/Mobile Money), Reference number, Paid date fill karo; "Mark paid" click karo.
+ -- Conditions
+   * Mismatched (unmatched/THREE_WAY_LOCKED) invoice ka payment kabhi approve nahi ho sakta.
+   * Payment sirf full outstanding amount ke liye exactly hota hai (invoiceAdjustedTotalInr) — partial payment approve nahi hota, exact amount match zaroori hai.
+   * Ek match par sirf ek hi payment record possible hai — re-allocation reject ho jaata hai.
+   * Idempotency key use hoti hai — same key + same payload safe replay retry hai; same key + different payload reject ho jaata hai.
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== warehouse-tab =====
+HI SUMMARY: Two-level warehouse system: ek CENTRAL (HQ bulk stock) aur har branch ka apna BRANCH warehouse.
+ -- Steps & Conditions
+   * "New Warehouse" click karo (Owner-only).
+   * Type Central ya Branch choose karo.
+   * Name enter karo, aur Branch type chuna ho to branch select karo.
+   * Finalize karne ke liye "Create" click karo.
+   * Sirf SUPER_ADMIN naya warehouse create kar sakta hai.
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== warehouse-stock-in =====
+HI SUMMARY: Central warehouse par directly stock-in record karna, flat balance aur real expiry-batch lots dono update hote hain.
+ -- Steps & Conditions
+   * Warehouses tab par jao, central warehouse select karo.
+   * Raw material, quantity, batch reference, expiry date enter karo.
+   * "Record central stock-in" click karo.
+   * Unknown expiry (na date, na "non-expiring") HELD rehta hai — Owner verify kiye bina consumption/FEFO dispatch ke liye eligible nahi.
+   * "Owner verified non-expiring" sirf SUPER_ADMIN ke liye hai aur evidence zaroori hai.
+   * Central warehouse ka flat balance (warehouseStock) aur real batch-lots total hamesha reconcile hona chahiye — mismatch hone par internal availability "unknown" ho jaati hai (reorder suggestions bhi affect hoti hain).
+ EXAMPLE: Is section ke liye source mein koi worked example nahi diya gaya.
+
+===== warehouse-dispatch =====
+HI SUMMARY: Central warehouse se branch warehouse ko raw material bhejna — sirf Central-to-Branch supported hai.
+ -- Steps & Conditions
+   * "Dispatch Transfer" click karo.
+   * "From (Central)" aur "To (Branch)" warehouse choose karo — branch user sirf apni branch ka warehouse select kar sakta hai; Owner kisi bhi branch ko dispatch kar sakta hai.
+   * Raw material aur qty dispatched enter karo, "Dispatch" click karo.
+   * Sirf Central-to-Branch transfer supported hai; branch-to-branch abhi available nahi.
+   * Dispatch FEFO se eligible lots select karta hai — expired/HELD/unknown-expiry stock automatically block ho jaata hai, kabhi use nahi hota.
+   * Central warehouse ka flat balance dispatch ke time atomically debit hota hai — stock kam ho to poora transaction rollback hota hai (partial transfer kabhi nahi banta).
+   * Branch ki inventory sirf receipt confirm hone par update hoti hai, dispatch ke time nahi.
+   * Optionally isko internal requisition line se link kiya ja sakta hai (requisitionLineId) — tab system check karta hai ki total dispatch approved qty se zyada na ho.
+ EXAMPLE: Sirf dispatch ke liye alag example nahi diya gaya — Confirm Receipt ka example dekho jo poora dispatch-and-receive cycle cover karta hai.
+
+===== warehouse-receipt =====
+HI SUMMARY: DISPATCHED transfer ki actual received quantity branch confirm karta hai — partial receive possible hai, per-lot bhi.
+ -- Steps
+   * "Stock Transfers" tab mein, DISPATCHED transfer par "Receive" click karo.
+   * Agar dispatch multiple lots (batches) se hua hai, to har lot ki received quantity alag se enter ki ja sakti hai — full dispatched prefilled hota hai, shortfall ke liye change karo.
+   * "Confirm Receipt" click karo — system variance dikhata hai (dispatched minus received).
+ -- Conditions
+   * Received quantity dispatched quantity se kabhi zyada nahi ho sakti.
+   * Agar dispatch multiple lots se hua aur received total dispatched total se kam ho (real shortfall), to per-lot breakdown mandatory hai — sirf ek aggregate number allow nahi hai (pata nahi chalta kaunsa lot kam aaya).
+   * Single-lot dispatch, ya full-qty multi-lot receive, par per-lot breakdown optional ho jaata hai.
+   * Branch ko credit karte waqt original dispatched lot ki identity (batchNo, expiry) preserve rehti hai — real lot pata ho to fabricated "unknown origin" batch kabhi nahi banta.
+   * Receive idempotent hai: exact same repeated request double-credit nahi karta, sirf stored result dobara return karta hai.
+   * Already-received transfer ko dobara receive karne ki alag request par 409 error aata hai.
+ EXAMPLE: Central ne 10kg "Chawal" dispatch kiya — 2 lots: Lot A 6kg (expiry 2026-12-01), Lot B 4kg (expiry 2026-12-15). Branch ko sirf 9kg mila (1kg transit mein spill/damage hua). Staff Lot A 6kg, Lot B 3kg confirm karta hai. Total received = 9kg, variance = 1kg (shortfall flag hota hai). Branch stock ko wahi 2 original lots credit hote hain (6kg of expiry 12/01, 3kg of expiry 12/15) — koi "unknown" lot nahi banta.
+

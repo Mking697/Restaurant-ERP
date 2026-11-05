@@ -4,6 +4,7 @@ import * as React from "react";
 import { CentralStockPanel } from "./central-stock-panel";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -160,6 +161,7 @@ export default function WarehousePage() {
         </Dialog>}
       </div>
     </PageHeader>
+    <PendingWorkWidget />
 
     {!allowed ? <p role="alert">{uiText("Inventory permission is required.")}</p> : <>
       {error && <p role="alert" className="mb-4 text-destructive">{uiText(error)}</p>}{message && <p role="status" className="mb-4">{uiText(message)}</p>}

@@ -4,6 +4,7 @@ import { useUiCopy } from "@/lib/ui-copy";
 import * as React from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
+import { PendingWorkWidget } from "@/components/pending-work-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
@@ -129,6 +130,7 @@ function ScopedCashDrop() {
         description={uiText("Expected cash stays hidden until submission. Count the denominations, then end this shift manually to hand over cash, card and UPI totals to the next shift.", "Expected cash submit tak hidden hai. Denominations gino, phir shift manually end karke agli shift ko cash, card aur UPI totals handover karo.")}
       />
 
+      <PendingWorkWidget />
       <p className="mb-4 text-sm text-muted-foreground">{uiText("Actual cash reconciliation includes all real sales, including Owner-only orders. It is not the access-filtered sales view.", "Actual cash reconciliation mein sabhi real sales, Owner-only orders bhi included hain. Yeh access-filtered sales view nahi hai.")}</p>
       {actor.role === "SUPER_ADMIN" && <HoCashDispatchPanel />}
       <ShiftSummaryPanel branchId={branchId} allowed={allowed} refreshToken={summaryToken} />
