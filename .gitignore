@@ -11,3 +11,15 @@ coverage/
 
 .vercel
 .env*
+
+# One-off scratch/deliverable files — never commit these
+presentation/
+.archify/
+vercel.json
+dashboard_data.js
+inventory_data.js
+pos_kitchen_waiter_cashdrop_data.js
+workforce_data.js
+roles_data.js
+erp_guide_data.json
+purchase_warehouse_dump.txt
