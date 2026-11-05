@@ -11,6 +11,7 @@ export const NAV_ITEMS = [
   { href: "/purchase", label: "Purchase & GRN", icon: "ShoppingCart", module: "PURCHASE_ORDER" },
   { href: "/pos", label: "POS / Cashier", icon: "CreditCard", module: "POS_CASHIER" },
   { href: "/kitchen", label: "Kitchen / Bar Queue", icon: "ChefHat", module: "POS_KITCHEN" },
+  { href: "/waiter", label: "Waiter — Take Order", icon: "ClipboardList", module: "POS_WAITER" },
   { href: "/cash-drop", label: "Blind Cash Drop", icon: "Wallet", module: "CASH_DROP" },
   { href: "/workforce", label: "Staff, Attendance & Payroll", icon: "Users", module: "PAYROLL" },
   { href: "/accounts", label: "Accounts", icon: "Landmark", module: "PETTY_CASH" },

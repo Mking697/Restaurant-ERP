@@ -8,7 +8,7 @@ import { branches } from "../../db/schema/platform";
 import { posOrderAttempts, posOrderLines, posOrders, posProductionTicketLines, posProductionTickets, posReceipts } from "../../db/schema/pos";
 import type { Executor } from "./auth";
 import { computeOrderCogs } from "./cogs";
-import { assertModule, branchScope, HttpError, type Identity } from "./permissions";
+import { assertAnyModule, assertModule, branchScope, hasModule, HttpError, type Identity } from "./permissions";
 import { deductStock, lockRecipeStock, readStockRecipe } from "./production";
 import { directRequirements } from "./production-quantity";
 import { requireOperableShift } from "./shifts";
@@ -132,7 +132,7 @@ function receipt(lines: { menuItemId: string; name: string; qty: number; price: 
 }
 
 export async function createPosOrder(tx: Executor, actor: Identity, branchId: string, input: Record<string, unknown>, documentContext?: { draftId: string; draftRevision: number }) {
-  assertModule(actor, "POS_CASHIER");
+  assertAnyModule(actor, ["POS_CASHIER", "POS_WAITER"]);
   branchScope(actor, branchId);
   assertAllowedFields(input, ["branchId", "channel", "tableNo", "counterNo", "customerPhone", "customerName", "tenderType", "tenderCurrencyCode", "lines", "idempotencyKey"]);
   const key = idempotencyKey(input.idempotencyKey);
@@ -141,6 +141,9 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
   const channel = input.channel as OrderChannel;
   if (!(["DINE_IN", "TAKEAWAY", "SWIGGY", "ZOMATO"] as string[]).includes(channel)) throw new HttpError(400, "Invalid channel");
   const flow = orderFlow(branch.operatingConcept as BranchConcept, channel);
+  // A Waiter-only actor (no POS_CASHIER) never collects payment: only the
+  // unpaid, kitchen-first flow (Conventional dine-in) may be created this way.
+  if (!hasModule(actor, "POS_CASHIER") && flow !== "PRODUCTION_FIRST") throw new HttpError(403, "Waiters can only send dine-in orders at a Conventional (dine-in) branch. Use POS / Cashier for this order.");
   const tableNo = tableNumber(input.tableNo, flow);
   if (input.counterNo !== undefined && (typeof input.counterNo !== "string" || !(POS_COUNTERS as readonly string[]).includes(input.counterNo))) throw new HttpError(400, "Invalid counterNo");
   const counterNo = typeof input.counterNo === "string" ? input.counterNo : "COUNTER_1";
@@ -180,7 +183,7 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
 }
 
 export async function addPosOrderLines(tx: Executor, actor: Identity, orderId: string, input: Record<string, unknown>) {
-  assertModule(actor, "POS_CASHIER");
+  assertAnyModule(actor, ["POS_CASHIER", "POS_WAITER"]);
   assertAllowedFields(input, ["lines", "idempotencyKey"]);
   const [order] = await tx.select().from(posOrders).where(eq(posOrders.id, orderId)).limit(1);
   assertOrderVisible(actor, order);

@@ -44,7 +44,7 @@ function harness(orders, role = 'BRANCH_MANAGER') {
     'drizzle-orm':orm, '@/db/client':{db},
     '@/lib/server/auth':{requireIdentity:async()=>actor, locked:fn=>fn(db)},
     '@/lib/server/http':{api:fn=>fn(),json:x=>x},
-    '@/lib/server/permissions':{assertModule(){},branchScope:()=> 'a',HttpError:class extends Error{}},
+    '@/lib/server/permissions':{assertModule(){},assertAnyModule(){},branchScope:()=> 'a',HttpError:class extends Error{}},
     '@/lib/server/order-visibility':{operationalOrderVisibility:a=>a.role==='SUPER_ADMIN'?undefined:orm.eq(table('posOrders').ownerOnly,false),salesSummaryFor:(a,t)=>a.role==='SUPER_ADMIN'?t:{visibleTotal:t.visibleTotal}},
     '@/lib/server/pos-orders':{}, '@/lib/server/whatsapp-triggers':{}, '@/lib/server/whatsapp-preferences':{}, '@/lib/settings':{getSetting:async()=>''}, '@/lib/chatxflow':{sendWhatsAppMessage:async(...args)=>{sent.push(args);return {ok:true};}},
     '@/app/api/mis/_shared':{listMisScores:async()=>[]}, '@/lib/server/accounts-ledger':{queryBranchId:x=>x},

@@ -4,7 +4,7 @@ import { posOrders } from "@/db/schema/pos";
 import { locked, mutate, requireIdentity } from "@/lib/server/auth";
 import { operationalOrderVisibility, salesSummaryFor } from "@/lib/server/order-visibility";
 import { api, body, json } from "@/lib/server/http";
-import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
+import { assertAnyModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { createPosOrder } from "@/lib/server/pos-orders";
 import { businessDayRange } from "@/lib/server/business-calendar";
 import { posSaleTime } from "@/lib/server/pos-reporting";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return api(() => locked(async tx => {
     const actor = await requireIdentity(request, tx);
-    assertModule(actor, "POS_CASHIER");
+    assertAnyModule(actor, ["POS_CASHIER", "POS_WAITER"]);
     const scope = branchScope(actor, new URL(request.url).searchParams.get("branchId"));
     const { start, end } = businessDayRange();
     const branch = scope ? eq(posOrders.branchId, scope) : undefined;
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return api(async () => {
     const result = await mutate(request, async (tx, actor) => {
-      assertModule(actor, "POS_CASHIER");
+      assertAnyModule(actor, ["POS_CASHIER", "POS_WAITER"]);
       const input = await body(request);
       if (["ownerOnly", "owner_only", "visibility"].some(key => key in input)) throw new HttpError(400, "Order visibility can only be changed by the Owner using the visibility action");
       const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);

@@ -4,7 +4,7 @@ import { RestaurantBrand } from "@/components/branding-provider";
 import Link from "next/link";
 import { PreferencesControls } from "@/components/preferences-controls";
 import { useTranslation } from "@/lib/i18n";
-import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, Clock, SlidersHorizontal, KeyRound, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, Warehouse as WarehouseIcon, Menu, Clock, SlidersHorizontal, KeyRound, ClipboardList, Download, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetCloseButton } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { clearCurrentUser, hasCurrentModule, refreshCurrentUser, requestJson, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId, setSelectedBranchId } from "@/lib/current-branch";
-const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, WarehouseIcon, Clock, SlidersHorizontal };
+const ICONS: Record<string, LucideIcon> = { LayoutDashboard, FileBarChart, Trophy, ListChecks, Boxes, ShoppingCart, CreditCard, Wallet, Landmark, Users, Building2, MessageCircle, BookOpenCheck, ChefHat, WarehouseIcon, Clock, SlidersHorizontal, ClipboardList, Download };
 export function canNavigate(user: CurrentUser, href: string, module: string) {
   if (!user.ready || !user.authenticated) return false;
   if (href === "/admin/users" || href === "/admin/branches") return ["SUPER_ADMIN", "BRANCH_MANAGER"].includes(user.role);
@@ -20,6 +20,7 @@ export function canNavigate(user: CurrentUser, href: string, module: string) {
   const groups: Record<string, string[]> = {
     "/tasks": ["TASKS_RECURRING", "CHECKLISTS", "TASKS_DELEGATION"],
     "/kitchen": ["POS_KITCHEN", "POS_CASHIER"],
+    "/waiter": ["POS_WAITER", "POS_CASHIER"],
     "/purchase": ["PURCHASE_INDENT", "PURCHASE_ORDER"],
     "/accounts": ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"],
     "/workforce": ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"],
@@ -30,12 +31,12 @@ function Logo() { return <RestaurantBrand />; }
 const NAV_HINGLISH: Record<string, string> = {
   "/dashboard": "Owner ka Dashboard", "/reports": "Reports", "/ho-stock-review": "HO Stock Review", "/performance": "MIS Ranking",
   "/tasks": "Kaam aur Checklists", "/inventory": "Stock", "/purchase": "Kharid aur GRN", "/menu": "Menu aur BOM", "/warehouse": "Warehouse aur Transfer",
-  "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/kitchen": "Kitchen / Bar Queue", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
-  "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/admin/settings/business-policy": "Business Policy Settings", "/guide": "Guide Book",
+  "/workforce": "Staff, Attendance aur Salary", "/pos": "POS / Cashier", "/kitchen": "Kitchen / Bar Queue", "/waiter": "Waiter — Order Lo", "/cash-drop": "Blind Cash Jama", "/accounts": "Hisaab",
+  "/admin/settings/restaurant": "Restaurant ki Settings", "/admin/users": "Users aur Permissions", "/admin/branches": "Branches", "/admin/settings/whatsapp": "WhatsApp Settings", "/admin/settings/business-policy": "Business Policy Settings", "/guide": "Guide Book", "/app-downloads": "App Downloads",
 };
 function NavList({ user, activeHref, onNavigate }: { user: CurrentUser; activeHref?: string; onNavigate?: () => void }) {
   const { t } = useTranslation();
-  const items = [...NAV_ITEMS.filter(item => canNavigate(user, item.href, item.module)), { href: "/guide", label: "Guide Book", icon: "BookOpenCheck" }];
+  const items = [...NAV_ITEMS.filter(item => canNavigate(user, item.href, item.module)), { href: "/app-downloads", label: "App Downloads", icon: "Download" }, { href: "/guide", label: "Guide Book", icon: "BookOpenCheck" }];
   return <nav className="flex-1 overflow-y-auto p-2">{items.map(item => {
     const Icon = ICONS[item.icon];
     return <Link key={item.href} href={item.href} prefetch={false} onClick={onNavigate} className={cn("mb-1 flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium", activeHref === item.href ? "bg-primary text-primary-foreground" : "hover:bg-accent")}><Icon className="size-4 shrink-0" />{t(item.label, NAV_HINGLISH[item.href])}</Link>;

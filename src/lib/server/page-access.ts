@@ -12,13 +12,14 @@ const RULES: Array<[string, ModuleKey[]]> = [
  ["/purchase", ["PURCHASE_INDENT", "PURCHASE_ORDER"]],
  ["/inventory", ["INVENTORY"]], ["/pos", ["POS_CASHIER"]],
  ["/kitchen", ["POS_KITCHEN", "POS_CASHIER"]],
+ ["/waiter", ["POS_WAITER", "POS_CASHIER"]],
  ["/warehouse", ["INVENTORY"]],
  ["/cash-drop", ["CASH_DROP"]], ["/accounts", ["PETTY_CASH", "AGGREGATOR_RECON", "ACCOUNTS_EXPENSES", "PAYROLL", "OFFICIAL_SALES_REPORTS", "VENDOR_REFUNDS"]],
  ["/admin/settings/shifts", ["SHIFT_MANAGEMENT"]],
  ["/workforce", ["PAYROLL", "ATTENDANCE", "LEAVE_APPROVAL", "LEAVE_SELF"]],
 ];
 export function canOpenPath(user: Identity, path: string) {
- if (path === "/guide" || path === "/") return true;
+ if (path === "/guide" || path === "/" || path === "/app-downloads") return true;
  if (path === "/admin/settings/restaurant" || path.startsWith("/admin/settings/restaurant/")) return user.role === "SUPER_ADMIN";
  if (path === "/admin/settings/whatsapp") return user.role === "SUPER_ADMIN";
  if (path === "/admin/settings/business-policy") return user.role === "SUPER_ADMIN";
@@ -29,7 +30,7 @@ export function canOpenPath(user: Identity, path: string) {
 // No mock business records are exposed as if persisted and branch-isolated.
 // Enable each remaining route only after its DB-backed acceptance is complete.
 export function isPersistedPath(path: string) {
- const persisted = ["/", "/guide", "/dashboard", "/reports", "/ho-stock-review", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/kitchen", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/admin/settings/business-policy", "/cash-drop"];
+ const persisted = ["/", "/guide", "/dashboard", "/reports", "/ho-stock-review", "/performance", "/tasks", "/purchase", "/accounts", "/workforce", "/admin/users", "/admin/branches", "/inventory", "/menu", "/pos", "/kitchen", "/waiter", "/app-downloads", "/warehouse", "/admin/settings/whatsapp", "/admin/settings/restaurant", "/admin/settings/shifts", "/admin/settings/business-policy", "/cash-drop"];
  // Report details share the real-data implementation; do not classify other
  // arbitrary nested routes as persisted. Purchase labels its remaining
  // quality-result/return/refund limitations beside those specific actions.

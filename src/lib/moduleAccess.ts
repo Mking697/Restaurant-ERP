@@ -18,6 +18,7 @@ export const MODULE_KEYS = [
   "CHECKLISTS", // multi-step checklist templates/runs (opening/closing, audits)
   "POS_CASHIER", // POS billing
   "POS_KITCHEN", // preparation queue only; does not grant billing/collection
+  "POS_WAITER", // table order-taking only (Conventional/dine-in branches); no billing, no payment, no settle
   "OFFICIAL_SALES_REPORTS", // unfiltered official VAT/accounting sales exports; not operational visibility
   "CASH_DROP", // blind cash drop entry
   "PETTY_CASH", // petty cash ledger

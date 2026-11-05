@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { PosTicketPreview, type PosTicket, type TicketAction } from "@/components/pos-ticket-preview";
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { useSelectedBranchId } from "@/lib/current-branch";
+import { PwaInstall } from "@/components/pwa-install";
 
 interface Queue { tickets: PosTicket[]; limit: number; truncated: boolean; capabilities: { canPrepare: boolean; canCashier: boolean; canCancel: boolean } }
 interface Intent { ticketId: string; ticketNumber: string; branchId: string; action: TicketAction; expectedRevision: number; requestKey: string; hadUnknown?: boolean }
@@ -98,7 +99,7 @@ function KitchenQueue({ selected, requestedSelection, onPendingChange }: { selec
   }
   return <AppShell activeHref="/kitchen">
     <div className="space-y-5">
-      <header><h1 className="text-2xl font-semibold">Kitchen / bar preparation</h1><p className="text-sm text-muted-foreground">Saved preparation tickets only. Financial and preparation status are separate.</p></header>
+      <header><h1 className="text-2xl font-semibold">Kitchen / bar preparation</h1><p className="text-sm text-muted-foreground">Saved preparation tickets only. Financial and preparation status are separate.</p><div className="pt-2"><PwaInstall scope="/kitchen/" /></div></header>
       {!allowed ? <p role="alert">Kitchen or cashier access is required.</p> : <>
         <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
           <label>Station <select value={station} disabled={locked} onChange={event => { if (intent.current || inFlight.current) return; setQueue(null); setPreviewId(null); setStation(event.target.value); }} className="rounded border bg-background p-2"><option value="ALL">All stations</option><option value="KITCHEN">Kitchen</option><option value="BAR">Bar</option></select></label>

@@ -5,6 +5,7 @@ export class HttpError extends Error { constructor(public status: number, messag
 export function assertOwner(user: Identity) { if (user.role !== "SUPER_ADMIN") throw new HttpError(403, "Owner access required"); }
 export function hasModule(user: Identity, key: ModuleKey) { return user.role === "SUPER_ADMIN" || user.moduleAccess.includes(key); }
 export function assertModule(user: Identity, key: ModuleKey) { if (!hasModule(user, key)) throw new HttpError(403, "Module access required"); }
+export function assertAnyModule(user: Identity, keys: ModuleKey[]) { if (!keys.some(key => hasModule(user, key))) throw new HttpError(403, "Module access required"); }
 export function assertUserAdmin(user: Identity) {
   if (user.role !== "SUPER_ADMIN" && user.role !== "BRANCH_MANAGER") throw new HttpError(403, "User administration required");
 }

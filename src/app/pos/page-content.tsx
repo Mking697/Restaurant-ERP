@@ -18,6 +18,7 @@ import { PosDocumentsPanel, type DocumentPending } from "./documents-panel";
 import { PosPaymentsPanel } from "./payments-panel";
 import { PosVoidPanel } from "./void-panel";
 import { MenuTilePicker } from "./menu-tile-picker";
+import { PwaInstall } from "@/components/pwa-install";
 import type { Document } from "@/lib/pos-documents";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
@@ -324,6 +325,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
     <AppShell activeHref="/pos">
       <PageHeader title={uiText("POS / Cashier")} description={uiText("Fast-food and non-dine-in orders are paid first. Conventional dine-in validates and posts stock when KOT/BOT tickets are dispatched, then creates the receipt when payment is settled.")}>
         <div className="flex flex-wrap gap-2">
+        <PwaInstall scope="/pos/" />
         {isOwner && <Dialog open={ratesOpen} onOpenChange={(v) => { setRatesOpen(v); if (v) setError(""); }}>
           <DialogTrigger asChild><Button size="sm" variant="outline">{uiText("Currency Rates")}</Button></DialogTrigger>
           <DialogContent><DialogHeader><DialogTitle>{uiText("Exchange Rates")}</DialogTitle><DialogDescription>{uiText("1 unit of the foreign currency = this many TSh. Each order locks in the rate at sale time — changing it here never alters past orders.", "1 unit foreign currency = itne TSh. Har order apne time ka rate lock kar leta hai — yahan change karne se purane orders nahi badalte.")}</DialogDescription></DialogHeader>
