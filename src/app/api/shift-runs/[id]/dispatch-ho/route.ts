@@ -1,0 +1,48 @@
+import { mutate } from "@/lib/server/auth";
+import { api, body, json } from "@/lib/server/http";
+import { branchScope, HttpError, hasModule, type Identity } from "@/lib/server/permissions";
+import { dispatchShiftCashToHo } from "@/lib/server/shifts";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function assertOperational(actor: Identity) {
+  if (!hasModule(actor, "POS_CASHIER") && !hasModule(actor, "CASH_DROP") && !hasModule(actor, "SHIFT_MANAGEMENT")) {
+    throw new HttpError(403, "POS, Cash Drop or Shift Management access required");
+  }
+}
+function count(value: unknown, field: string) {
+  const n = Number(value ?? 0);
+  if (!Number.isInteger(n) || n < 0 || n > 100000) throw new HttpError(400, `Invalid ${field}`);
+  return n;
+}
+function coinAmount(value: unknown) {
+  const text = String(value ?? 0);
+  if (!/^\d{1,6}(?:\.\d{1,2})?$/.test(text) || Number(text) > 100000) throw new HttpError(400, "Invalid coinsInr");
+  return Number(text);
+}
+
+// GAP-036: ends the given OPEN run by sending its counted cash to Head
+// Office — the branch's FINAL shift of the business day. Unlike
+// POST /api/shift-runs/[id]/end, this does NOT open a next run.
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  return api(async () => {
+    const { id } = await params;
+    const result = await mutate(request, async (tx, actor) => {
+      assertOperational(actor);
+      const input = await body(request);
+      const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);
+      if (!branchId) throw new HttpError(400, "Select a branch");
+      const denominations = {
+        note10000Count: count(input.note10000Count, "note10000Count"),
+        note5000Count: count(input.note5000Count, "note5000Count"),
+        note2000Count: count(input.note2000Count, "note2000Count"),
+        note1000Count: count(input.note1000Count, "note1000Count"),
+        note500Count: count(input.note500Count, "note500Count"),
+        coinsInr: coinAmount(input.coinsInr),
+      };
+      return dispatchShiftCashToHo(tx, actor, branchId, id, denominations, input.retainedFloatInr);
+    });
+    return json(result, 201);
+  });
+}

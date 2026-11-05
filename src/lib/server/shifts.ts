@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { branchShifts, shiftHandovers, shiftRuns } from "../../db/schema/shifts";
-import { cashDrops, posOrders } from "../../db/schema/pos";
+import { branchShifts, hoCashDispatches, shiftHandovers, shiftRuns } from "../../db/schema/shifts";
+import { cashDrops } from "../../db/schema/pos";
+import { branchExpenses } from "../../db/schema/expenses";
 import type { Executor } from "./auth";
 import { HttpError, type Identity } from "./permissions";
 import { businessTimeHHMM } from "./business-calendar";
+import { readPosCollectionTenders } from "./pos-collections";
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -99,16 +101,44 @@ export async function requireOperableShift(tx: Executor, branchId: string): Prom
   return { shiftRunId: run.id, gated: false };
 }
 
-export async function startFirstShift(tx: Executor, actor: Identity, branchId: string) {
+export async function startFirstShift(tx: Executor, actor: Identity, branchId: string, input: { openingFloatInr?: unknown; openingFloatReference?: unknown } = {}) {
   await lockShiftState(tx, branchId);
   const defs = await activeDefinitions(tx, branchId);
   if (!defs.length) throw new HttpError(400, "Configure at least one shift for this branch first");
   const existing = await currentOpenRun(tx, branchId);
   if (existing) throw new HttpError(409, "A shift is already open for this branch");
+  // GAP-033: an explicit opening float is Branch Manager/Owner-only — a
+  // plain cashier may still start a shift (unaffected, exactly as before)
+  // as long as they don't attempt to also record custody-sensitive cash.
+  const openingFloatInr = openingFloatAmount(input.openingFloatInr);
+  if (openingFloatInr !== null && !(actor.role === "SUPER_ADMIN" || actor.role === "BRANCH_MANAGER")) throw new HttpError(403, "Only a Branch Manager or Owner may record an opening cash float");
+  const openingFloatReference = openingFloatInr !== null ? openingFloatReferenceText(input.openingFloatReference) : "";
   const now = currentIstTime();
   const due = defs.find((d) => isWithin(now, d.startTime, d.endTime)) ?? defs[0];
-  const [run] = await tx.insert(shiftRuns).values({ id: randomUUID(), branchId, shiftDefinitionId: due.id, label: due.label, status: "OPEN", startedBy: actor.id }).returning();
+  const [run] = await tx.insert(shiftRuns).values({
+    id: randomUUID(), branchId, shiftDefinitionId: due.id, label: due.label, status: "OPEN", startedBy: actor.id,
+    openingFloatInr, openingFloatReference,
+    openingFloatRecordedBy: openingFloatInr !== null ? actor.id : null,
+    openingFloatRecordedAt: openingFloatInr !== null ? new Date() : null,
+  }).returning();
   return run;
+}
+
+// Non-negative, at most 2 decimals, e.g. "50000.00" / "0.00". Returns null
+// for "not provided" (the ordinary, unaffected path) — distinct from an
+// explicit "0" (a deliberate, Manager-recorded "no float today" entry).
+function openingFloatAmount(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" && typeof value !== "number") throw new HttpError(400, "Invalid opening float amount");
+  const str = typeof value === "number" ? value.toFixed(2) : value.trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(str)) throw new HttpError(400, "Opening float amount must be a non-negative number with at most 2 decimals");
+  return Number(str).toFixed(2);
+}
+
+function openingFloatReferenceText(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string" || value.length > 200) throw new HttpError(400, "Opening float source/reference must be text up to 200 characters");
+  return value.trim();
 }
 
 // Exact paise-equivalent BigInt money math — same convention as src/lib/
@@ -116,7 +146,7 @@ export async function startFirstShift(tx: Executor, actor: Identity, branchId: s
 // there is no shared money module yet (pre-existing pattern in this
 // codebase). Shift-close is the real audited cash-variance figure, so it
 // must never drift from float summation error across hundreds of orders.
-function toCents(value: string): bigint {
+export function toCents(value: string): bigint {
   if (!/^-?\d+(\.\d{1,2})?$/.test(value)) throw new Error("Invalid persisted money");
   const negative = value.startsWith("-");
   const abs = negative ? value.slice(1) : value;
@@ -124,10 +154,40 @@ function toCents(value: string): bigint {
   const cents = BigInt(whole) * BigInt(100) + BigInt(fraction.padEnd(2, "0"));
   return negative ? -cents : cents;
 }
-function fromCents(value: bigint): string {
+export function fromCents(value: bigint): string {
   const negative = value < BigInt(0);
   const abs = negative ? -value : value;
   return (negative ? "-" : "") + `${abs / BigInt(100)}.${String(abs % BigInt(100)).padStart(2, "0")}`;
+}
+
+// Shared by endShiftAndHandover and dispatchShiftCashToHo — the real
+// expected-cash baseline (opening float or carried-forward drawer balance)
+// plus this run's own actual collected tenders (GAP-026 seam) minus any
+// POSTED CASH drawer expense linked to this exact run (GAP-035). Never
+// touches DB state; pure computation over already-loaded run + live reads.
+async function computeExpectedCashCents(tx: Executor, branchId: string, run: typeof shiftRuns.$inferSelect) {
+  const tenders = await readPosCollectionTenders(tx, branchId, run.id);
+  const [incoming] = await tx.select().from(shiftHandovers).where(and(eq(shiftHandovers.toRunId, run.id), eq(shiftHandovers.branchId, branchId), eq(shiftHandovers.status, "ACCEPTED"))).limit(1);
+  let cashExpectedCents = toCents(incoming?.cashAmount ?? run.openingFloatInr ?? "0"), cardCents = BigInt(0), upiCents = BigInt(0), otherCents = BigInt(0);
+  for (const row of tenders) {
+    const amountCents = toCents(row.totalAmount);
+    if (row.tenderType === "CASH") cashExpectedCents += amountCents;
+    else if (row.tenderType === "CARD") cardCents += amountCents;
+    else if (row.tenderType === "UPI") upiCents += amountCents;
+    else otherCents += amountCents;
+  }
+  const cashExpenseRows = await tx.select().from(branchExpenses).where(and(eq(branchExpenses.branchId, branchId), eq(branchExpenses.shiftRunId, run.id)));
+  for (const row of cashExpenseRows) if (row.status === "POSTED") cashExpectedCents -= toCents(row.amount);
+  return { cashExpectedCents, cardCents, upiCents, otherCents };
+}
+
+function countedCentsFrom(denominations: { note10000Count: number; note5000Count: number; note2000Count: number; note1000Count: number; note500Count: number; coinsInr: number }) {
+  return BigInt(10000 * 100) * BigInt(denominations.note10000Count)
+    + BigInt(5000 * 100) * BigInt(denominations.note5000Count)
+    + BigInt(2000 * 100) * BigInt(denominations.note2000Count)
+    + BigInt(1000 * 100) * BigInt(denominations.note1000Count)
+    + BigInt(500 * 100) * BigInt(denominations.note500Count)
+    + toCents(denominations.coinsInr.toFixed(2));
 }
 
 // Ends the given OPEN run: takes the closing blind cash count, computes this
@@ -150,30 +210,8 @@ export async function endShiftAndHandover(tx: Executor, actor: Identity, branchI
   const next = currentIndex >= 0 ? defs[(currentIndex + 1) % defs.length] : defs.find((d) => isWithin(currentIstTime(), d.startTime, d.endTime));
   if (!next) throw new HttpError(409, "No shift window covers the current time");
 
-  // Keep the legacy COMPLETED query separate from new PAID rows so old
-  // in-memory transaction harnesses and existing persisted sales remain valid.
-  const legacyTenders = await tx.select({ tenderType: posOrders.tenderType, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.shiftRunId, run.id), eq(posOrders.branchId, branchId), eq(posOrders.status, "COMPLETED")));
-  const paidTenders = await tx.select({ tenderType: posOrders.tenderType, totalAmount: posOrders.totalAmount }).from(posOrders).where(and(eq(posOrders.shiftRunId, run.id), eq(posOrders.branchId, branchId), eq(posOrders.status, "PAID")));
-  const tenders = [...legacyTenders, ...paidTenders];
-  // Physical cash is carried forward at its accepted COUNTED value, including
-  // any prior shortage/excess. Electronic tenders are receipts for this run
-  // only, not a drawer balance: never add incoming CARD/UPI/OTHER again.
-  const [incoming] = await tx.select().from(shiftHandovers).where(and(eq(shiftHandovers.toRunId, run.id), eq(shiftHandovers.branchId, branchId), eq(shiftHandovers.status, "ACCEPTED"))).limit(1);
-  let cashExpectedCents = toCents(incoming?.cashAmount ?? "0"), cardCents = BigInt(0), upiCents = BigInt(0), otherCents = BigInt(0);
-  for (const row of tenders) {
-    const amountCents = toCents(row.totalAmount);
-    if (row.tenderType === "CASH") cashExpectedCents += amountCents;
-    else if (row.tenderType === "CARD") cardCents += amountCents;
-    else if (row.tenderType === "UPI") upiCents += amountCents;
-    else otherCents += amountCents;
-  }
-
-  const countedCashCents = BigInt(10000 * 100) * BigInt(denominations.note10000Count)
-    + BigInt(5000 * 100) * BigInt(denominations.note5000Count)
-    + BigInt(2000 * 100) * BigInt(denominations.note2000Count)
-    + BigInt(1000 * 100) * BigInt(denominations.note1000Count)
-    + BigInt(500 * 100) * BigInt(denominations.note500Count)
-    + toCents(denominations.coinsInr.toFixed(2));
+  const { cashExpectedCents, cardCents, upiCents, otherCents } = await computeExpectedCashCents(tx, branchId, run);
+  const countedCashCents = countedCentsFrom(denominations);
   const shortageExcessCents = countedCashCents - cashExpectedCents;
   const closingDropId = randomUUID();
   await tx.insert(cashDrops).values({
@@ -202,5 +240,65 @@ export async function acceptHandover(tx: Executor, actor: Identity, branchId: st
   const [handover] = await tx.select().from(shiftHandovers).where(and(eq(shiftHandovers.id, handoverId), eq(shiftHandovers.branchId, branchId), eq(shiftHandovers.status, "PENDING"))).limit(1);
   if (!handover) throw new HttpError(404, "Pending handover not found");
   const [updated] = await tx.update(shiftHandovers).set({ status: "ACCEPTED", acceptedBy: actor.id, acceptedAt: new Date() }).where(eq(shiftHandovers.id, handoverId)).returning();
+  return updated;
+}
+
+// GAP-036: ends the given OPEN run by sending its counted cash to Head
+// Office — the branch's FINAL shift of the business day, not a same-branch
+// handover. Deliberately does NOT open a next run: the branch has no OPEN
+// shift until someone explicitly starts one again (typically the next
+// business day, referencing retainedFloatInr as that new run's GAP-033
+// opening float — a manual, separate act). The run's own OPEN-status check
+// below is what prevents a double dispatch (a second attempt 404s, since
+// the run is already ENDED), in addition to the unique index on fromRunId.
+export async function dispatchShiftCashToHo(tx: Executor, actor: Identity, branchId: string, runId: string, denominations: { note10000Count: number; note5000Count: number; note2000Count: number; note1000Count: number; note500Count: number; coinsInr: number }, retainedFloatInput: unknown) {
+  await lockShiftState(tx, branchId);
+  const [run] = await tx.select().from(shiftRuns).where(and(eq(shiftRuns.id, runId), eq(shiftRuns.branchId, branchId), eq(shiftRuns.status, "OPEN"))).limit(1);
+  if (!run) throw new HttpError(404, "Open shift run not found");
+  const pending = await pendingHandoverFor(tx, run.id);
+  if (pending) throw new HttpError(409, "Accept this shift's own handover before ending it");
+
+  const { cashExpectedCents } = await computeExpectedCashCents(tx, branchId, run);
+  const countedCashCents = countedCentsFrom(denominations);
+  const shortageExcessCents = countedCashCents - cashExpectedCents;
+
+  const retainedFloatCents = retainedFloatInput === undefined || retainedFloatInput === null || retainedFloatInput === "" ? BigInt(0) : toCents(openingFloatAmount(retainedFloatInput) ?? "0");
+  if (retainedFloatCents < BigInt(0) || retainedFloatCents > countedCashCents) throw new HttpError(400, "Retained float must be between 0 and the full counted cash");
+  const dispatchedCents = countedCashCents - retainedFloatCents;
+
+  const closingDropId = randomUUID();
+  await tx.insert(cashDrops).values({
+    id: closingDropId, branchId, cashierId: actor.id, shiftDate: run.startedAt,
+    expectedCashInr: fromCents(cashExpectedCents),
+    note10000Count: denominations.note10000Count, note5000Count: denominations.note5000Count, note2000Count: denominations.note2000Count,
+    note1000Count: denominations.note1000Count, note500Count: denominations.note500Count,
+    coinsInr: denominations.coinsInr.toFixed(2), countedCashInr: fromCents(countedCashCents),
+    shortageExcessInr: fromCents(shortageExcessCents), shiftRunId: run.id,
+  });
+
+  const [endedRun] = await tx.update(shiftRuns).set({ status: "ENDED", endedAt: new Date(), endedBy: actor.id }).where(eq(shiftRuns.id, run.id)).returning();
+
+  const [dispatch] = await tx.insert(hoCashDispatches).values({
+    id: randomUUID(), branchId, fromRunId: run.id, closingCashDropId: closingDropId,
+    countedCashInr: fromCents(countedCashCents), retainedFloatInr: fromCents(retainedFloatCents), dispatchedAmountInr: fromCents(dispatchedCents),
+    dispatchedBy: actor.id,
+  }).returning();
+
+  return { dispatch, fromRun: endedRun, cashExpected: fromCents(cashExpectedCents), shortageExcessInr: fromCents(shortageExcessCents) };
+}
+
+// GAP-036 acceptance: Owner/SUPER_ADMIN only (Head Office) — never the same
+// actor who dispatched (self-acceptance), never a branch-scoped manager
+// (cross-branch substitution is structurally impossible since no non-Owner
+// role can ever reach this at all). Exactly-once: the dispatch's own
+// PENDING-status check rejects a retry/duplicate accept with 409.
+export async function acceptHoCashDispatch(tx: Executor, actor: Identity, dispatchId: string, acceptedAmountInput: unknown) {
+  if (actor.role !== "SUPER_ADMIN") throw new HttpError(403, "Only the Owner (Head Office) may accept a cash dispatch");
+  const [dispatch] = await tx.select().from(hoCashDispatches).where(and(eq(hoCashDispatches.id, dispatchId), eq(hoCashDispatches.status, "PENDING"))).limit(1);
+  if (!dispatch) throw new HttpError(404, "Pending cash dispatch not found");
+  if (dispatch.dispatchedBy === actor.id) throw new HttpError(403, "The dispatching actor cannot also accept their own cash dispatch");
+  const acceptedAmountInr = openingFloatAmount(acceptedAmountInput) ?? dispatch.dispatchedAmountInr;
+  const discrepancyInr = fromCents(toCents(acceptedAmountInr) - toCents(dispatch.dispatchedAmountInr));
+  const [updated] = await tx.update(hoCashDispatches).set({ status: "ACCEPTED", acceptedBy: actor.id, acceptedAt: new Date(), acceptedAmountInr, discrepancyInr }).where(eq(hoCashDispatches.id, dispatchId)).returning();
   return updated;
 }

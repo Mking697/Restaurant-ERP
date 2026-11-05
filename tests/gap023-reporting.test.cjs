@@ -46,7 +46,7 @@ function harness(orders, role = 'BRANCH_MANAGER') {
     '@/lib/server/http':{api:fn=>fn(),json:x=>x},
     '@/lib/server/permissions':{assertModule(){},branchScope:()=> 'a',HttpError:class extends Error{}},
     '@/lib/server/order-visibility':{operationalOrderVisibility:a=>a.role==='SUPER_ADMIN'?undefined:orm.eq(table('posOrders').ownerOnly,false),salesSummaryFor:(a,t)=>a.role==='SUPER_ADMIN'?t:{visibleTotal:t.visibleTotal}},
-    '@/lib/server/pos-orders':{}, '@/lib/server/whatsapp-triggers':{}, '@/lib/chatxflow':{sendWhatsAppMessage:async(...args)=>{sent.push(args);return {ok:true};}},
+    '@/lib/server/pos-orders':{}, '@/lib/server/whatsapp-triggers':{}, '@/lib/server/whatsapp-preferences':{}, '@/lib/settings':{getSetting:async()=>''}, '@/lib/chatxflow':{sendWhatsAppMessage:async(...args)=>{sent.push(args);return {ok:true};}},
     '@/app/api/mis/_shared':{listMisScores:async()=>[]}, '@/lib/server/accounts-ledger':{queryBranchId:x=>x},
     '@/lib/server/expenses':{expensePermission(){},expenseScope:()=> 'a',expenseMonth:()=>({month:'2026-11',start:'2026-10-31T21:00:00Z',end:'2026-11-30T21:00:00Z'}),expenseProfitLoss:(month,expenses,payroll,revenue,cogs,cogsComplete)=>({revenue,cogs,cogsComplete})},
   };

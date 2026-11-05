@@ -13,6 +13,17 @@ export function expenseScope(actor: Identity, requested?: unknown, write = false
 
 export const EXPENSE_CATEGORIES = ["RENT", "UTILITIES", "MARKETING", "OTHER"] as const;
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+// GAP-035: "" = unspecified/legacy (never a drawer movement — the pre-existing
+// behavior), "CASH" = a real physical drawer outflow (shiftRunId is resolved
+// server-side, never client-supplied — see the POST route), "NON_CASH" =
+// bank/card/other, explicit, still never a drawer movement.
+export const EXPENSE_PAYMENT_METHODS = ["", "CASH", "NON_CASH"] as const;
+export type ExpensePaymentMethod = typeof EXPENSE_PAYMENT_METHODS[number];
+export function expensePaymentMethod(value: unknown): ExpensePaymentMethod {
+  if (value === undefined) return "";
+  if (!(EXPENSE_PAYMENT_METHODS as readonly unknown[]).includes(value)) throw new HttpError(400, "Invalid paymentMethod");
+  return value as ExpensePaymentMethod;
+}
 function text(value: unknown, field: string, min: number, max: number): string {
   if (typeof value !== "string" || value.length > max || value.trim().length < min || /[\u0000-\u001f\u007f]/.test(value)) throw new HttpError(400, `Invalid ${field}`);
   return value.trim();
@@ -92,7 +103,7 @@ export function expenseProfitLoss(month: string, rows: CostRow[], finalizedPayro
     ] };
 }
 export function parseExpense(input: Record<string, unknown>) {
-  const fields = ["branchId", "date", "category", "subcategory", "amount", "description", "reference", "idempotencyKey"];
+  const fields = ["branchId", "date", "category", "subcategory", "amount", "description", "reference", "idempotencyKey", "paymentMethod"];
   if (Object.keys(input).some(key => !fields.includes(key))) throw new HttpError(400, "Unexpected expense field");
   const branchId = text(input.branchId, "branchId", 1, 200), date = expenseDate(input.date);
   if (!(EXPENSE_CATEGORIES as readonly unknown[]).includes(input.category)) throw new HttpError(400, "Invalid category");
@@ -105,8 +116,9 @@ export function parseExpense(input: Record<string, unknown>) {
   const subcategory = input.subcategory === undefined || input.subcategory === "" ? "" : text(input.subcategory, "subcategory", 1, 80);
   const idempotencyKey = text(input.idempotencyKey, "idempotencyKey", 8, 128);
   if (!/^[a-zA-Z0-9_-]{8,128}$/.test(idempotencyKey) || idempotencyKey !== input.idempotencyKey) throw new HttpError(400, "Invalid idempotencyKey");
+  const paymentMethod = expensePaymentMethod(input.paymentMethod);
   // Fixed field order ignores JSON property order but preserves exact submitted values,
   // including decimal spelling, whitespace and omitted versus empty optional fields.
   const requestFingerprint = createHash("sha256").update(JSON.stringify(fields.filter(k => k !== "idempotencyKey" && Object.hasOwn(input, k)).map(k => [k, input[k]]))).digest("hex");
-  return { branchId, date, category: input.category as ExpenseCategory, subcategory, amount, description, reference, idempotencyKey, requestFingerprint };
+  return { branchId, date, category: input.category as ExpenseCategory, subcategory, amount, description, reference, idempotencyKey, requestFingerprint, paymentMethod };
 }

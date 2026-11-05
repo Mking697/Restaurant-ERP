@@ -1,0 +1,24 @@
+# GAP-037 — local implementation verification
+
+Status: VERIFIED_LOCAL. No commit/push, production migration or deployment at this checkpoint — batched with future gaps per the owner's standing instruction.
+
+## What was implemented
+
+- Schema: new table `whatsapp_opt_outs` (migration `drizzle/0048_gap037_whatsapp_opt_outs.sql`) — phone (bare 9-digit Tanzanian mobile, same convention as `posOrders.customerPhone`) as primary key, `optedOutAt`. Deliberately NOT a membership identity table (no name, no merge/dedup) — that fuller registry is GAP-038's own separate, still-PENDING scope. A row here only ever exists because the customer themself clicked the opt-out link; capturing a phone on an order never creates one.
+- `src/lib/server/whatsapp-preferences.ts`: `optOutPhone` (idempotent via `onConflictDoNothing` — a repeat click never errors or duplicates), `isOptedOut`, `optedOutSet` (bulk, for a broadcast), `buildOptOutUrl` (empty when no public URL is configured yet — never a broken placeholder link).
+- `src/lib/server/whatsapp-triggers.ts`: `thankYouMessage` gained an optional `communityUrl` — appended ONLY when an Owner has actually configured a real link (empty by default, explicitly voluntary wording, "optional/aap chaahein to hi"; clicking it is the customer's own act on WhatsApp's side — this code never creates membership or infers consent from a phone number). Both `thankYouMessage` and `offerMessage` gained an optional `optOutUrl`, appended to every customer-facing message once configured.
+- `POST /api/whatsapp/opt-out` (new, intentionally PUBLIC/unauthenticated — the recipient of a WhatsApp message is by definition not a logged-in staff user) + `/whatsapp-optout` page (the link target customers land on, phone pre-filled from the query string, one explicit button press required — never automatic).
+- `POST /api/pos/orders` (thank-you send site): checks `isOptedOut` before sending; an opted-out customer's order/receipt still succeeds exactly as before (unaffected) — only the best-effort WhatsApp send is skipped. The message itself is now built with the Owner's configured community link + opt-out link.
+- `GET`/`POST /api/whatsapp/offer-alert`: opted-out phones are now excluded from BOTH the preview count and the real send — not just one. Response reports `excludedOptedOut` so a cashier can see how many were skipped.
+- Settings: two new Owner-only keys on the existing WhatsApp settings page — `WHATSAPP_COMMUNITY_URL` (the voluntary join link) and `APP_PUBLIC_URL` (used only to build the opt-out link text; both must start with `https://` if set, validated server-side; never fetched/redirected to — plain string interpolation only).
+
+## Verification performed
+
+- Full suite: 705/705 passing (added `gap037-service.test.cjs` — 4 tests for the opt-out persistence/lookup/bulk-set/URL-building — and extended `whatsapp-triggers.test.cjs` with 3 GAP-037 cases: community link appears only when configured with explicit voluntary wording; opt-out link appears on both thank-you and offer messages when configured; and no opt-out line at all when no public URL is set yet). Also fixed an unrelated pre-existing gap in `gap023-reporting.test.cjs`'s mock module loader — it didn't know how to stub the two new imports added to `pos/orders/route.ts` (`@/lib/server/whatsapp-preferences`, `@/lib/settings`), which made it fall through to reading real schema files and blow up on a bare `drizzle-orm/pg-core` import; added matching stub entries, same pattern as the existing `@/lib/server/whatsapp-triggers` stub.
+- TypeScript: `tsc --noEmit` clean.
+- Production build: `next build` succeeded; `/whatsapp-optout` and `/api/whatsapp/opt-out` both compiled.
+- Migration 0048: fresh apply (48 → 49) and no-op re-apply (49 → 49, no error) verified against a disposable local Postgres container (`restaurant-gap037-qa`, stopped and removed after use); the primary-key uniqueness was directly exercised — a duplicate phone insert was genuinely rejected by Postgres.
+
+## Explicit limits (consistent with the acceptance's own scope)
+
+No inbound WhatsApp webhook/reply handling exists in this codebase yet (`whatsAppMessageLog`'s INBOUND direction is schema-ready but nothing writes it) — opt-out is link-based, not a "reply STOP" flow, because there is no inbound channel to process a reply on. The public opt-out endpoint has no OTP/PIN step in front of it (same convention as a plain web "unsubscribe" link) — this is a privacy-positive action with no destructive blast radius beyond "this phone stops receiving messages from us," but it does mean anyone who knows a phone number could opt it out on the business's behalf; flagged here, not hidden. No full customer membership/consent registry (name, dedup, merge) — that is GAP-038's separate scope. No production migration, commit/push, or deployment — batched with future gaps.

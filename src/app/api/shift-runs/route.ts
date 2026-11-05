@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       const input = await body(request);
       const branchId = branchScope(actor, typeof input.branchId === "string" ? input.branchId : undefined);
       if (!branchId) throw new HttpError(400, "Select a branch");
-      return startFirstShift(tx, actor, branchId);
+      return startFirstShift(tx, actor, branchId, { openingFloatInr: input.openingFloatInr, openingFloatReference: input.openingFloatReference });
     });
     return json({ run }, 201);
   });

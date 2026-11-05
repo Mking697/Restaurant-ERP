@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, inArray, lt, or, sql } from "drizzle-orm";
+import { db } from "@/db/client";
 import { posOrders } from "@/db/schema/pos";
 import { locked, mutate, requireIdentity } from "@/lib/server/auth";
 import { operationalOrderVisibility, salesSummaryFor } from "@/lib/server/order-visibility";
@@ -8,6 +9,8 @@ import { createPosOrder } from "@/lib/server/pos-orders";
 import { businessDayRange } from "@/lib/server/business-calendar";
 import { posSaleTime } from "@/lib/server/pos-reporting";
 import { thankYouMessage } from "@/lib/server/whatsapp-triggers";
+import { buildOptOutUrl, isOptedOut } from "@/lib/server/whatsapp-preferences";
+import { getSetting } from "@/lib/settings";
 import { sendWhatsAppMessage } from "@/lib/chatxflow";
 
 export const runtime = "nodejs";
@@ -52,9 +55,18 @@ export async function POST(request: Request) {
     const receipt = result.receipt as { totalAmount: string } | null;
     let whatsapp: { attempted: boolean; sent: boolean; error?: string } = { attempted: false, sent: false };
     if (!result.replayed && order.status === "PAID" && order.customerPhone && receipt) {
-      const message = thankYouMessage({ customerName: order.customerName, orderNumber: order.orderNumber, totalAmount: receipt.totalAmount, branchName: order.branchName });
-      const sendResult = await sendWhatsAppMessage(order.customerPhone, message, { relatedEntityType: "PosOrder", relatedEntityId: order.id });
-      whatsapp = { attempted: true, sent: sendResult.ok, error: sendResult.ok ? undefined : sendResult.error };
+      // GAP-037: an explicit opt-out is the customer's own request to stop
+      // ALL contact — the order/receipt itself is unaffected (it already
+      // succeeded above), only this best-effort WhatsApp send is skipped.
+      if (await isOptedOut(db, order.customerPhone)) {
+        whatsapp = { attempted: false, sent: false };
+      } else {
+        const [communityUrl, appPublicUrl] = await Promise.all([getSetting("WHATSAPP_COMMUNITY_URL"), getSetting("APP_PUBLIC_URL")]);
+        const optOutUrl = buildOptOutUrl(appPublicUrl, order.customerPhone);
+        const message = thankYouMessage({ customerName: order.customerName, orderNumber: order.orderNumber, totalAmount: receipt.totalAmount, branchName: order.branchName, communityUrl, optOutUrl });
+        const sendResult = await sendWhatsAppMessage(order.customerPhone, message, { relatedEntityType: "PosOrder", relatedEntityId: order.id });
+        whatsapp = { attempted: true, sent: sendResult.ok, error: sendResult.ok ? undefined : sendResult.error };
+      }
     }
     return json({ ...result, whatsapp }, result.replayed ? 200 : 201);
   });

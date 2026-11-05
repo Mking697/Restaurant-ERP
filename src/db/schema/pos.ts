@@ -57,6 +57,7 @@ export const posOrders = pgTable(
     // Operational confidentiality only. Never exclude this order from tax,
     // inventory or actual cash reconciliation because of this flag.
     ownerOnly: boolean("owner_only").notNull().default(false),
+    paymentCaptured: boolean("payment_captured").notNull().default(false),
     voidReason: text("void_reason").notNull().default(""),
     cashierId: text("cashier_id")
       .notNull()
@@ -82,6 +83,12 @@ export const posOrders = pgTable(
     // Fail closed for writers that omit cost capture. Only the POS capture
     // path may explicitly mark a cost complete, including a genuine zero.
     cogsComplete: boolean("cogs_complete").notNull().default(false),
+    // GAP-029: the customer-facing takeaway pickup number — distinct from
+    // `id` (internal identity) and from any statutory invoice number
+    // (pos_documents.number). Empty string means "no pickup token applies
+    // to this order" (every DINE_IN table order, and legacy rows). Never
+    // renumbered after assignment, including on void.
+    pickupToken: text("pickup_token").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
   },
@@ -90,6 +97,22 @@ export const posOrders = pgTable(
     index("pos_orders_branch_created_idx").on(table.branchId, table.createdAt),
     index("pos_orders_shift_run_id_idx").on(table.shiftRunId),
   ]
+);
+
+// GAP-029: an atomic, branch/business-day/channel-scoped pickup token
+// counter. lastValue only ever increases per scope row — a cancelled/
+// voided order never frees or reuses its number, and the scope (business
+// day resets, branch is isolated) is exactly the unique key below.
+export const posTokenSequences = pgTable(
+  "pos_token_sequences",
+  {
+    id: text("id").primaryKey(),
+    branchId: text("branch_id").notNull().references(() => branches.id),
+    businessDate: text("business_date").notNull(), // "YYYY-MM-DD", Tanzania EAT calendar day
+    channel: orderChannelEnum("channel").notNull(),
+    lastValue: integer("last_value").notNull().default(0),
+  },
+  (table) => [uniqueIndex("pos_token_sequences_scope_unique").on(table.branchId, table.businessDate, table.channel)]
 );
 
 export const posOrderLines = pgTable(

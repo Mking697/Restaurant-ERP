@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { issueFinalPosDocument } from "./pos-documents";
+import { capturePosPayment } from "./pos-payments";
 import { and, eq, inArray } from "drizzle-orm";
 import { currencyRates } from "../../db/schema/currency";
 import { menuItems } from "../../db/schema/menu";
@@ -11,6 +12,7 @@ import { assertModule, branchScope, HttpError, type Identity } from "./permissio
 import { deductStock, lockRecipeStock, readStockRecipe } from "./production";
 import { directRequirements } from "./production-quantity";
 import { requireOperableShift } from "./shifts";
+import { allocatePickupToken } from "./pos-tokens";
 import { vatInvoiceSummary } from "./vat";
 import { validOptionalPhone } from "./whatsapp-triggers";
 import { assertAllowedFields, idempotencyKey, orderFlow, parsePolicyLines, productionTickets, sameReplayPayload, tableNumber, type BranchConcept, type OrderChannel, type ProductionStation } from "./pos-order-policy";
@@ -160,16 +162,19 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
   const cogs = await computeOrderCogs(tx, branchId, lines);
   const now = new Date();
   const orderNumber = `ORD-${Date.now()}-${orderId.slice(0, 4)}`;
-  await tx.insert(posOrders).values({ id: orderId, branchId, orderNumber, channel, operatingConcept: branch.operatingConcept, tableNo, counterNo, customerPhone, customerName, serviceStatus: "ACTIVE", revision: 1, subtotal: billing.subtotal, taxAmount: billing.taxAmount, totalAmount: billing.totalAmount, tenderCurrencyCode: payment.tenderCurrencyCode, fxRateToInr: payment.fxRateToInr, tenderCurrencyAmount: payment.tenderCurrencyAmount, tenderType, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", cashierId: actor.id, shiftRunId, cogsAmount: cogs.cogsAmount, cogsComplete: cogs.complete, stockDeductedAt: now, settledAt: flow === "PAYMENT_FIRST" ? now : null });
+  const pickupToken = await allocatePickupToken(tx, branchId, channel, now);
+  await tx.insert(posOrders).values({ id: orderId, branchId, orderNumber, channel, operatingConcept: branch.operatingConcept, tableNo, counterNo, customerPhone, customerName, serviceStatus: "ACTIVE", revision: 1, subtotal: billing.subtotal, taxAmount: billing.taxAmount, totalAmount: billing.totalAmount, tenderCurrencyCode: payment.tenderCurrencyCode, fxRateToInr: payment.fxRateToInr, tenderCurrencyAmount: payment.tenderCurrencyAmount, tenderType, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", cashierId: actor.id, shiftRunId, cogsAmount: cogs.cogsAmount, cogsComplete: cogs.complete, stockDeductedAt: now, settledAt: flow === "PAYMENT_FIRST" ? now : null, pickupToken });
   const tickets = await insertLinesAndTickets(tx, orderId, branchId, lines, itemById, branch.vatRatePercent);
   let receiptResult = null;
   if (flow === "PAYMENT_FIRST") {
     const receiptNumber = `RCP-${Date.now()}-${orderId.slice(0, 4)}`;
     await tx.insert(posReceipts).values({ id: randomUUID(), orderId, branchId, receiptNumber });
-    receiptResult = { receiptNumber, ...receipt(billing.snapshots.map(line => ({ menuItemId: line.menuItemId, name: line.item.name, qty: line.qty, price: line.item.price, vatRatePercent: line.vatRatePercent, productCode: line.item.productCode })), billing.subtotal, billing.taxAmount, billing.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
+    receiptResult = { receiptNumber, pickupToken, ...receipt(billing.snapshots.map(line => ({ menuItemId: line.menuItemId, name: line.item.name, qty: line.qty, price: line.item.price, vatRatePercent: line.vatRatePercent, productCode: line.item.productCode })), billing.subtotal, billing.taxAmount, billing.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
   }
   const final = flow === "PAYMENT_FIRST" ? await issueFinalPosDocument(tx, actor, orderId, documentContext) : null;
-  const result = { order: { id: orderId, orderNumber, branchId, branchName: branch.name, channel, tableNo, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", flow, customerPhone, customerName }, tickets, kot: tickets.flatMap(ticket => ticket.lines), receipt: receiptResult, ...(final ? { finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}) } : {}), inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
+  const collection = flow === "PAYMENT_FIRST" ? await capturePosPayment(tx, actor, orderId, "CREATE") : {};
+  const result = { order: { id: orderId, orderNumber, pickupToken, branchId, branchName: branch.name, channel, tableNo, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", flow, customerPhone, customerName }, tickets: tickets.map(ticket => ({ ...ticket, pickupToken })), kot: tickets.flatMap(ticket => ticket.lines), receipt: receiptResult, ...(final ? { finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}) } : {}), inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
+  Object.assign(result, collection);
   await saveAttempt(tx, branchId, orderId, actor.id, "CREATE", key, input, result);
   return result;
 }
@@ -229,7 +234,9 @@ export async function settlePosOrder(tx: Executor, actor: Identity, orderId: str
   const receiptLines = savedLines.map(({ nameSnapshot, productCodeSnapshot, ...line }) => ({ ...line, name: nameSnapshot ?? line.name, productCode: productCodeSnapshot ?? line.productCode, vatRatePercent: line.vatRatePercent ?? branch.vatRatePercent ?? "18.00" }));
   const receiptResult = { receiptNumber, ...receipt(receiptLines, order.subtotal, order.taxAmount, order.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
   const final = await issueFinalPosDocument(tx, actor, orderId);
+  const collection = await capturePosPayment(tx, actor, orderId, "SETTLE");
   const result = { order: { id: orderId, orderNumber: order.orderNumber, status: "PAID", tenderType }, receipt: receiptResult, finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}), inventoryDeducted: [], semiFgDeducted: [] };
+  Object.assign(result, collection);
   await saveAttempt(tx, order.branchId, orderId, actor.id, "SETTLE", key, input, result);
   return result;
 }

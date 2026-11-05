@@ -6,6 +6,8 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertModule, branchScope, HttpError } from "@/lib/server/permissions";
 import { offerMessage } from "@/lib/server/whatsapp-triggers";
+import { buildOptOutUrl, optedOutSet } from "@/lib/server/whatsapp-preferences";
+import { getSetting } from "@/lib/settings";
 import { operationalOrderVisibility } from "@/lib/server/order-visibility";
 import { sendWhatsAppBatch } from "@/lib/chatxflow";
 
@@ -18,6 +20,9 @@ export const dynamic = "force-dynamic";
 // so the target list is derived data, not a fabricated contact list — a
 // customer only appears here because they actually ordered and a cashier
 // captured their number.
+// GAP-037: a phone's own explicit opt-out (src/lib/server/whatsapp-preferences.ts)
+// is enforced here too — excluded from BOTH the preview count and the real
+// send, never just one.
 export async function POST(request: Request) {
   return api(() => mutate(request, async (tx, actor) => {
     assertModule(actor, "POS_CASHIER");
@@ -34,12 +39,14 @@ export async function POST(request: Request) {
       .selectDistinct({ phone: posOrders.customerPhone })
       .from(posOrders)
       .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, operationalOrderVisibility(actor), isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
-    const phones = customerRows.map((r) => r.phone).filter((p): p is string => !!p);
-    if (!phones.length) throw new HttpError(400, "No past customers with a WhatsApp number in this scope yet");
+    const allPhones = customerRows.map((r) => r.phone).filter((p): p is string => !!p);
+    const optedOut = await optedOutSet(tx, allPhones);
+    const phones = allPhones.filter((p) => !optedOut.has(p));
+    if (!phones.length) throw new HttpError(400, "No past customers with a WhatsApp number in this scope yet (excluding anyone who opted out)");
 
-    const message = offerMessage({ offerText, validUntil, branchName });
-    const outcome = await sendWhatsAppBatch(phones.map((phone) => ({ phone, message, relatedEntityType: "OfferAlert", relatedEntityId: branchId || "ALL" })));
-    return json({ message, targeted: phones.length, ...outcome }, 201);
+    const appPublicUrl = await getSetting("APP_PUBLIC_URL");
+    const outcome = await sendWhatsAppBatch(phones.map((phone) => ({ phone, message: offerMessage({ offerText, validUntil, branchName, optOutUrl: buildOptOutUrl(appPublicUrl, phone) }), relatedEntityType: "OfferAlert", relatedEntityId: branchId || "ALL" })));
+    return json({ targeted: phones.length, excludedOptedOut: allPhones.length - phones.length, ...outcome }, 201);
   }));
 }
 
@@ -53,6 +60,8 @@ export async function GET(request: Request) {
       .selectDistinct({ phone: posOrders.customerPhone })
       .from(posOrders)
       .where(and(branchId ? eq(posOrders.branchId, branchId) : undefined, operationalOrderVisibility(actor), isNotNull(posOrders.customerPhone), ne(posOrders.customerPhone, "")));
-    return json({ targetCount: customerRows.length });
+    const allPhones = customerRows.map((r) => r.phone).filter((p): p is string => !!p);
+    const optedOut = await optedOutSet(db, allPhones);
+    return json({ targetCount: allPhones.length - optedOut.size });
   });
 }

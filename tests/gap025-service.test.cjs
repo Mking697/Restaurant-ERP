@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 function harness() {
-  const names=['currencyRates','menuItems','branches','posOrderAttempts','posOrderLines','posOrders','posProductionTicketLines','posProductionTickets','posReceipts','posDrafts','posLifecycleActions','posLifecycleEvents','posDocuments','posDocumentRequests','settings'];
+  const names=['currencyRates','menuItems','branches','posOrderAttempts','posOrderLines','posOrders','posProductionTicketLines','posProductionTickets','posReceipts','posDrafts','posLifecycleActions','posLifecycleEvents','posDocuments','posDocumentRequests','settings','posPayments','posPaymentAllocations','posTokenSequences'];
   const tables=Object.fromEntries(names.map(name=>[name,new Proxy({name},{get:(t,k)=>k==='_table'?name:{table:name,key:k}})]));
   const state=Object.fromEntries(names.map(n=>[n,[]]));
   Object.assign(state,{branches:[{id:'b',name:'Branch',code:'B1',address:'Street',operatingConcept:'CONVENTIONAL',vatRatePercent:'0.00'}],menuItems:[{id:'dish',branchId:'b',name:'Saved dish',price:'10.00',isActive:true,isSellable:true,vatRatePercent:'0.00',productCode:'D',productionStation:'KITCHEN'}],deductions:[]});
@@ -22,13 +22,23 @@ function harness() {
   const queries=[];
   const tx={
     select:projection=>({from(table){let pred=()=>true,sort=[],max=Infinity,joined=false;const rows=()=>{queries.push({table:table._table,max,sort});let rows=state[table._table].filter(pred).map(r=>joined?{...state.menuItems.find(i=>i.id===r.menuItemId),...r}:{...r});for(const s of [...sort].reverse())rows.sort((a,b)=>(a[s.c.key]>b[s.c.key]?1:a[s.c.key]<b[s.c.key]?-1:0)*s.d);rows=rows.slice(0,max);return projection?rows.map(r=>Object.fromEntries(Object.entries(projection).map(([k,c])=>[k,r[c.key]]))):rows;};const q={_rows:rows,where(p){pred=p;return q;},orderBy(...s){sort=s;return q;},limit(n){max=n;return q;},innerJoin(){joined=true;return q;},then(a,b){return Promise.resolve(rows()).then(a,b);}};return q;}}),
-    insert:table=>({values:async values=>{for(const r of Array.isArray(values)?values:[values])state[table._table].push({revision:1,createdAt:new Date('2026-11-03T00:00:00Z'),updatedAt:new Date(),ownerOnly:false,orderId:null,...r});}}),
+    insert:table=>({values:async values=>{for(const r of Array.isArray(values)?values:[values])state[table._table].push({revision:1,createdAt:new Date('2026-11-03T00:00:00Z'),updatedAt:new Date(),ownerOnly:false,paymentCaptured:false,orderId:null,...r});}}),
     update:table=>({set:values=>({where(pred){let done=false,changed=[];const run=()=>{if(!done){changed=state[table._table].filter(pred);for(const r of changed)Object.assign(r,values);done=true;}return changed;};return {returning:async()=>run(),then:(a,b)=>Promise.resolve(run()).then(a,b)};}})}),
-    execute:async query=>({rows:query.parts.join('').includes('nextval')?[{value:String(++state.sequence)}]:[]}),
+    execute:async query=>{
+      const text=query.parts.join('?');
+      if(text.includes('nextval'))return{rows:[{value:String(++state.sequence)}]};
+      if(text.includes('pos_token_sequences')){
+        const[id,branchId,businessDate,channel]=query.values;
+        let row=state.posTokenSequences.find(r=>r.branchId===branchId&&r.businessDate===businessDate&&r.channel===channel);
+        if(!row){row={id,branchId,businessDate,channel,lastValue:1};state.posTokenSequences.push(row);}else row.lastValue+=1;
+        return{rows:[{last_value:row.lastValue}]};
+      }
+      return{rows:[]};
+    },
   };
   state.sequence=0;
   tx.transaction=async fn=>{const saved=structuredClone(state);try{return await fn(tx);}catch(e){for(const k of Object.keys(saved))state[k]=saved[k];throw e;}};
-  const actor={id:'cashier',role:'CASHIER',branchId:'b',moduleAccess:['POS_CASHIER'],status:'Active'};
+  const actor={id:'cashier',name:'Actual collector',role:'CASHIER',branchId:'b',moduleAccess:['POS_CASHIER'],status:'Active'};
   const kitchen={...actor,id:'kitchen',role:'KITCHEN_STAFF',moduleAccess:['POS_KITCHEN']};
   const manager={...actor,id:'manager',role:'BRANCH_MANAGER'};
   const owner={...actor,id:'owner',role:'SUPER_ADMIN',branchId:null,moduleAccess:[]};

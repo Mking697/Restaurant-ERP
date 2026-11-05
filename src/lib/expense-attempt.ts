@@ -1,6 +1,8 @@
 export type ExpenseEntry = {
   date: string; category: "RENT" | "UTILITIES" | "MARKETING" | "OTHER";
   subcategory: string; amount: string; description: string; reference: string;
+  // GAP-035: "" (unspecified/legacy) | "CASH" (drawer outflow) | "NON_CASH" (bank/card/other).
+  paymentMethod: "" | "CASH" | "NON_CASH";
 };
 export type ExpensePayload = ExpenseEntry & { branchId: string; idempotencyKey: string };
 type Scope = { actorId: string; branchId: string; month: string };
@@ -14,12 +16,13 @@ export function createExpenseAttempt(storage: () => Storage, scope: Scope) {
     const value = storage().getItem(key);
     if (value === null) return null;
     const payload: unknown = JSON.parse(value);
-    const fields = ["date", "category", "subcategory", "amount", "description", "reference", "branchId", "idempotencyKey"];
+    const fields = ["date", "category", "subcategory", "amount", "description", "reference", "branchId", "idempotencyKey", "paymentMethod"];
     if (!payload || typeof payload !== "object" || Array.isArray(payload) || Object.keys(payload).length !== fields.length ||
       !fields.every(field => field in payload && typeof (payload as Record<string, unknown>)[field] === "string")) throw new Error("Expense recovery storage is damaged; posting is blocked.");
     const saved = payload as ExpensePayload;
     if (saved.branchId !== scope.branchId || !saved.date.startsWith(`${scope.month}-`) ||
       !["RENT", "UTILITIES", "MARKETING", "OTHER"].includes(saved.category) ||
+      !["", "CASH", "NON_CASH"].includes(saved.paymentMethod) ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved.idempotencyKey)) throw new Error("Expense recovery scope or key is damaged; posting is blocked.");
     return saved;
   }
@@ -30,6 +33,7 @@ export function createExpenseAttempt(storage: () => Storage, scope: Scope) {
       (row.status === "POSTED" || row.status === "VOID") && row.date === payload.date && row.category === payload.category &&
       // Compare the server's canonical text, but retain raw payload spelling for replay fingerprints.
       (row.subcategory === null ? "" : row.subcategory) === payload.subcategory.trim() && row.description === payload.description.trim() && row.reference === payload.reference.trim() &&
+      (row.paymentMethod ?? "") === payload.paymentMethod &&
       typeof row.amount === "string" && Number.isFinite(Number(row.amount)) && Number(row.amount) === Number(payload.amount);
   }
   return {

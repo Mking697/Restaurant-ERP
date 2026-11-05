@@ -33,6 +33,39 @@ test('offerMessage includes branch, text and optional validity', () => {
   assert.doesNotMatch(noExpiry, /Valid tak/);
 });
 
+test('GAP-037: thankYouMessage offers a community link ONLY when one is actually configured — never by default', () => {
+  const { thankYouMessage } = load();
+  const base = { customerName: 'Rahul', orderNumber: 'ORD-9', totalAmount: '100.00', branchName: 'B1' };
+  const withoutLink = thankYouMessage(base);
+  assert.doesNotMatch(withoutLink, /chat\.whatsapp\.com|community/i);
+  const withLink = thankYouMessage({ ...base, communityUrl: 'https://chat.whatsapp.com/abc123' });
+  assert.match(withLink, /https:\/\/chat\.whatsapp\.com\/abc123/);
+  // Explicitly voluntary wording, never a claim of automatic enrollment.
+  assert.match(withLink, /optional/i);
+});
+
+test('GAP-037: an opt-out link, when configured, is printed on BOTH thank-you and offer messages', () => {
+  const { thankYouMessage, offerMessage } = load();
+  const thankYou = thankYouMessage({ customerName: 'A', orderNumber: 'O1', totalAmount: '1.00', branchName: 'B', optOutUrl: 'https://app.example.com/whatsapp-optout?phone=712345678' });
+  assert.match(thankYou, /app\.example\.com\/whatsapp-optout\?phone=712345678/);
+  const offer = offerMessage({ offerText: 'Deal', validUntil: '', branchName: 'B', optOutUrl: 'https://app.example.com/whatsapp-optout?phone=712345678' });
+  assert.match(offer, /app\.example\.com\/whatsapp-optout\?phone=712345678/);
+});
+
+test('GAP-037: no opt-out URL configured means no opt-out line is printed — never a broken/placeholder link', () => {
+  const { thankYouMessage, offerMessage } = load();
+  assert.doesNotMatch(thankYouMessage({ customerName: 'A', orderNumber: 'O1', totalAmount: '1.00', branchName: 'B' }), /whatsapp-optout/);
+  assert.doesNotMatch(offerMessage({ offerText: 'Deal', validUntil: '', branchName: 'B' }), /whatsapp-optout/);
+});
+
+test('GAP-038: requiredPhone rejects empty/invalid where validOptionalPhone would silently allow empty', () => {
+  const { requiredPhone } = load();
+  assert.equal(requiredPhone('712345678'), '712345678');
+  assert.throws(() => requiredPhone(''), { status: 400 });
+  assert.throws(() => requiredPhone(undefined), { status: 400 });
+  assert.throws(() => requiredPhone('12345'), { status: 400 });
+});
+
 test('taskReminderMessage includes doer name, title, branch and defaults a blank name', () => {
   const { taskReminderMessage } = load();
   const due = new Date('2026-10-30T06:00:00.000Z'); // 09:00 EAT

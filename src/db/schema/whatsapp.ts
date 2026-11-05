@@ -36,3 +36,19 @@ export const auditLog = pgTable(
   },
   (table) => [index("audit_log_entity_idx").on(table.entityType, table.entityId)]
 );
+
+/**
+ * GAP-037: a customer's own explicit "stop messaging me" request — phone is
+ * the bare 9-digit Tanzanian mobile (same convention as
+ * posOrders.customerPhone), NOT a membership identity (no name, no merge/
+ * dedup — that is GAP-038's separate, still-PENDING scope). Simply
+ * capturing a phone on an order never creates a row here; a row only ever
+ * exists because the customer themself clicked the opt-out link that is
+ * printed on every outbound customer-facing WhatsApp message. Once present,
+ * EVERY future customer-facing send (thank-you, offer broadcast, community
+ * join line) to this phone is skipped — see src/lib/server/whatsapp-preferences.ts.
+ */
+export const whatsAppOptOuts = pgTable("whatsapp_opt_outs", {
+  phone: text("phone").primaryKey(),
+  optedOutAt: timestamp("opted_out_at", { withTimezone: true }).notNull().defaultNow(),
+});

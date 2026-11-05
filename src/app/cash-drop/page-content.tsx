@@ -11,10 +11,13 @@ import { CheckCircle2 } from "lucide-react";
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { useSelectedBranchId } from "@/lib/current-branch";
 import { useShiftStatus, ShiftHandoverGate, useShiftWriteGuard } from "@/lib/shift-gate";
+import { ShiftSummaryPanel } from "./shift-summary-panel";
+import { HoCashDispatchPanel } from "./ho-cash-dispatch-panel";
 
 const DENOMS = [10000, 5000, 2000, 1000, 500] as const;
 
 interface EndShiftResult { handover: { id: string; cashAmount: string; cardAmount: string; upiAmount: string; otherAmount: string }; toRun: { label: string }; cashExpected: string; shortageExcessInr: string }
+interface DispatchResult { dispatch: { id: string; countedCashInr: string; retainedFloatInr: string; dispatchedAmountInr: string }; cashExpected: string; shortageExcessInr: string }
 
 export default function CashDropPage() {
   const actor = useCurrentUser();
@@ -34,8 +37,17 @@ function ScopedCashDrop() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [submitted, setSubmitted] = React.useState<EndShiftResult | null>(null);
+  const [dispatched, setDispatched] = React.useState<DispatchResult | null>(null);
+  const [retainedFloat, setRetainedFloat] = React.useState("");
+  // GAP-033: Branch Manager/Owner-only, optional opening float for the
+  // branch's very first-ever shift. A plain cashier never sees these
+  // fields and starts a shift exactly as before.
+  const canRecordOpeningFloat = actor.role === "SUPER_ADMIN" || actor.role === "BRANCH_MANAGER";
+  const [openingFloat, setOpeningFloat] = React.useState("");
+  const [openingFloatReference, setOpeningFloatReference] = React.useState("");
 
   const writeGuard = useShiftWriteGuard(`${actor.id}:${branchId}`);
+  const [summaryToken, setSummaryToken] = React.useState(0);
   const countRun = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (shiftStatus.run && countRun.current !== shiftStatus.run.id) {
@@ -47,13 +59,14 @@ function ScopedCashDrop() {
   const countedCashInr = DENOMS.reduce((sum, d) => sum + d * (counts[d] || 0), 0) + coins;
 
   async function startShift() {
-    const payload = { branchId };
+    const payload: { branchId: string; openingFloatInr?: string; openingFloatReference?: string } = { branchId };
+    if (canRecordOpeningFloat && openingFloat.trim()) { payload.openingFloatInr = openingFloat.trim(); payload.openingFloatReference = openingFloatReference.trim(); }
     if (!canWrite || !writeGuard.begin("/api/shift-runs", payload)) return;
     setBusy(true); setError("");
     try {
       const saved = await requestJson<{ run: { id: string; branchId: string } }>("/api/shift-runs", { method: "POST", body: JSON.stringify(payload) });
       if (!saved.run?.id || saved.run.branchId !== branchId) throw new Error("Could not confirm shift start. Verify saved records before continuing.");
-      writeGuard.finish(); await shiftStatus.reload();
+      writeGuard.finish(); setOpeningFloat(""); setOpeningFloatReference(""); setSummaryToken(v => v + 1); await shiftStatus.reload();
     }
     catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
@@ -76,10 +89,35 @@ function ScopedCashDrop() {
       setSubmitted(data);
       writeGuard.finish();
       setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0);
+      setSummaryToken(v => v + 1);
       await shiftStatus.reload();
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
       setError(err instanceof Error ? err.message : "Could not confirm shift closure. Verify saved records before continuing.");
+    }
+    finally { setBusy(false); }
+  }
+
+  // GAP-036: the branch's FINAL shift of the business day — cash goes to
+  // Head Office instead of to another shift here. Never opens a next run.
+  async function dispatchToHo() {
+    if (!canWrite || !shiftStatus.run || countRun.current !== shiftStatus.run.id) return;
+    if (!DENOMS.every((d) => Number.isSafeInteger(counts[d]) && counts[d] >= 0) || !Number.isFinite(coins) || coins < 0) { setError("Enter whole non-negative note counts and a valid coin amount."); return; }
+    const url = `/api/shift-runs/${encodeURIComponent(shiftStatus.run.id)}/dispatch-ho`;
+    const payload = { branchId, note10000Count: counts[10000], note5000Count: counts[5000], note2000Count: counts[2000], note1000Count: counts[1000], note500Count: counts[500], coinsInr: coins, retainedFloatInr: retainedFloat.trim() || undefined };
+    if (!writeGuard.begin(url, payload)) return;
+    setBusy(true); setError(""); setDispatched(null);
+    try {
+      const data = await requestJson<DispatchResult>(url, { method: "POST", body: JSON.stringify(payload) });
+      if (!data.dispatch?.id || typeof data.cashExpected !== "string" || typeof data.shortageExcessInr !== "string") throw new Error("Could not confirm Head Office dispatch. Verify saved records before continuing.");
+      setDispatched(data);
+      writeGuard.finish();
+      setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0); setRetainedFloat("");
+      setSummaryToken(v => v + 1);
+      await shiftStatus.reload();
+    } catch (err) {
+      if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
+      setError(err instanceof Error ? err.message : "Could not confirm Head Office dispatch. Verify saved records before continuing.");
     }
     finally { setBusy(false); }
   }
@@ -92,6 +130,8 @@ function ScopedCashDrop() {
       />
 
       <p className="mb-4 text-sm text-muted-foreground">{uiText("Actual cash reconciliation includes all real sales, including Owner-only orders. It is not the access-filtered sales view.", "Actual cash reconciliation mein sabhi real sales, Owner-only orders bhi included hain. Yeh access-filtered sales view nahi hai.")}</p>
+      {actor.role === "SUPER_ADMIN" && <HoCashDispatchPanel />}
+      <ShiftSummaryPanel branchId={branchId} allowed={allowed} refreshToken={summaryToken} />
       {!allowed ? <p role="alert">{uiText("Cash Drop permission is required.")}</p> : !branchId ? (
         <p role="alert">{uiText("Select one branch.")}</p>
       ) : (
@@ -117,6 +157,21 @@ function ScopedCashDrop() {
                     </div>
                 </CardContent>
               </Card>)}
+          {dispatched && (
+            <Card className="min-w-0">
+                <CardHeader><CardTitle>{uiText("Head Office dispatch result", "Head Office dispatch result")}</CardTitle></CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-3 rounded-lg border border-success/40 bg-success/10 p-4">
+                      <CheckCircle2 className="size-5 text-success" />
+                      <div>
+                        <div className="text-sm font-medium">{uiText("Shift ended — cash dispatched to Head Office", "Shift end — cash Head Office ko dispatch ho gaya")}</div>
+                        <div className="text-xs text-muted-foreground">{uiText("Dispatched:", "Dispatch kiya:")} {formatInr(Number(dispatched.dispatch.dispatchedAmountInr))} · {uiText("Retained float:", "Retained float:")} {formatInr(Number(dispatched.dispatch.retainedFloatInr))}</div>
+                        <div className="text-xs text-muted-foreground">{uiText("Shortage/Excess:", "Shortage/Excess:")} {formatInr(Number(dispatched.shortageExcessInr))} ({uiText("Expected cash was")} {formatInr(Number(dispatched.cashExpected))})</div>
+                        <div className="text-xs text-muted-foreground">{uiText("No new shift opened. Start the next one manually (use the retained float above as the opening float).", "Koi nayi shift nahi khuli. Agli shift manually start karo (retained float ko opening float ke roop mein use karo).")}</div>
+                      </div>
+                    </div>
+                </CardContent>
+              </Card>)}
           {writeGuard.blocked && !busy && <p role="alert" className="text-destructive">{uiText("A shift change has an unconfirmed outcome, or browser storage is unavailable. Further changes are blocked in this tab. Ask an administrator to verify saved records. Reloading status never retries or unlocks this change.")}</p>}
           {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
           <Button variant="outline" disabled={busy || shiftStatus.loading} onClick={() => { void shiftStatus.reload(); }}>{uiText("Reload shift status")}</Button>
@@ -126,6 +181,12 @@ function ScopedCashDrop() {
               <CardHeader><CardTitle>{uiText("No active shift")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">{uiText("No shift is open for this branch. Start one below, or ask an administrator to configure shift windows first.", "Is branch mein koi shift open nahi hai. Neeche start karo ya admin se pehle shift windows configure karwao.")}</p>
+                {canRecordOpeningFloat && <div className="space-y-2 rounded-md border p-3">
+                  <p className="text-sm font-medium">{uiText("Opening cash float (optional)", "Opening cash float (optional)")}</p>
+                  <p className="text-xs text-muted-foreground">{uiText("Only record this for a branch's first-ever shift — records the cash already in the drawer so it is not counted as an unexplained excess at close. Leave blank if this is not the first shift.", "Sirf branch ki pehli shift ke liye bharo — jo cash drawer mein already hai wo record hoga, taaki shift-end par galat excess na dikhe. Agar pehli shift nahi hai to khali chhodo.")}</p>
+                  <input type="number" min={0} step="0.01" placeholder={uiText("Amount (TSh)")} value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} disabled={!canWrite} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
+                  <input type="text" maxLength={200} placeholder={uiText("Source / reference (e.g. Owner cash box)")} value={openingFloatReference} onChange={(e) => setOpeningFloatReference(e.target.value)} disabled={!canWrite} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
+                </div>}
                 <Button disabled={!canWrite} onClick={startShift}>{busy ? uiText("Starting…") : uiText("Start Shift")}</Button>
               </CardContent>
             </Card>
@@ -152,6 +213,12 @@ function ScopedCashDrop() {
                     <span className="text-lg font-semibold">{formatInr(countedCashInr)}</span>
                   </div>
                   <Button className="w-full" disabled={!canWrite} onClick={endShift}>{busy ? uiText("Ending Shift…") : uiText(" End Shift & Handover ", " Shift End aur Handover Karo ")}</Button>
+                  {canRecordOpeningFloat && <div className="space-y-2 rounded-md border p-3">
+                    <p className="text-sm font-medium">{uiText("Or: this is the final shift of the day — dispatch to Head Office", "Ya: aaj ki aakhri shift hai — Head Office ko dispatch karo")}</p>
+                    <p className="text-xs text-muted-foreground">{uiText("No new shift opens. Enter how much cash stays at the branch (optional) — the rest is dispatched to HO for acceptance.", "Koi nayi shift nahi khulegi. Branch mein kitna cash rakhna hai likho (optional) — baaki HO ko dispatch hoga, jo wahan accept hoga.")}</p>
+                    <input type="number" min={0} step="0.01" placeholder={uiText("Retained float for tomorrow (TSh, optional)")} value={retainedFloat} onChange={(e) => setRetainedFloat(e.target.value)} disabled={!canWrite} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
+                    <Button variant="outline" className="w-full" disabled={!canWrite} onClick={dispatchToHo}>{busy ? uiText("Dispatching…") : uiText("Dispatch to Head Office", "Head Office ko dispatch karo")}</Button>
+                  </div>}
                 </CardContent>
               </Card>
             </div>

@@ -15,12 +15,15 @@ import { useShiftStatus, ShiftHandoverGate } from "@/lib/shift-gate";
 import { Plus, MessageCircle } from "lucide-react";
 import { PosLifecyclePanel, type LifecyclePending } from "./lifecycle-panel";
 import { PosDocumentsPanel, type DocumentPending } from "./documents-panel";
+import { PosPaymentsPanel } from "./payments-panel";
+import { PosVoidPanel } from "./void-panel";
+import { MenuTilePicker } from "./menu-tile-picker";
 import type { Document } from "@/lib/pos-documents";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
 interface OrderRow { ownerOnly?: boolean; operatingConcept: "FAST_FOOD" | "CONVENTIONAL"; id: string; branchId: string; orderNumber: string; channel: string; tableNo: string; counterNo: string; totalAmount: string; tenderType: string; tenderCurrencyCode: string; tenderCurrencyAmount: string; status: string; createdAt: string; }
-interface MenuItemRow { id: string; branchId: string; name: string; price: string; isActive: boolean; isSellable: boolean; }
-interface OrderResult { finalDocument?: Document | null; documentUnavailableReason?: string; order: { id?: string; orderNumber: string; status?: string; flow?: "PAYMENT_FIRST" | "PRODUCTION_FIRST" }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; lines: { name: string; qty: number }[] }[]; kot: { name: string; qty: number }[]; receipt: { receiptNumber?: string; lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null } | null; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
+interface MenuItemRow { id: string; branchId: string; name: string; price: string; category?: string; isActive: boolean; isSellable: boolean; imageUrl?: string | null; }
+interface OrderResult { finalDocument?: Document | null; documentUnavailableReason?: string; order: { id?: string; orderNumber: string; pickupToken?: string; status?: string; flow?: "PAYMENT_FIRST" | "PRODUCTION_FIRST" }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; pickupToken?: string; lines: { name: string; qty: number }[] }[]; kot: { name: string; qty: number }[]; receipt: { receiptNumber?: string; pickupToken?: string; lines: { name: string; qty: number; price: string; lineTotal: string }[]; subtotal: string; taxAmount: string; totalAmount: string; vat: { rates: { ratePercent: string; taxableAmount: string; vatAmount: string }[] }; currency: { tenderCurrencyCode: string; fxRateToInr: string; tenderCurrencyAmount: string } | null } | null; inventoryDeducted: { rawMaterialId: string; qtyDeducted: number }[]; whatsapp: { attempted: boolean; sent: boolean; error?: string }; }
 interface CurrencyRateRow { id: string; currencyCode: string; rateToInr: string; updatedAt: string; }
 
 const CHANNEL_VARIANT: Record<string, "default" | "secondary" | "warning" | "destructive"> = { DINE_IN: "default", TAKEAWAY: "secondary", SWIGGY: "warning", ZOMATO: "destructive" };
@@ -99,6 +102,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
   const [orders, setOrders] = React.useState<OrderRow[]>([]);
   const [lifecycleRefreshToken, refreshLifecycle] = React.useState(0);
   const [documentRefreshToken, refreshDocuments] = React.useState(0);
+  const [paymentsRefreshToken, refreshPayments] = React.useState(0);
   const [menuOptions, setMenuOptions] = React.useState<MenuItemRow[]>([]);
   const [menuLoading, setMenuLoading] = React.useState(true);
   const [menuError, setMenuError] = React.useState("");
@@ -115,6 +119,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
   const [tenderCurrencyCode, setTenderCurrencyCode] = React.useState("INR");
   const [currencyRates, setCurrencyRates] = React.useState<CurrencyRateRow[]>([]);
   const [lines, setLines] = React.useState<{ menuItemId: string; qty: number }[]>([]);
+  const [newOrderItemsView, setNewOrderItemsView] = React.useState<"tiles" | "list">("tiles");
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<OrderResult | null>(null);
   const [openOrderTarget, setOpenOrderTarget] = React.useState<OrderRow | null>(null);
@@ -185,7 +190,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       const data = await requestJson<{ order: { id: string; ownerOnly: boolean }; changed: boolean }>(`/api/pos/orders/${encodeURIComponent(target.id)}/visibility`, { method: "PATCH", body: JSON.stringify({ ownerOnly, reason: visibilityReason.trim() }) });
       if (!mounted.current) return;
       if (data.order?.id !== target.id || data.order.ownerOnly !== ownerOnly || typeof data.changed !== "boolean") throw new Error("Unverified visibility acknowledgment");
-      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1); refreshPayments(value => value + 1);
       setVisibilityTarget(null); setVisibilityReason("");
       setVisibilityMessage(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
       // A confirmed PATCH stays confirmed even when this separate GET fails.
@@ -241,7 +246,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       orderAttempt.current ??= { key: String(payload.idempotencyKey), payload };
       const data = await requestJson<OrderResult>("/api/pos/orders", { method: "POST", body: JSON.stringify(payload) });
       orderAttempt.current = null;
-      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1); refreshPayments(value => value + 1);
       setResult(data); setOpen(false);
       setLines([]); setTableNo(""); setCustomerPhone(""); setCustomerName(""); setTenderCurrencyCode("INR");
       if (!await reloadOrders(data)) setError("Order confirmed. Could not reload the order list; do not submit it again.");
@@ -269,7 +274,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       const url = `/api/pos/orders/${encodeURIComponent(openOrderTarget.id)}/${kind === "ADD" ? "lines" : "settle"}`;
       const data = await requestJson<Record<string, unknown>>(url, { method: "POST", body: JSON.stringify(payload) });
       openOrderAttempt.current = null; setOpenOrderTarget(null); setOpenOrderLines([]);
-      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1);
+      refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1); refreshPayments(value => value + 1);
       if (kind === "SETTLE") {
         const settlement = data as unknown as OrderResult;
         const settlementResult = { ...settlement, order: { ...settlement.order, flow: "PRODUCTION_FIRST" as const }, kot: [], whatsapp: { attempted: false, sent: false } };
@@ -367,13 +372,15 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
                 <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer WhatsApp (optional)")}</span><input className={inputClass} value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="712 345 678" /></label>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium">{uiText("Items")}</p>
-                {lines.map((line, i) => <div key={i} className="flex gap-2">
-                  <select className={inputClass} value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({formatInr(Number(m.price))})</option>)}</select>
-                  <input type="number" min={1} max={500} className={inputClass + " w-20"} value={line.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value) || 1) })} />
-                  <Button type="button" variant="outline" size="sm" onClick={() => removeLine(i)}>{uiText("Remove")}</Button>
-                </div>)}
-                <Button type="button" variant="outline" size="sm" disabled={!menuOptions.length} onClick={addLine}>{uiText("Add Item Line")}</Button>
+                <MenuTilePicker items={menuOptions} lines={lines} setLines={setLines} disabled={!menuOptions.length} view={newOrderItemsView} onViewChange={setNewOrderItemsView} />
+                {newOrderItemsView === "list" && <>
+                  {lines.map((line, i) => <div key={i} className="flex gap-2">
+                    <select className={inputClass} value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({formatInr(Number(m.price))})</option>)}</select>
+                    <input type="number" min={1} max={500} className={inputClass + " w-20"} value={line.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value) || 1) })} />
+                    <Button type="button" variant="outline" size="sm" onClick={() => removeLine(i)}>{uiText("Remove")}</Button>
+                  </div>)}
+                  <Button type="button" variant="outline" size="sm" disabled={!menuOptions.length} onClick={addLine}>{uiText("Add Item Line")}</Button>
+                </>}
                 {!menuOptions.length && <p className="text-xs text-muted-foreground">{uiText("No sellable menu items in this branch — add some on the Menu & BOM page.")}</p>}
               </div>
             </fieldset>}
@@ -392,20 +399,23 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
         <PosLifecyclePanel refreshToken={lifecycleRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} operatingConcept={operatingConcept} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current && !pendingDocuments.current} menuOptions={menuOptions} menuLoading={menuLoading} menuError={menuError} currencyCodes={["INR", ...currencyRates.map(rate => rate.currencyCode).filter(code => code !== "INR")]} pendingIntent={pendingLifecycle} acquireMutation={kind => {
           if (!mounted.current || !canOrder || visibilityBusy || visibilityInFlight.current || visibilityUnknown || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return false;
           return acquireMutation(kind);
-        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={async () => { refreshDocuments(value => value + 1); return reloadOrders(); }} />
+        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={async () => { refreshDocuments(value => value + 1); refreshPayments(value => value + 1); return reloadOrders(); }} />
         <PosDocumentsPanel refreshToken={documentRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} identity={identity} allowed={allowed} canMutate={canOrder && !busy && !visibilityBusy && !visibilityInFlight.current && !visibilityUnknown && !orderAttempt.current && !openOrderAttempt.current && !pendingLifecycle.current} pendingIntent={pendingDocuments} acquireMutation={kind => {
           if (!mounted.current || !canOrder || visibilityBusy || visibilityInFlight.current || visibilityUnknown || orderInFlight.current || orderAttempt.current || openOrderAttempt.current) return false;
           return acquireMutation(kind);
-        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={reloadOrders} />
+        }} releaseMutation={releaseMutation} onPendingChange={pending => { refreshMutation(value => value + 1); onPendingChange?.(pending); }} onChanged={async () => { refreshPayments(value => value + 1); return reloadOrders(); }} />
+        <PosPaymentsPanel refreshToken={paymentsRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} identity={identity} allowed={allowed} />
+        <PosVoidPanel refreshToken={paymentsRefreshToken} branchId={orderBranchId} branchName={branches.find(branch => branch.id === orderBranchId)?.name ?? orderBranchId} identity={identity} allowed={allowed} onVoided={() => { refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1); refreshPayments(value => value + 1); }} />
         {menuError && <p role="alert" className="mb-4 text-destructive">{uiText(menuError)} {uiText("Reload the page to reload the branch menu.")}</p>}
         {error && !open && <p role="alert" className="mb-4 text-destructive">{uiText(error)}</p>}
             {result && <div role="status" className="mt-3 space-y-3 rounded-md border p-3 text-sm">
               <p className="font-medium">{uiText("Order")} {result.order.orderNumber} {result.order.status === "OPEN" ? uiText("opened and sent to production.") : uiText("confirmed.")}</p>
+              {result.order.pickupToken && <p role="status" className="text-lg font-bold">{uiText("Pickup token:")} {result.order.pickupToken}</p>}
               {result.finalDocument && <p>INTERNAL SALES DOCUMENT — NOT A FISCAL RECEIPT. Final {result.finalDocument.number}; receipt {result.finalDocument.receiptNumber || "none"}; applicable proforma {result.finalDocument.proformaId || "none"}. View / print the immutable final in document history above; kitchen tickets are separate.</p>}
               {result.documentUnavailableReason && <p role="status">Immutable final document unavailable: {result.documentUnavailableReason}. Existing receipt/payment is unchanged; missing legacy snapshots are not fabricated.</p>}
-              {result.tickets?.map(ticket => <div key={ticket.ticketNumber}><p className="font-medium">{ticket.ticketType} — {ticket.ticketNumber}</p><ul className="list-disc pl-5">{ticket.lines.map((line, i) => <li key={i}>{line.name} × {line.qty}</li>)}</ul></div>)}
+              {result.tickets?.map(ticket => <div key={ticket.ticketNumber}><p className="font-medium">{ticket.ticketType} — {ticket.ticketNumber}{ticket.pickupToken ? ` (${uiText("Pickup")} ${ticket.pickupToken})` : ""}</p><ul className="list-disc pl-5">{ticket.lines.map((line, i) => <li key={i}>{line.name} × {line.qty}</li>)}</ul></div>)}
               {!result.tickets?.length && !!result.kot.length && <div><p className="font-medium">{uiText("KOT (kitchen copy, no price)")}</p><ul className="list-disc pl-5">{result.kot.map((k, i) => <li key={i}>{k.name} × {k.qty}</li>)}</ul></div>}
-              {result.receipt && <div><p className="font-medium">{uiText("Receipt")} {result.receipt.receiptNumber}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>
+              {result.receipt && <div><p className="font-medium">{uiText("Receipt")} {result.receipt.receiptNumber}{result.receipt.pickupToken ? ` — ${uiText("Pickup")} ${result.receipt.pickupToken}` : ""}</p><ul className="list-disc pl-5">{result.receipt.lines.map((l, i) => <li key={i}>{l.name} × {l.qty} = {formatInr(Number(l.lineTotal))}</li>)}</ul>
                 <p>{uiText("Subtotal:")} {formatInr(Number(result.receipt.subtotal))}</p>
                 <p>{uiText("VAT:")} {formatInr(Number(result.receipt.taxAmount))}{result.receipt.vat.rates.length ? " (" + result.receipt.vat.rates.map((r) => `${r.ratePercent}%: ${formatInr(Number(r.vatAmount))}`).join(", ") + ")" : ""}</p>
                 <p className="font-medium">{uiText("Total:")} {formatInr(Number(result.receipt.totalAmount))}</p>

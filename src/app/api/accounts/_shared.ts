@@ -8,6 +8,7 @@ export const expenseColumns = {
   id: branchExpenses.id, branchId: branchExpenses.branchId, date: branchExpenses.date,
   category: branchExpenses.category, subcategory: branchExpenses.subcategory, amount: branchExpenses.amount,
   description: branchExpenses.description, reference: branchExpenses.reference, status: branchExpenses.status,
+  paymentMethod: branchExpenses.paymentMethod, shiftRunId: branchExpenses.shiftRunId,
   createdById: branchExpenses.createdById, createdAt: branchExpenses.createdAt,
   voidReason: branchExpenses.voidReason, voidedById: branchExpenses.voidedById, voidedAt: branchExpenses.voidedAt,
 };

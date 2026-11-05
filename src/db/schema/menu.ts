@@ -35,6 +35,12 @@ export const menuItems = pgTable(
     // has no GSTR-1/HSN filing requirement).
     productCode: text("product_code").notNull().default(""),
     vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }).notNull().default("18.00"),
+    // GAP-028: optional dish photo for the POS touch-tile picker. Public
+    // Vercel Blob URL (dish photos are not sensitive, unlike purchase/task
+    // evidence) — null means "no photo yet", never a fabricated placeholder
+    // URL. Upload/replace/remove is MENU_BOM-only; see menu-images.ts.
+    imageUrl: text("image_url"),
+    imageUpdatedAt: timestamp("image_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("menu_items_branch_id_idx").on(table.branchId)]

@@ -22,6 +22,32 @@ export function RecipeBuilder({ item, recipe, items, materials, branches, branch
   const [error, setError] = React.useState("");
   const alive = React.useRef(true);
   const submitting = React.useRef(false);
+  const [photoUrl, setPhotoUrl] = React.useState<string | null>(item?.imageUrl ?? null);
+  const [photoBusy, setPhotoBusy] = React.useState(false);
+  const [photoError, setPhotoError] = React.useState("");
+  async function uploadPhoto(file: File) {
+    if (!item) return;
+    setPhotoBusy(true); setPhotoError("");
+    try {
+      const form = new FormData(); form.append("photo", file);
+      const res = await fetch(`/api/menu-items/${encodeURIComponent(item.id)}/image`, { method: "POST", credentials: "same-origin", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Photo upload failed (${res.status})`);
+      if (alive.current) setPhotoUrl(data.imageUrl ?? null);
+    } catch (err) { if (alive.current) setPhotoError(err instanceof Error ? err.message : uiText("Photo upload failed")); }
+    finally { if (alive.current) setPhotoBusy(false); }
+  }
+  async function removePhoto() {
+    if (!item) return;
+    setPhotoBusy(true); setPhotoError("");
+    try {
+      const res = await fetch(`/api/menu-items/${encodeURIComponent(item.id)}/image`, { method: "DELETE", credentials: "same-origin" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Photo remove failed (${res.status})`);
+      if (alive.current) setPhotoUrl(null);
+    } catch (err) { if (alive.current) setPhotoError(err instanceof Error ? err.message : uiText("Photo remove failed")); }
+    finally { if (alive.current) setPhotoBusy(false); }
+  }
   React.useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const options = eligibleSemiFg(items, metadata.branchId, item?.id);
   const update = (key: string, patch: Partial<IngredientDraft>) => setRows(current => current.map(row => row.key === key ? { ...row, ...patch } : row));
@@ -63,6 +89,21 @@ export function RecipeBuilder({ item, recipe, items, materials, branches, branch
       <Field label={uiText("Recipe yield (batch output)", "Recipe yield (batch mein taiyar quantity)")}><input required type="number" min="0.001" step="any" disabled={rows.some(row => row.locked)} className={inputClass} value={recipeYield} onChange={e => setRecipeYield(e.target.value)} /></Field>
       {item && <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-4">{uiText("Only the ingredient recipe is updated here; existing item details stay unchanged. HQ-locked ingredients cannot be changed by branch users.", "Yahan sirf ingredient recipe badlegi; item details wahi rahengi. Branch users HQ-locked ingredients nahi badal sakte.")}</p>}
     </section>
+    {item && <section className="space-y-2 rounded-lg border bg-muted/20 p-4">
+      <h3 className="font-semibold">{uiText("Dish photo", "Dish ki photo")}</h3>
+      <p className="text-xs text-muted-foreground">{uiText("Shown as a touch tile on the POS New Order screen. PNG, JPEG or WebP up to 8 MB; optional.", "POS New Order screen par touch tile mein dikhegi. PNG, JPEG ya WebP, 8 MB tak; optional.")}</p>
+      {photoError && <p role="alert" className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">{photoError}</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border bg-card">
+          {photoUrl ? <img src={photoUrl} alt={uiText("Dish photo")} className="h-full w-full object-cover" /> : <span aria-hidden className="text-2xl text-muted-foreground">🍽</span>}
+        </div>
+        <label className="inline-block"><span className="sr-only">{uiText("Upload dish photo")}</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} className="text-xs" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadPhoto(file); }} />
+        </label>
+        {photoUrl && <Button type="button" variant="outline" size="sm" disabled={photoBusy} onClick={removePhoto}>{uiText("Remove photo", "Photo hatayein")}</Button>}
+        {photoBusy && <span className="text-xs text-muted-foreground">{uiText("Saving…")}</span>}
+      </div>
+    </section>}
     <section className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{uiText("Ingredients", "Ingredients")} <span className="text-muted-foreground">({rows.length})</span></h3><Badge variant="outline">{uiText("Auto unit · normalized per 1 output", "Auto unit · har 1 output ke hisaab se")}</Badge></div>
       <p className="text-xs text-muted-foreground">{uiText("Enter all quantities for the batch yield above. Each row is divided by yield and rounded to 3 decimals when saved.", "Upar diye batch yield ke liye quantity bharein. Save par har quantity yield se divide hokar 3 decimals mein save hogi.")}</p>
       {rows.map((row, index) => {

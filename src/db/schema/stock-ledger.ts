@@ -37,6 +37,7 @@ export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
   "SEMI_FG_CONSUME", // deductStock's Semi-FG debit, e.g. a dish using a prepared item (SEMI_FG)
   "WASTAGE_WRITE_OFF", // logWastage's debit (RAW) — expired/dropped/burnt stock
   "PHYSICAL_COUNT_ADJUST", // submitNightVariance's signed adjustment to the real counted qty (RAW)
+  "ORDER_VOID_RESTOCK", // GAP-027 manager void: unprepared line's reversing credit back to stock (RAW/SEMI_FG)
 ]);
 
 export const stockItemTypeEnum = pgEnum("stock_item_type", ["RAW_MATERIAL", "SEMI_FG"]);

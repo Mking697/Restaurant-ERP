@@ -288,6 +288,83 @@
       "when": 1793790465948,
       "tag": "0040_gap025_pos_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793813970069,
+      "tag": "0041_gap026_pos_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793815716325,
+      "tag": "0042_gap027_order_reversals",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793816823706,
+      "tag": "0043_gap028_menu_item_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793817712391,
+      "tag": "0044_gap029_pos_token_sequences",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793819315277,
+      "tag": "0045_gap033_shift_opening_float",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793820859933,
+      "tag": "0046_gap035_expense_drawer_cash",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793844194030,
+      "tag": "0047_gap036_ho_cash_dispatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793846079325,
+      "tag": "0048_gap037_whatsapp_opt_outs",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793848036710,
+      "tag": "0049_gap038_customers_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793849389331,
+      "tag": "0050_gap039_reward_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793852730198,
+      "tag": "0051_gap040_customer_qr_tokens",
+      "breakpoints": true
     }
   ]
 }

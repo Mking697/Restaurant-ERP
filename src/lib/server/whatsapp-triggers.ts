@@ -19,14 +19,40 @@ export function validOptionalPhone(value: unknown): string {
   throw new HttpError(400, "Enter a valid Tanzanian mobile number");
 }
 
-export function thankYouMessage(params: { customerName: string; orderNumber: string; totalAmount: string; branchName: string }): string {
-  const name = params.customerName.trim() || "Guest";
-  return `Namaste ${name}! Aapka order #${params.orderNumber} confirm ho gaya hai — Total TSh ${params.totalAmount} (${params.branchName}). Dhanyawad, phir se aaiyega! 🙏`;
+// GAP-038: customer membership registration requires a real phone (it is
+// the unique identity key) — unlike the optional POS order capture above.
+export function requiredPhone(value: unknown): string {
+  const result = validOptionalPhone(value);
+  if (!result) throw new HttpError(400, "Enter a valid Tanzanian mobile number");
+  return result;
 }
 
-export function offerMessage(params: { offerText: string; validUntil: string; branchName: string }): string {
+export function thankYouMessage(params: { customerName: string; orderNumber: string; totalAmount: string; branchName: string; communityUrl?: string; optOutUrl?: string }): string {
+  const name = params.customerName.trim() || "Guest";
+  let message = `Namaste ${name}! Aapka order #${params.orderNumber} confirm ho gaya hai — Total TSh ${params.totalAmount} (${params.branchName}). Dhanyawad, phir se aaiyega! 🙏`;
+  // GAP-037: the link is only ever offered, never auto-joined — clicking it
+  // is the customer's own voluntary act on WhatsApp's side; we never create
+  // membership/consent ourselves just because a phone was captured on an
+  // order. Only shown when an Owner has actually configured a real
+  // community link (empty by default — no link, no line at all).
+  const community = params.communityUrl?.trim();
+  if (community) message += ` Humari WhatsApp community join karna chahein to (optional, aap chaahein to hi): ${community}`;
+  message += optOutSuffix(params.optOutUrl);
+  return message;
+}
+
+export function offerMessage(params: { offerText: string; validUntil: string; branchName: string; optOutUrl?: string }): string {
   const text = params.offerText.trim();
-  return `${params.branchName}: ${text}${params.validUntil ? ` (Valid tak ${params.validUntil})` : ""}`;
+  return `${params.branchName}: ${text}${params.validUntil ? ` (Valid tak ${params.validUntil})` : ""}${optOutSuffix(params.optOutUrl)}`;
+}
+
+// GAP-037: printed on every customer-facing message (thank-you + offer) so
+// the customer always has a way to stop being contacted — see
+// src/lib/server/whatsapp-preferences.ts. Omitted (not blocking) when the
+// Owner hasn't configured a public URL to build the link from yet.
+function optOutSuffix(optOutUrl?: string): string {
+  const url = optOutUrl?.trim();
+  return url ? ` Future messages band karne ke liye: ${url}` : "";
 }
 
 // ---------------------------------------------------------------------------

@@ -826,9 +826,11 @@ Release: N/A — local, uncommitted source only; ask before committing/deploying
 
 ### GAP-026 - POS payment receipts and invoice allocation
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-001, GAP-025
+Status: VERIFIED_LOCAL
+Coverage: PARTIAL (owner-approved full-payment scope only; partial/split/refund explicitly deferred) | Phase: P4 | Depends on: GAP-001, GAP-025
 Source: S1 optional receipt channels and invoice linkage; S2 payment-before/after rules; E07.
+
+Owner confirmed the inspected full-payment plan with "haa shuru kro" after GAP-025 release. Local implementation and isolated verification are complete under `docs/gap026-contract.md`: durable immutable payment/allocation capture within existing create/settle actions, truthful OPEN/CAPTURED/LEGACY/UNAVAILABLE coverage, and one shared no-double-count shift collection seam. Full suite 655/655, TypeScript and build clean, migration fresh/no-op verified, and a real-Postgres smoke (no mocks) confirmed capture, exact-replay dedup and correct shift-close totals. Evidence: `docs/gap026-verification.md`. No partial/split payment, refund, provider send, production migration, or commit/push/deployment is authorized — a separate release approval is required for that, distinct from GAP-025's.
 
 Acceptance: persisted payment/receipt references link amount/method/currency/rate to an invoice/order, expose outstanding balance, and enforce each concept's sequencing. Partial/split tender/refund behavior follows the approved policy, not an assumed requirement. Prevent duplicate receipt/sale/COGS/stock posting and preserve committed totals on retry. Channel labels or a combined KOT/receipt response are not separate payment accounting.
 
@@ -843,9 +845,11 @@ Acceptance: persisted payment/receipt references link amount/method/currency/rat
 
 ### GAP-027 - Manager-authorized void/cancellation and reversals
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-001, GAP-024, GAP-026
+Status: VERIFIED_LOCAL
+Coverage: PARTIAL (owner-approved scope: no new wastage posting, no reward reversal — see `docs/gap027-plan.md`) | Phase: P4 | Depends on: GAP-001, GAP-024, GAP-026
 Source: S1 manager-level void in both scenarios; E07.
+
+Owner confirmed the inspected plan with "haa shuru kro" after two scope clarifications (waste recorded in the reversal row only, no new wastage-ledger posting this pass; reversal detail shown in a separate read-only panel, VOIDED status unchanged). Local implementation and verification are complete under `docs/gap027-plan.md`: manager/Owner-only void of a PAID/COMPLETED order, append-only reversal record (reason/actor/prior status/payment-receipt-FINAL links/refund liability/restock-waste split), genuine stock restock for never-served lines via the existing stock-ledger seam, and exact-reason idempotent replay. Full suite 664/664, TypeScript and build clean, migration fresh/no-op verified, and a real-Postgres smoke (no mocks) confirmed authority denial, persisted void, untouched GAP-026 payment evidence, correct restock/waste split and exact-replay dedup. Evidence: `docs/gap027-verification.md`. No new wastage-ledger posting, refund execution, reward reversal, partial void, production migration, or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 Acceptance: server-enforced authorized manager action records reason, actor, prior state and reversal references. Stage-specific cancellation/void policy distinguishes unprepared/prepared/paid goods, waste/restock and cash/refund liability. Stock, COGS, invoices, receipts, reports and future rewards reverse or remain as approved exactly once; owner-only hiding is not voiding. Preserve official/audit records, deny cashier/cross-branch bypass and repeated reversal.
 
@@ -860,45 +864,28 @@ Acceptance: server-enforced authorized manager action records reason, actor, pri
 
 ### GAP-028 - Image-based touch POS menu
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-023, GAP-024
+Status: VERIFIED_LOCAL
+Coverage: PARTIAL (owner-approved scope: touch-tile grid ships on POS New Order only, not the add-items-to-open-table flow — see `docs/gap028-verification.md`) | Phase: P4 | Depends on: GAP-023, GAP-024
 Source: S2 graphic menu images/widget POS; E07, E05.
 
-Acceptance: authorized image create/update and appropriate storage/access are implemented; touch-friendly searchable/category menu tiles show item identity, price and availability, with clear order cart/quantity/table/channel. Test missing images, unavailable items, touch and keyboard, mobile overflow and accidental repeated taps. Dropdown ordering remains a fallback, not the claimed visual workflow.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/db/schema/menu.ts` (`menuItems` category/price/sellability), `src/app/api/menu-items/route.ts`, and `src/app/pos/page-content.tsx` cart `addLine`/`updateLine`/`submitOrder` reuse karein.
-- Proposed data/server change: PROPOSED: menu image metadata/reference and authorized upload/update service, reusing validation/storage conventions from `src/lib/server/purchase-documents.ts` only as a pattern. Menu media has a distinct access/storage policy; private invoice evidence must never be exposed as public dish images.
-- Proposed API/UI fit: Replace primary item selection with searchable/category touch tiles + availability/price and cart; retain dropdown/manual fallback. Existing backend still revalidates active/sellable/stock/current price, and uploaded images have clear missing/error placeholders.
-- Compatibility / rollout: Do not assume a new image/scanner/UI dependency exists. Update Menu edit, clone-approved configuration, POS API types and localization together; scope media writes to correct branch/concept and do not clone transaction data.
-- Concrete proof scenario: Missing photo and inactive item remain safe; keyboard/touch quantity controls work at narrow viewport; rapid confirm cannot double-submit. Failed upload never converts private purchase evidence into menu media.
-- Business improvement: Order-taking faster aur less error-prone hoga, while existing cart/validation investment remains intact.
+Owner confirmed the inspected plan with "haa shuru kro" after two scope clarifications (photo upload stays MENU_BOM-only; touch-tile grid ships on the New Order screen first). Local implementation and verification are complete: additive `menu_items.image_url`/`image_updated_at` columns; MENU_BOM-only, same-branch, same-origin `POST/DELETE /api/menu-items/[id]/image` with real signature+decode validation, resize-to-bounded-JPEG normalization, and public Vercel Blob storage (dish photos are decorative/customer-visible, not private evidence); a photo-upload control on the Menu & BOM edit panel; and a new `MenuTilePicker` (search, category chips, photo/placeholder tiles, qty stepper, disabled-unavailable state) on the POS New Order screen, with the original dropdown kept as an explicit "Switch to list view" fallback. Full suite 671/671 (7 new tests: 3 real-image validation, 4 component-behavior), TypeScript and build clean, migration 0043 fresh/no-op verified against a disposable Postgres container. Evidence: `docs/gap028-verification.md`. No bulk/CSV image import, barcode/QR scanning, customer-facing kiosk, production migration, or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-029 - Unique takeaway token numbers
 
-Status: PENDING
-Coverage: MISSING | Phase: P4 | Depends on: GAP-008, GAP-024
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P4 | Depends on: GAP-008, GAP-024
 Source: S2 unique takeaway tokens; E07.
 
-Acceptance: approved per-branch/business-day/channel token sequence is atomic under concurrency, persisted on order/KOT/receipt and safe on retry/reprint/cancellation. Distinguish the customer pickup token from internal order ID and statutory invoice numbering. Test rollover, gaps policy and cross-branch collisions.
+Local implementation and verification are complete: an additive `pos_token_sequences` table keyed by (branch, Tanzania-EAT business day, channel), atomically incremented via a single `INSERT ... ON CONFLICT DO UPDATE` statement; `pos_orders.pickup_token` scoped to TAKEAWAY only (dine-in tables and platform channels never get one in this pass — GAP-030 may layer a platform display token on top later). The token is distinct from the internal order id and from the separate statutory invoice number, is persisted on the order/receipt/KOT, and an exact-replay retry returns the already-assigned token rather than allocating a new one. Full suite 673/673 (2 new tests; 5 pre-existing POS harnesses updated to support the new call path, no coverage weakened), TypeScript and build clean, migration 0044 fresh/no-op verified. A real-Postgres concurrency smoke (no mocks) fired 40 genuinely concurrent allocations in the same branch/business-day/channel and got exactly 1..40 with zero duplicates/gaps, plus proof that a second branch running concurrently starts its own sequence at 1 with no collision. Evidence: `docs/gap029-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/db/schema/pos.ts` order identity, POS KOT/receipt output and `src/app/pos/page-content.tsx` result UI reuse karein; current timestamp/UUID orderNumber is not a pickup sequence.
-- Proposed data/server change: PROPOSED: scoped sequence identity and persisted one-time pickup-token assignment keyed by approved concept/branch/business-day/channel. Atomic allocate under transaction/unique constraint; invoice numbering is a separate legally approved identity, not token reuse.
-- Proposed API/UI fit: POS takeaway result, kitchen queue, KOT and receipt show same token and source order. Proposed lifecycle token allocator is shared by manual/API/platform intake instead of browser-local increments.
-- Compatibility / rollout: GAP-008 day/cutover and cancellation-gap policy precede allocation. No renumbering canceled/issued past tokens or all existing order IDs; retry/reprint returns already assigned token.
-- Concrete proof scenario: Parallel allocations yield unique scoped tokens; repeated same order retains token; approved midnight rollover and two branches do not collide in the defined scope.
-- Business improvement: Pickup coordination clear hogi aur concurrent counters duplicate tokens nahi nikaalenge.
 
 ### GAP-030 - Platform-specific tokens and external references
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-024, GAP-029
+Status: BLOCKED
+Coverage: MISSING | Phase: P4 | Depends on: GAP-024, GAP-029
 Source: S2 each online platform has its own token; E07.
 
-Acceptance: configured real platform identity, external order ID and platform-specific displayed token are retained and searchable without colliding with dine-in/direct takeaway. Deduplicate by provider/location/external order identity and preserve it through invoice/KOT/receipt/reprint. Existing manual channel names are not an integration or a unique platform token.
+Blocked by the owner's already-recorded P0 decision (gaps.md section 7): "Delivery providers: none currently in use or planned (no Swiggy/Zomato-equivalent)... treat as BLOCKED/no current scope until the client names an actual provider." This gap's acceptance explicitly requires a configured REAL platform/provider identity and "existing hard-coded SWIGGY/ZOMATO options do not establish actual Tanzania provider support" — with no real provider named, there is nothing genuine to integrate against, and building a fictional provider/token scheme would fabricate an integration that doesn't exist. Re-confirmed directly with the owner this session (November 4, 2026): proceed as BLOCKED, no code written. Reopen only when the owner names an actual delivery-platform provider.
 
 #### Current-project integration blueprint (PROPOSED)
 
@@ -911,11 +898,11 @@ Acceptance: configured real platform identity, external order ID and platform-sp
 
 ### GAP-031 - Real delivery-platform order intake
 
-Status: PENDING
+Status: BLOCKED
 Coverage: MISSING | Phase: P4 | Depends on: GAP-001, GAP-024, GAP-025, GAP-030, GAP-032
 Source: S2 incoming order through SMS/machine/platform; E07.
 
-Acceptance: select the actual supported API/webhook/SMS/machine interface and mapping with client/provider; authenticate/verify messages, map products/modifiers/taxes, deduplicate retries and handle unavailable items/cancellations. Real controlled acceptance proves order -> KOT/invoice/pending-payment as agreed; record external failure/retry/reconciliation. Requires approved provider access and consent; no invented API, mocked success or fabricated delivery proof. Any manual fallback must be clearly labeled.
+Blocked for the same reason as GAP-030 (its own blueprint already says so: "Blocked until actual provider docs/credentials/consent... are approved"), and by the same owner-recorded P0 decision: no real delivery-platform provider exists or is planned. This gap's acceptance itself forbids "no invented API, mocked success or fabricated delivery proof" — there is no real provider to authenticate against, so nothing here can be built without exactly the fabrication the acceptance criteria prohibits. Re-confirmed directly with the owner this session (November 4, 2026): proceed as BLOCKED, no code written. Reopen only when the owner names an actual delivery-platform provider and GAP-030 unblocks.
 
 #### Current-project integration blueprint (PROPOSED)
 
@@ -928,132 +915,69 @@ Acceptance: select the actual supported API/webhook/SMS/machine interface and ma
 
 ### GAP-032 - Online unpaid/pending-payment order state
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P4 | Depends on: GAP-024, GAP-025, GAP-026
+Status: VERIFIED_LOCAL
+Coverage: PARTIAL (generalized scope — "provider reference" deferred, see `docs/gap032-verification.md`) | Phase: P4 | Depends on: GAP-024, GAP-025, GAP-026
 Source: S2 online orders KOT/invoice/receipt pending payment; E07.
 
-Acceptance: order/fulfillment status and payment status are distinct; incoming online order may fire approved kitchen documents without falsely being marked paid. Show unpaid amounts and controlled settlement/receipt transition; reconcile with provider reference. Revenue recognition and shift tender inclusion follow approved policy, not automatic treatment as cashier cash. Repeated provider settlement cannot double-post.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing completed sales/COGS in `src/db/schema/pos.ts`, shared POS posting boundary and `src/lib/server/shifts.ts` collections integration reuse karein.
-- Proposed data/server change: PROPOSED: fulfillment state and payment state separate; provider receivable/settlement references and pending balance link to GAP-026 payments. Kitchen/invoice events follow approved revenue-recognition rules but never manufacture a paid receipt; financial projection is explicitly versioned.
-- Proposed API/UI fit: POS online pending-payment queue and controlled settlement action show actual unpaid/partially/fully settled status per approved policy. Reuse invoice/receipt lifecycle rather than adding a second aggregator billing engine.
-- Compatibility / rollout: Implement before GAP-031 despite numeric ID order. Current completed-order tender sums cannot treat unpaid kitchen orders as cash; reconciliation/report/shift readers must understand new event sources and keep historical paid orders unchanged.
-- Concrete proof scenario: Unpaid online kitchen dispatch creates no drawer receipt. Repeated provider settlement links once, updates outstanding once and never rededucts inventory or recaptures sale COGS.
-- Business improvement: Online order kitchen me process ho sakega, lekin accounts/shift me payment aane se pehle cash collection jhoothi nahi dikhegi.
+Owner confirmed generalizing this gap to "any order dispatched to fulfillment before payment is confirmed" (today: CONVENTIONAL dine-in OPEN orders) rather than requiring a real online-platform provider, which does not exist (GAP-030/031 BLOCKED). Inspection found the acceptance already substantially satisfied by the existing GAP-023/024/025/026 lifecycle: `pos_orders.status` already separates fulfillment from payment; an OPEN order's KOT/stock/COGS fire without ever being marked paid; `listPosPayments` already shows real unpaid amounts (`coverage: 'OPEN'`); `readPosCollectionTenders` already excludes OPEN orders from shift cash entirely; `settlePosOrder` is the one controlled OPEN→PAID transition and rejects a second distinct settlement attempt with 409 (only an exact-key retry replays); stock/COGS are captured once at dispatch and never re-touched at settlement. No application code changed in this pass — only two new tests (`tests/gap032-service.test.cjs`) proving these properties directly and end-to-end. Full suite 675/675, TypeScript clean. Evidence: `docs/gap032-verification.md`. The online-specific "reconcile with provider reference" piece remains deferred until GAP-030/031 unblock with a real named provider.
 
 ### GAP-033 - First opening cash/float entry
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P5 | Depends on: GAP-008, GAP-026
+Status: VERIFIED_LOCAL
+Coverage: PARTIAL (owner-approved minimal scope — first-shift opening float only, not the larger drawer-movements ledger — see `docs/gap033-verification.md`) | Phase: P5 | Depends on: GAP-008, GAP-026
 Source: S1 Shift Opening Cash; E08.
 
-Acceptance: authorized opening-float amount/source/reference can be recorded for the first run and approved replenishment. Later incoming handover and new float are not double-counted; opening snapshot is immutable after controlled posting. Reconciliation proves expected cash from opening + actual cash receipts - approved cash movements. Test zero/negative/duplicate float and role denial.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/lib/server/shifts.ts` (`startFirstShift`, `lockShiftState`, `endShiftAndHandover`), `src/app/api/shift-runs/route.ts`, `src/app/admin/settings/shifts/page-content.tsx`, `src/app/cash-drop/page-content.tsx` aur `src/lib/shift-gate.tsx` ko extend karein.
-- Proposed data/server change: PROPOSED: append-only drawer movements (opening float/top-up/cash receipt/cash expense/refund/HO dispatch) with branch/run/source identity, exact amount, actor and unique idempotency reference. Shift opening snapshot points to its real funding source; accepted prior handover is not a second opening-float credit. Existing run/handovers stay historical records.
-- Proposed API/UI fit: Existing Start Shift action me authorized opening source/amount form add karein; start handler run + first movement atomically persist kare. Cash Drop screen blind expected amount hide rakhe aur shared drawer summary se close compute kare. New movement handlers are proposals, not existing APIs.
-- Compatibility / rollout: Configured pilot branches ke liye feature-gated path; unconfigured shift behavior unchanged. Existing runs ko invented opening float backfill na karein. Lock ordering remains recipe-stock before shift-state where both required; foundation/auth lock ordering must remain consistent.
-- Concrete proof scenario: Fresh run opens with TSh 50,000, collects TSh 10,000 cash, count TSh 60,000 -> zero variance. Same start/float request retry once-only; subsequent accepted handover 60,000 is not counted again as new funding.
-- Business improvement: First shift ka unexplained cash shortage/excess khatam hoga aur opening money ki custody traceable hogi.
+Owner confirmed a minimal scope (literally "first opening cash/float entry", not the full proposed drawer-movements ledger) and Branch Manager/Owner-only authorization. Local implementation and verification are complete: additive `shift_runs.opening_float_inr`/`opening_float_reference`/`opening_float_recorded_by`/`opening_float_recorded_at` columns; `startFirstShift` accepts an optional Manager/Owner-only opening float (non-negative, 2-decimal validated, explicit zero distinct from "not provided"), rejected 403 for a cashier with no write and 400 for a negative/invalid amount; a duplicate float is structurally impossible since a second shift-start on an already-open branch already fails 409 before any write; `endShiftAndHandover`'s expected-cash baseline now falls back to the run's own recorded float only when no incoming accepted handover exists (structurally only the branch's first-ever run) — every later run is unaffected and still uses the real carried-forward drawer balance. Full suite 680/680 (5 new tests), TypeScript and build clean, migration 0045 fresh/no-op verified against a disposable Postgres container. Evidence: `docs/gap033-verification.md`. No mid-shift top-up/cash-expense/refund/HO-dispatch movement types, production migration, or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-034 - Live shift sales, tender and pending-order summary
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P5 | Depends on: GAP-024, GAP-026, GAP-032
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P5 | Depends on: GAP-024, GAP-026, GAP-032
 Source: S1 sales summary, pending orders, receipt breakup; E07-E08.
 
-Acceptance: running shift screen/API distinguish completed/invoiced/open/unpaid orders and actual collected Cash/Card/Other by the approved run/time policy. Pending orders carry over by explicit policy, not by marking them completed. Existing closing tender summary remains correct; role/order visibility boundaries are preserved and operational vs official totals are labeled honestly.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/app/api/shift-runs/route.ts` GET/status, `src/lib/server/shifts.ts` (`currentOpenRun`, `requireOperableShift`), `src/app/admin/settings/shifts/page-content.tsx` aur `src/lib/shift-gate.tsx` ka scoped read pattern reuse karein.
-- Proposed data/server change: PROPOSED: read-model over GAP-024 order lifecycle plus GAP-026 payment events and drawer ledger; no independent editable totals table. Attribute actual collections to collection run, not blindly the run that originally opened an unpaid order. Operational visibility-filtered order lists and actual custody totals are separate contracts.
-- Proposed API/UI fit: Existing shift status screen/API me live sales, collected tenders, open/unpaid orders and carryover panel add karein; cashier POS/Cash Drop me same shared summary use karein. No hidden-order IDs/counts leak through operational aggregates; required unfiltered physical reconciliation is explicitly labeled actual custody.
-- Compatibility / rollout: New summary read-only first, compare against close snapshots before replacing any existing calculation. Query invalidation/manual reload follows current stale-response guards, with indexed bounded reads instead of repeated whole-history fetches.
-- Concrete proof scenario: Order run A me open hua, cash run B me mila: order carryover dikhe, cash sirf B ke drawer me aaye; card pending order cash expected amount na badhaye. Existing owner-only privacy tests and actual cash close both pass.
-- Business improvement: Cashier ko sales aur actually received money ka difference clear dikhega; pending order ko fake completed sale bana kar shift close nahi karna padega.
+Local implementation and verification are complete: a pure read-model (`liveShiftSummary` in `src/lib/server/shift-summary.ts`, no new table) over the current open run showing actual collected Cash/Card/UPI/Other via the exact GAP-026 collection seam read live, completed/paid orders this run with the established visible/actual/owner-only split, and every currently OPEN/unpaid order branch-wide — carried over by policy (never force-completed), correctly flagged when dispatched under an earlier, already-ended run. `GET /api/shift-runs/summary` and a new read-only `ShiftSummaryPanel` on the Cash Drop screen. Full suite 684/684 (4 new tests), TypeScript and build clean; no schema/migration needed since this is a read-model only. Evidence: `docs/gap034-verification.md`. No commit/push or deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-035 - Shift-linked expenses and cash drawer movements
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P5 | Depends on: GAP-026, GAP-033
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P5 | Depends on: GAP-026, GAP-033
 Source: S1 expenses on shift; E08.
 
-Acceptance: approved expenses link a specific shift, paying drawer/method, amount, reason/evidence and approver. Only actual drawer-cash outflow reduces expected cash, exactly once; noncash expense must not. Corrections are auditable and reconcile to Accounts without duplicate posting. Prove the TSh 20,000 cash-expense example closes without a false shortage and reject backdated/closed-run bypass.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/db/schema/expenses.ts` (`branchExpenses`), `src/lib/server/expenses.ts` (`parseExpense`, `assertExpenseReplay`, `voidExpenseChanges`), `src/app/api/accounts/expenses/route.ts` (`postExpenseJournal` call) aur `src/lib/server/shifts.ts` close math ko connect karein.
-- Proposed data/server change: PROPOSED: optional shiftRunId/payment source/method on new approved expense entries plus uniquely linked drawer movement. Existing expense/journal remains the expense source of truth; drawer row records cash custody only, not another operating expense. New refund/void cash compensation is append-only and distinct from merely voiding an accounting entry.
-- Proposed API/UI fit: Accounts expense form me 'paid from this shift drawer' option only for authorized open run; Cash Drop/shift panel approved movement read kare. Extend current validators/column selection/types together and enforce real actor/branch/run server-side; no client-supplied expected cash.
-- Compatibility / rollout: Existing date-based expenses retain unknown/not-drawer origin unless evidence authorizes reconciliation; never retroactively subtract all old expenses from an active drawer. Expense insert, journal and cash movement share one appropriate DB transaction; changed payload under same idempotency key rejects.
-- Concrete proof scenario: Drawer 100,000, approved cash expense 20,000 -> expected 80,000; same expense paid by bank/card -> drawer stays 100,000. Retry or expense void without actual cash return must not create phantom drawer credit or duplicate P&L expense.
-- Business improvement: Accounts aur physical cash ek hi real expense ko consistently explain karenge, bina double expense ya false shortage ke.
+Local implementation and verification are complete: additive `branch_expenses.payment_method`/`shift_run_id` columns with two DB-level CHECK constraints enforcing "only CASH ever carries a shift link, and CASH always does" at the Postgres layer itself. A CASH expense's `shiftRunId` is ALWAYS resolved server-side from the branch's actual currently-open run — the field is not even an accepted client input, making a backdated/foreign/closed-run bypass structurally impossible, not just policy. `endShiftAndHandover` now subtracts every POSTED CASH expense linked to the closing run from expected cash exactly once; a VOIDed one is excluded live, and a NON_CASH/unspecified expense never touches drawer cash at all — the exact TSh 20,000 example from the acceptance criteria is proven end-to-end. Full suite 690/690 (6 new tests), TypeScript and build clean, migration 0046 fresh/no-op verified against a disposable Postgres container, with the new CHECK constraints directly exercised via real INSERT statements (a bad CASH/empty-run combination genuinely rejected by Postgres). Evidence: `docs/gap035-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-036 - Final shift cash handover to Head Office
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P5 | Depends on: GAP-033, GAP-034, GAP-035
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P5 | Depends on: GAP-033, GAP-034, GAP-035
 Source: S1 last shift cash to HO; E08.
 
-Acceptance: distinguish next-shift carryover from final HO dispatch/deposit; record counted denominations/amount, custody, receiver acknowledgment, discrepancy and pending/in-transit state. Prevent double handover, self/unauthorized acceptance and an unwanted automatic next-shift opening. Define retained float/next-business-day restart and test all run transitions.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/lib/server/shifts.ts` (`endShiftAndHandover`, `acceptHandover`), `src/db/schema/shifts.ts` (`shiftRuns`, `shiftHandovers`), `src/app/api/shift-runs/[id]/end/route.ts`, `src/app/api/shift-handovers/[id]/accept/route.ts` aur `src/app/cash-drop/page-content.tsx` ko extend karein.
-- Proposed data/server change: PROPOSED: explicit destination type NEXT_SHIFT vs HEAD_OFFICE, custody transfer identity/status, retained float and receipt acknowledgment linked to drawer movements. Existing shiftHandovers.toRunId is NOT NULL; HO flow needs a reviewed additive separate custody-transfer table or coherent schema migration, not a fake next-run reference. HO cross-database acknowledgment uses the approved durable bridge.
-- Proposed API/UI fit: End Shift me authorized next-shift/HO option and counted dispatch amount; HO/Accounts receipt queue shows in-transit cash and differences. Next shift is created only for the approved NEXT_SHIFT path; final close/next-day restart follow agreed operating-day policy.
-- Compatibility / rollout: Keep current next-shift default until pilot approval; update response discriminated shape and Cash Drop UI together because it currently requires toRun.label. Preserve historic handovers/cashDrops, blind count and accepted incoming logic. Receiver confirmation must not itself pretend to be bank deposit.
-- Concrete proof scenario: Final run count 80,000, retain float 10,000, dispatch HO 70,000 -> no automatic new shift; HO acknowledgment credits custody once. Retry, wrong receiver and cross-branch substitution reject; next-shift path still works unchanged.
-- Business improvement: Last shift ka cash next fictitious shift me atakne ke bajaye actual HO custody tak tracked rahega.
+Local implementation and verification are complete. Owner decisions recorded this session: a discrepancy on HO acceptance is accepted immediately with the signed difference recorded (no separate DISPUTED workflow); acceptance authority is Owner/SUPER_ADMIN only (which also structurally rules out cross-branch substitution — no branch-scoped role can reach the accept path at all). A deliberately separate `ho_cash_dispatches` table (not a reuse of `shiftHandovers`, whose `toRunId` stays NOT NULL/real) carries counted/retained/dispatched amounts, dispatcher, acceptance, and signed discrepancy. New `dispatchShiftCashToHo` ends the run exactly like the ordinary close but creates no next run; new `acceptHoCashDispatch` blocks self-acceptance, non-Owner acceptance, and double-accept. The expected-cash calculation was extracted into one shared helper reused by both the ordinary next-shift close and the new HO path, so they can never drift apart. The ordinary NEXT_SHIFT handover path is proven completely unaffected. Full suite 698/698 (8 new tests), TypeScript and build clean, migration 0047 fresh/no-op verified against a disposable Postgres container with the new table's shape confirmed directly. Evidence: `docs/gap036-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-037 - Voluntary WhatsApp community join flow
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P6 | Depends on: GAP-001, GAP-023
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P6 | Depends on: GAP-001, GAP-023
 Source: S1/S2 CRM join link; E09.
 
-Acceptance: configured community link is offered voluntarily through the approved thank-you/receipt/customer path with privacy/opt-in text; no automatic group enrollment or marketing-consent inference from a phone number. Verify link/fallback and opt-out behavior. Provider send/delivery claims require controlled proof; existing thank-you/offer paths are reused, not rebuilt as missing.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/lib/server/whatsapp-triggers.ts` (`thankYouMessage`, `offerMessage`), POS post-commit thank-you path and `src/app/api/whatsapp/offer-alert/route.ts` preview/send audience queries reuse/extend karein.
-- Proposed data/server change: PROPOSED: approved community URL/privacy text plus consent/preference events and invitation eligibility. Community enrollment is voluntary outside our accounting transaction; no phone capture automatically creates membership, marketing consent or group enrollment.
-- Proposed API/UI fit: Receipt/thank-you path offers optional Join Community link with clear opt-out/manual fallback. Both offer preview GET and send POST must apply the same consent + branch + operational visibility rules once membership/preferences exist.
-- Compatibility / rollout: Current offer audience derives from historical phones, not consent, and current offer send runs inside mutate. As part of this slice persist authorized campaign intent/audience evidence under lock, then deliver outside the business lock with rechecked opt-out policy and bounded retries; do not claim all current sends are already post-commit.
-- Concrete proof scenario: Anonymous/declined invitation sale still succeeds. Opted-out customer excluded from both preview and send; provider failure never rolls back sale or holds stock/cash locks, and no test real-send without consent.
-- Business improvement: Existing messaging investment se community growth possible hogi, without unsolicited auto-enrollment or inaccurate audience counts.
+Local implementation and verification are complete. A new `whatsapp_opt_outs` table (phone-only, never a membership identity — that fuller registry is GAP-038's separate scope) records a customer's own explicit "stop messaging me" click on a public, unauthenticated `/whatsapp-optout` page/API — never inferred from merely capturing a phone on an order. `thankYouMessage` offers the Owner-configured community link ONLY when one is actually set (empty by default, explicit voluntary wording — clicking it is the customer's own act on WhatsApp's side, never auto-enrollment), and both the thank-you and offer messages now carry an opt-out link once an app public URL is configured. The POS thank-you send and the existing offer-alert broadcast (both preview GET and send POST) now check opt-out status and skip/exclude accordingly — proven by tests that a sale still succeeds for an opted-out customer (only the WhatsApp send is skipped) and that an opted-out phone is excluded from both the offer preview count and the real send. Full suite 705/705 (7 new tests), TypeScript and build clean, migration 0048 fresh/no-op verified against a disposable Postgres container with PK uniqueness directly exercised. Also fixed an unrelated pre-existing gap in a different test's mock-module loader that this change's new imports exposed. Evidence: `docs/gap037-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps.
 
 ### GAP-038 - Customer membership registry and consent
 
-Status: PENDING
-Coverage: PARTIAL | Phase: P6 | Depends on: GAP-001, GAP-003
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P6 | Depends on: GAP-001, GAP-003
 Source: S2 trackable loyalty membership; E09.
 
-Acceptance: stable unique membership identity, Tanzania phone validation/deduplication, consent/preferences and authorized lookup/update/merge rules exist. Define cross-concept/branch membership scope and retention. Anonymous cash customers remain valid; merely capturing a phone on an order is not membership or community enrollment.
-
-#### Current-project integration blueprint (PROPOSED)
-
-- Current-project reuse: Existing `src/lib/server/whatsapp-triggers.ts` (`validOptionalPhone`), optional customer name/phone in `src/db/schema/pos.ts`, and branch/auth guards reuse karein; employee users are not customer membership records.
-- Proposed data/server change: PROPOSED: stable customer/member identity with approved scope-unique normalized phone, consent/preference events, audited merge aliases and lifecycle order/member links. Cross-concept membership ownership/sharing follows P0; do not join independently isolated DBs by untrusted phone alone.
-- Proposed API/UI fit: Proposed `/api/customers` scoped lookup/create/update and optional POS member selector with anonymous checkout. Customer history retention/access and merge authority are explicit; new records integrate with community and reward events, not auto-import all past captured phones as enrolled members.
-- Compatibility / rollout: Normalize supported Tanzania local/international variants consistently; preserve historical order customer snapshots and attach only verified links. Uniqueness/backfill duplicates are reviewed before constraints, not overwritten by convenience upserts.
-- Concrete proof scenario: Two concurrent registrations using equivalent approved phone variants resolve one member or a clear conflict; unauthorized cross-scope lookup rejects. Anonymous sale works and past invoice customer text remains unchanged after member edit.
-- Business improvement: Repeat customers ki dependable identity milegi; phone-on-receipt ko fake membership/consent nahi maana jayega.
+Local implementation and verification are complete. Owner decisions recorded this session: membership identity is GLOBAL (one shared identity across every branch/concept, a normal loyalty-program model); edit/merge authority is Branch Manager (own-branch-registered members only) or Owner (any), while read/search stays global for any POS_CASHIER-module staff. A new `customers` table (unique normalized phone as the identity key) backs an idempotent find-or-create that resolves concurrent equivalent-phone-variant registrations to one row, including surviving a genuine DB-level unique-constraint race. Consent/opt-out is read live from the existing GAP-037 `whatsapp_opt_outs` table by phone — never duplicated. Merge rejects self-merge, double-merge, and merge-into-already-merged, and checks edit authority on both sides. Capturing a phone/name on a POS order still never creates or touches a membership record — registration is an explicit staff action only. Full suite 711/711 (7 new tests), TypeScript and build clean, migration 0049 fresh/no-op verified against a disposable Postgres container with the UNIQUE phone constraint directly exercised, plus a live-DB smoke test of the real `like`/`ilike` search SQL. Evidence: `docs/gap038-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps. Not yet built: POS-time member selection/order linking and the reward ledger (GAP-039) — out of this gap's written scope.
 
 ### GAP-039 - Trackable reward earn/redeem/reversal ledger
 
-Status: PENDING
-Coverage: MISSING | Phase: P6 | Depends on: GAP-026, GAP-027, GAP-038
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P6 | Depends on: GAP-026, GAP-027, GAP-038
 Source: S2 proposed trackable rewards program; E09.
 
-Acceptance: client approves program, eligibility, value, expiry and accounting policy before implementation. Persist append-only earn/redeem/expire/reverse events tied to eligible actual orders/payments, prevent overspend/concurrent double redemption and reverse rewards according to void/refund policy. Balance is reproducible and branch/user authorization tested. A WhatsApp broadcast or cosmetic points field is not loyalty accounting.
+Owner approved the required pre-implementation policy this session (recorded in `src/db/schema/rewards.ts`): eligibility = every PAID/COMPLETED order, no minimum; earn rate = 1 point per TSh 1,000 (floor division); redeem value = 1 point = TSh 50 discount, rate snapshotted at redemption time; expiry = 12 months from each earn, FIFO; accounting = redemption is a discount reducing revenue, not a separate expense line. Local implementation and verification are complete on that approved policy: a new append-only `reward_events` table and ledger service (`earnPoints`/`redeemPoints`/`reverseEarnForOrder`/`expireOldEarns`) — balance is always derived by replaying events (a REVERSE nets its target to exactly zero), never an independently mutable points field; `earnPoints` reads the real order row server-side (never a client-supplied amount) and is idempotent per order; `redeemPoints` is serialized per customer via an advisory lock so concurrent redemptions cannot overspend; `expireOldEarns` does true FIFO lot replay to correctly size only the still-remaining portion of an aged-out earn. Full suite 718/718 (7 new tests), TypeScript and build clean, migration 0050 fresh/no-op verified against a disposable Postgres container with BOTH unique constraints (one-earn-per-order, one-settlement-per-event) directly exercised via real duplicate inserts. Evidence: `docs/gap039-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps. Not yet built: POS-time auto-earn/auto-reverse wiring, a staff-facing UI, a scheduled expiry job, and the actual Accounts/VAT discount posting — all explicitly deferred, consistent with GAP-038's same pattern.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Superseded blueprint (implemented per the owner-approved policy above, not as originally drafted)
 
 - Current-project reuse: Existing sale/payment/void identities from `src/db/schema/pos.ts`, current `src/lib/server/cogs.ts` capture boundaries and proposed GAP-026/027 domain events reuse karein.
 - Proposed data/server change: PROPOSED: versioned approved reward policy and append-only earn/redeem/expire/reverse ledger with unique source-event identity. Serialize redemption against the authoritative member ledger; reproducible balance derives from events, not an independently editable points number. Money/account treatment follows explicit client decision.
@@ -1064,13 +988,13 @@ Acceptance: client approves program, eligibility, value, expiry and accounting p
 
 ### GAP-040 - Customer membership QR issuance and safe scanning
 
-Status: PENDING
-Coverage: MISSING | Phase: P6 | Depends on: GAP-038
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P6 | Depends on: GAP-038
 Source: S2 QR-based membership-number scanning; E09.
 
-Acceptance: generate safe non-sensitive customer QR identifiers and implement authorized scanner/lookup with revoked/invalid/unknown-code handling and manual membership fallback. Define supported scanner/camera hardware and test it. Do not expose phone/credentials in QR or confuse provider-login QR with customer membership QR. Scanning must not itself authenticate a high-value redemption without the approved control.
+Local implementation and verification are complete. Hardware scoping decision recorded explicitly (no existing QR library in this project): scanning assumes a standard HID barcode/QR scanner that types the decoded text into a focused input, needing no camera API; QR generation uses the newly-added `qrcode` npm package (small, standard, no native deps). A new `customer_qr_tokens` table stores only a sha256 hash of a random opaque token (never the phone/name/id, same convention as session tokens) with a partial unique index enforcing at most one ACTIVE token per customer at the database layer. `issueMemberQrToken` implicitly revokes any previous token (re-issuing = how a lost code gets invalidated) and returns the raw token exactly once; `lookupMemberByQrToken` resolves a scanned code to identity only — it never itself authorizes a redemption or other high-value action, and gives byte-identical errors for an unknown vs. a revoked code. Issue/revoke reuse GAP-038's own edit-authority rule (registering Branch Manager or Owner); lookup is any POS_CASHIER-module staff. Full suite 724/724 (6 new tests), TypeScript and build clean, migration 0051 fresh/no-op verified against a disposable Postgres container with BOTH the token-hash uniqueness and the partial one-active-per-customer index directly exercised via real inserts/updates. Evidence: `docs/gap040-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps. Not yet built: a POS "scan to find member" UI screen, a printable membership card, and a camera/photo-based scanning mode — all explicitly deferred.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Superseded blueprint (implemented per the scoping decision above, not as originally drafted)
 
 - Current-project reuse: Existing authenticated customer selection/cart structure in `src/app/pos/page-content.tsx` plus approved GAP-038 membership lookup reuse karein; provider-login QR is unrelated.
 - Proposed data/server change: PROPOSED: opaque revocable member-lookup token hashed at rest with issue/revoke/audit events; QR contains no phone/password/session credential. QR possession only identifies a member and cannot authorize high-value redemption without approved additional control.
@@ -1081,13 +1005,13 @@ Acceptance: generate safe non-sensitive customer QR identifiers and implement au
 
 ### GAP-041 - QR/member-assisted repeat ordering
 
-Status: PENDING
-Coverage: MISSING | Phase: P6 | Depends on: GAP-028, GAP-038, GAP-039, GAP-040
+Status: VERIFIED_LOCAL
+Coverage: COMPLETE | Phase: P6 | Depends on: GAP-028, GAP-038, GAP-039, GAP-040
 Source: S2 swift repeat orders from membership scan; E07, E09.
 
-Acceptance: scan/lookup selects the intended customer in POS, shows permitted recent orders/preferences/rewards and lets the cashier add a prior order using CURRENT availability/prices/taxes with explicit confirmation. No silent historical-price reuse, duplicate sale or unauthorized customer-history disclosure. Membership lookup remains useful if loyalty earning is temporarily unavailable.
+Local implementation and verification are complete. No schema change — a read-only service over the existing `posOrders`/`posOrderLines`/`menuItems` tables. `recentOrdersForMember` scopes to the exact branch + the member's phone + PAID/COMPLETED status, with the existing `operationalOrderVisibility` applied at the query boundary (a hidden order never surfaces for a non-Owner); deliberately no cross-branch matching (cloned-menu identity across branches is a separately unresolved mapping problem, explicitly out of scope). `repeatOrderPreview` maps a past order's lines onto the CURRENT catalog — flags a removed or now-inactive item, and prices every still-available line from the live `menuItems.price`, never the historical snapshot — and gives the identical generic 404 for a foreign-member/different-branch/hidden/nonexistent order id. The function never posts an order itself; placing a repeat order reuses the existing, unmodified order-creation flow with the cashier's own act of building that order serving as the required explicit confirmation. Zero dependency on GAP-039's reward ledger, so a reward outage cannot affect ordinary reordering. Full suite 729/729 (5 new tests), TypeScript and build clean; no migration needed. Evidence: `docs/gap041-verification.md`. No production migration or commit/push/deployment is authorized — owner's explicit instruction is to batch release with future gaps. Not yet built: the actual POS "recent orders / add again" UI panel — API-only this pass, consistent with GAP-038/039/040's same deferral.
 
-#### Current-project integration blueprint (PROPOSED)
+#### Superseded blueprint (implemented per the approach above, not as originally drafted)
 
 - Current-project reuse: Existing `src/db/schema/pos.ts` (`posOrderLines`), `src/app/api/menu-items/route.ts`, POS addLine/updateLine/submitOrder and `src/lib/server/order-visibility.ts` filters reuse karein.
 - Proposed data/server change: PROPOSED: scoped member recent-order query and repeat-into-cart mapping using current local catalog identity/availability/price/tax. Historical order snapshots remain read-only; quantities/item substitutions require explicit validation and user confirmation, not automatic reorder posting.

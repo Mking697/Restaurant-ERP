@@ -1,0 +1,4 @@
+ALTER TABLE "branch_expenses" ADD COLUMN "payment_method" text DEFAULT '' NOT NULL;--> statement-breakpoint
+ALTER TABLE "branch_expenses" ADD COLUMN "shift_run_id" text DEFAULT '' NOT NULL;--> statement-breakpoint
+ALTER TABLE "branch_expenses" ADD CONSTRAINT "expenses_payment_method_valid" CHECK ("branch_expenses"."payment_method" in ('', 'CASH', 'NON_CASH'));--> statement-breakpoint
+ALTER TABLE "branch_expenses" ADD CONSTRAINT "expenses_cash_requires_shift_run" CHECK (("branch_expenses"."payment_method" = 'CASH' and "branch_expenses"."shift_run_id" <> '') or ("branch_expenses"."payment_method" <> 'CASH' and "branch_expenses"."shift_run_id" = ''));

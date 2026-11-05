@@ -22,6 +22,7 @@ const columns = {
   isSemiFg: menuItems.isSemiFg,
   isSellable: menuItems.isSellable,
   outputUnit: menuItems.outputUnit,
+  imageUrl: menuItems.imageUrl,
   createdAt: menuItems.createdAt,
 };
 

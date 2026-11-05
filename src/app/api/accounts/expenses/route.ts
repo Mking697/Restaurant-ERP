@@ -6,6 +6,8 @@ import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
 import { assertExpenseReplay, expenseMonth, expensePermission, expenseProfitLoss, expenseScope, parseExpense } from "@/lib/server/expenses";
 import { postExpenseJournal } from "@/lib/server/accounts-ledger";
+import { HttpError } from "@/lib/server/permissions";
+import { currentOpenRun, lockShiftState } from "@/lib/server/shifts";
 import { ensureExpenseBranch, expenseColumns, expenseWindow } from "../_shared";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +33,19 @@ export async function POST(request: Request) { return api(async () => {
       assertExpenseReplay(existing, input);
       const [row] = await tx.select(expenseColumns).from(branchExpenses).where(eq(branchExpenses.id, existing.id)); return row;
     }
-    const [row] = await tx.insert(branchExpenses).values({ ...input, id: randomUUID(), branchId, createdById: actor.id }).returning(expenseColumns);
+    // GAP-035: a CASH expense's shiftRunId is ALWAYS resolved here, from the
+    // branch's actual currently-open run — never accepted from the client.
+    // This is exactly what makes a backdated/closed-run bypass impossible:
+    // there is no input field that could ever name a foreign or already-
+    // ended run.
+    let shiftRunId = "";
+    if (input.paymentMethod === "CASH") {
+      await lockShiftState(tx, branchId);
+      const run = await currentOpenRun(tx, branchId);
+      if (!run) throw new HttpError(409, "No active shift to charge this cash expense against — start a shift first, or post this as a non-cash expense.");
+      shiftRunId = run.id;
+    }
+    const [row] = await tx.insert(branchExpenses).values({ ...input, id: randomUUID(), branchId, createdById: actor.id, shiftRunId }).returning(expenseColumns);
     await postExpenseJournal(tx, actor, { id: row.id, branchId, category: row.category, amount: row.amount });
     return row;
   });

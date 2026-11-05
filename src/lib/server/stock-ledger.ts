@@ -11,7 +11,7 @@ import { decimal, quantity } from "./production-quantity";
 // inventory_stock.qtyOnHand / semi_fg_stock.qtyOnHand in the SAME
 // transaction before calling this — it does not touch those columns itself.
 
-export type StockMovementType = "GRN_RECEIPT" | "PRODUCTION_CONSUME" | "PRODUCTION_OUTPUT" | "SEMI_FG_CONSUME" | "WASTAGE_WRITE_OFF" | "PHYSICAL_COUNT_ADJUST";
+export type StockMovementType = "GRN_RECEIPT" | "PRODUCTION_CONSUME" | "PRODUCTION_OUTPUT" | "SEMI_FG_CONSUME" | "WASTAGE_WRITE_OFF" | "PHYSICAL_COUNT_ADJUST" | "ORDER_VOID_RESTOCK";
 
 export type StockMovementInput = {
   branchId: string;

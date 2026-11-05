@@ -23,6 +23,10 @@ function harness() {
     './shifts': { requireOperableShift: async () => ({ shiftRunId: state.shift }) },
     // GAP-025 documents are isolated here; its real service runs in gap025-service.
     './pos-documents': { issueFinalPosDocument: async () => ({ document: null, unavailableReason: 'Isolated legacy harness' }) },
+    // GAP-026 payment capture is isolated here; its real service runs in gap026-service.
+    './pos-payments': { capturePosPayment: async () => ({ payment: null }) },
+    // GAP-029 pickup-token allocation is isolated here; its real service runs in gap029-service/gap029-orders-service.
+    './pos-tokens': { allocatePickupToken: async (_tx, _branchId, channel) => (channel === 'TAKEAWAY' ? 'T-TEST' : '') },
     './whatsapp-triggers': { validOptionalPhone: value => value ?? '' },
   };
   function load(name) {
