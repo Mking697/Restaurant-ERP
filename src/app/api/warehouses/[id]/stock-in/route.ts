@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json } from "@/lib/server/http";
-import { assertModule } from "@/lib/server/permissions";
+import { assertModule, assertOwner } from "@/lib/server/permissions";
 import { assertCentralWarehouse, creditWarehouseStock } from "@/lib/server/warehouse-stock";
 import { creditLocatedBatch } from "@/lib/server/stock-batches";
 import { parseBatchInput, fields } from "@/lib/server/batch-policy";
@@ -24,6 +24,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   return api(async () => {
     const result = await mutate(request, async (tx, actor) => {
+      // Nov 2026: this route's own comment always claimed "Owner/INVENTORY-
+      // gated" but only ever checked the generic INVENTORY module — any
+      // branch staff with that module (granted for their own branch's
+      // normal stock work) could inject arbitrary central-warehouse stock
+      // with zero vendor/invoice/PO trail. Now actually Owner-gated.
+      assertOwner(actor);
       assertModule(actor, "INVENTORY");
       const { id } = await context.params;
       const input = await body(request);

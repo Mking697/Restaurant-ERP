@@ -96,6 +96,13 @@ export async function settleVendorReturn(tx: Executor, actor: Identity, id: stri
   branchScope(actor, row.branchId);
   assertReturnNotSettled(row.settledAt);
   const parsed = parseSettleInput(input);
+  // Nov 2026: settling for MORE than the claim's own expected refund amount
+  // was accepted with no check at all — a fat-finger (or worse) could
+  // record an arbitrarily large settlement against a small claim. Settling
+  // for LESS stays explicitly allowed (a vendor can legitimately negotiate/
+  // credit-note a lower amount than first claimed); only an amount strictly
+  // greater than the claim is rejected.
+  if (Number(parsed.settledAmountInr) > Number(row.refundAmountInr)) throw new HttpError(400, `settledAmountInr (${parsed.settledAmountInr}) cannot exceed the claim's own refundAmountInr (${row.refundAmountInr})`);
   await tx
     .update(materialReturns)
     .set({ settledAmountInr: parsed.settledAmountInr, settledAt: new Date(), settledById: actor.id, settledNote: parsed.settledNote })

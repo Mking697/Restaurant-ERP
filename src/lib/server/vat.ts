@@ -41,7 +41,11 @@ export function vatBreakdown(taxableAmountDecimal: string, ratePercent: string):
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(ratePercent) || Number(ratePercent) < 0 || Number(ratePercent) > 100) throw new HttpError(400, "Invalid VAT rate");
   const taxable = paise(taxableAmountDecimal);
   const rateBasisPoints = BigInt(Math.round(Number(ratePercent) * 100)); // 2dp rate -> basis points of 10000
-  const vatAmount = (taxable * rateBasisPoints) / BigInt(10000);
+  // Round half-up to the nearest paisa/cent (same convention as every other
+  // money calculation in this codebase, e.g. accounts-ledger.ts/expenses.ts)
+  // instead of truncating toward zero — plain integer division here would
+  // silently under-collect VAT by up to 0.99 cent on every single line.
+  const vatAmount = (taxable * rateBasisPoints + BigInt(5000)) / BigInt(10000);
   return { taxableAmount: decimal(taxable), ratePercent, vatAmount: decimal(vatAmount), totalWithTax: decimal(taxable + vatAmount) };
 }
 

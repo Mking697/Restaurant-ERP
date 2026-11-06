@@ -14,6 +14,7 @@ import { lifecycleCapabilities } from "./pos-lifecycle-policy";
 import { decimal, directRequirements } from "./production-quantity";
 import { readStockRecipe, lockRecipeStock } from "./production";
 import { postStockMovement } from "./stock-ledger";
+import { postPosSaleVoidJournal } from "./accounts-ledger";
 import type { OrderReversal, OrderReversalLine } from "../pos-order-reversals";
 
 function reversalDTO(row: typeof posOrderReversals.$inferSelect): OrderReversal {
@@ -124,6 +125,8 @@ export async function voidPosOrder(tx: Executor, actor: Identity, orderId: strin
 
   const [updated] = await tx.update(posOrders).set({ status: "VOIDED", voidReason: reason, voidedAt: new Date(), revision: order.revision + 1 }).where(and(eq(posOrders.id, orderId), eq(posOrders.revision, order.revision), eq(posOrders.status, order.status))).returning();
   if (!updated) throw new HttpError(409, "Order changed concurrently; reload and retry");
+
+  if (order.tenderType) await postPosSaleVoidJournal(tx, actor, { id: orderId, branchId: order.branchId, tenderType: order.tenderType, subtotal: order.subtotal, taxAmount: order.taxAmount });
 
   const [reversal] = await tx.insert(posOrderReversals).values({
     id: randomUUID(), orderId, branchId: order.branchId, reason, actorId: actor.id, actorName: actor.name,

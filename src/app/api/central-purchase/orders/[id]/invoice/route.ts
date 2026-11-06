@@ -1,7 +1,7 @@
 import { HttpError } from "@/lib/server/permissions";
 import { api, json } from "@/lib/server/http";
 import { mutate, requireIdentity } from "@/lib/server/auth";
-import { assertModule } from "@/lib/server/permissions";
+import { assertModule, assertCentralStoreAccess } from "@/lib/server/permissions";
 import { createCentralVendorInvoice, readCentralPoInvoice } from "@/lib/server/central-purchase";
 import { db } from "@/db/client";
 import {
@@ -22,6 +22,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const expected = process.env.APP_ORIGIN || new URL(request.url).origin;
     if (!origin || origin !== expected || request.headers.get("sec-fetch-site") === "cross-site") throw new HttpError(403, "Same-origin request required");
     const actor = await requireIdentity(request);
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
 
     const contentLength = Number(request.headers.get("content-length") ?? "0");
@@ -61,6 +62,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   return api(async () => {
     const { id } = await context.params;
     const actor = await requireIdentity(request);
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
     const result = await readCentralPoInvoice(db, id);
     if (!result.invoice) return json(result);

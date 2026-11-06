@@ -3,6 +3,15 @@ export type Role = "SUPER_ADMIN" | "CENTRAL_STORE_MGR" | "BRANCH_MANAGER" | "CAS
 export interface Identity { id: string; name: string; email: string; phoneE164: string; role: Role; branchId: string | null; moduleAccess: string[]; status: "Active" | "Inactive"; }
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function assertOwner(user: Identity) { if (user.role !== "SUPER_ADMIN") throw new HttpError(403, "Owner access required"); }
+// Nov 2026: Central Purchase (the shared HQ/cross-branch warehouse's own
+// purchase-request -> PO -> GRN -> quality -> invoice -> payment pipeline,
+// src/lib/server/central-purchase.ts) was previously reachable by ANY user
+// holding the generic PURCHASE_ORDER module — including a Branch Manager
+// granted that module purely for their own branch's ordinary purchasing.
+// CENTRAL_STORE_MGR is a real, dedicated role (branchId null, same as
+// SUPER_ADMIN) that exists specifically for this cross-branch/HQ purchasing
+// — restrict every central-purchase route to Owner or that role.
+export function assertCentralStoreAccess(user: Identity) { if (user.role !== "SUPER_ADMIN" && user.role !== "CENTRAL_STORE_MGR") throw new HttpError(403, "Central warehouse purchasing requires Owner or Central Store Manager access"); }
 export function hasModule(user: Identity, key: ModuleKey) { return user.role === "SUPER_ADMIN" || user.moduleAccess.includes(key); }
 export function assertModule(user: Identity, key: ModuleKey) { if (!hasModule(user, key)) throw new HttpError(403, "Module access required"); }
 export function assertAnyModule(user: Identity, keys: ModuleKey[]) { if (!keys.some(key => hasModule(user, key))) throw new HttpError(403, "Module access required"); }

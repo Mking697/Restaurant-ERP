@@ -57,12 +57,15 @@ test('aggregator input is allowlisted, server never trusts a client netPayout fi
 });
 test('postPettyCashEntry derives balance from the sum of real rows and rejects a negative result', async () => {
   const { postPettyCashEntry } = load();
-  function chain(rows) { const p = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); return p; }
+  function chain(rows) { const p = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); p.orderBy = () => p; return p; }
   // Queue matches the real call order: ensureLedgerBranch, running-balance sums,
-  // then postPettyCashJournal's own accountsByCode lookup and existing-journal check.
+  // (OUT only:) daily-cap lookup + today's-OUT sum, then postPettyCashJournal's
+  // own accountsByCode lookup and existing-journal check.
   const queue = [
     [{ id: 'branch-a' }],
     [{ totalIn: '100.00', totalOut: '90.00' }],
+    [{ cap: '2000.00' }],
+    [{ total: '0' }],
     [{ id: 'cash', code: '1000' }, { id: 'equity', code: '3000' }, { id: 'other', code: '5400' }],
     [],
   ];

@@ -153,12 +153,19 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
   const customerPhone = validOptionalPhone(input.customerPhone);
   const lines = parseOrderLines(input.lines);
   const itemById = await loadItems(tx, branchId, lines);
-  const { shiftRunId } = await requireOperableShift(tx, branchId);
+  // Lock order fixed (Nov 2026): must take recipe-stock BEFORE shift-state
+  // here, matching the documented convention in shifts.ts's
+  // requireOperableShift ("POS takes recipe-stock then shift-state; never
+  // acquire recipe-stock while holding shift-state — that would invert the
+  // order"). This function previously did the opposite, which is a live
+  // deadlock risk the instant any other code path legitimately takes the
+  // two locks in the documented order while this one holds them reversed.
+  await lockRecipeStock(tx, branchId);
   const billing = bill(lines, itemById, branch.vatRatePercent);
   const payment = flow === "PAYMENT_FIRST" ? await currency(tx, input.tenderCurrencyCode, billing.totalAmount) : { tenderCurrencyCode: "INR", fxRateToInr: "1.000000", tenderCurrencyAmount: "0.00" };
   const tenderType = flow === "PAYMENT_FIRST" ? tender(input.tenderType) : "";
   const orderId = randomUUID();
-  await lockRecipeStock(tx, branchId);
+  const { shiftRunId } = await requireOperableShift(tx, branchId);
   const recipeRows = await readStockRecipe(tx, branchId, [...itemById.keys()]);
   const required = directRequirements(branchId, recipeRows, lines.map(line => ({ menuItemId: line.menuItemId, quantity: String(line.qty) })));
   const deductions = await deductStock(tx, branchId, required, { type: "POS_ORDER", id: orderId, actorId: actor.id });
@@ -195,11 +202,13 @@ export async function addPosOrderLines(tx: Executor, actor: Identity, orderId: s
   if (["CLOSED", "CANCELLED"].includes(order.serviceStatus)) throw new HttpError(409, "Order service is closed or cancelled");
   const branch = await branchSettings(tx, order.branchId);
   if (order.operatingConcept !== "CONVENTIONAL" || order.channel !== "DINE_IN" || order.status !== "OPEN") throw new HttpError(409, "Only an OPEN conventional dine-in order can accept more lines");
-  await requireOperableShift(tx, order.branchId);
   const lines = parseOrderLines(input.lines);
   const itemById = await loadItems(tx, order.branchId, lines);
-  const billing = bill(lines, itemById, branch.vatRatePercent);
+  // Lock order fixed (Nov 2026) — see the matching comment in createPosOrder:
+  // recipe-stock must be taken before shift-state, never the reverse.
   await lockRecipeStock(tx, order.branchId);
+  await requireOperableShift(tx, order.branchId);
+  const billing = bill(lines, itemById, branch.vatRatePercent);
   const recipeRows = await readStockRecipe(tx, order.branchId, [...itemById.keys()]);
   const required = directRequirements(order.branchId, recipeRows, lines.map(line => ({ menuItemId: line.menuItemId, quantity: String(line.qty) })));
   const deductions = await deductStock(tx, order.branchId, required, { type: "POS_ORDER", id: orderId, eventId: `${orderId}:ADD_LINES:${key}`, actorId: actor.id });
@@ -208,7 +217,8 @@ export async function addPosOrderLines(tx: Executor, actor: Identity, orderId: s
   const subtotal = addMoney(order.subtotal, billing.subtotal);
   const taxAmount = addMoney(order.taxAmount, billing.taxAmount);
   const totalAmount = addMoney(order.totalAmount, billing.totalAmount);
-  await tx.update(posOrders).set({ revision: (order.revision ?? 1) + 1, subtotal, taxAmount, totalAmount, cogsAmount: addMoney(order.cogsAmount, cogs.cogsAmount), cogsComplete: order.cogsComplete && cogs.complete }).where(eq(posOrders.id, orderId));
+  const [updated] = await tx.update(posOrders).set({ revision: (order.revision ?? 1) + 1, subtotal, taxAmount, totalAmount, cogsAmount: addMoney(order.cogsAmount, cogs.cogsAmount), cogsComplete: order.cogsComplete && cogs.complete }).where(and(eq(posOrders.id, orderId), eq(posOrders.revision, order.revision))).returning({ id: posOrders.id });
+  if (!updated) throw new HttpError(409, "Order changed concurrently; reload and retry");
   const result = { order: { id: orderId, orderNumber: order.orderNumber, status: "OPEN", subtotal, taxAmount, totalAmount }, tickets, inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
   await saveAttempt(tx, order.branchId, orderId, actor.id, "ADD_LINES", key, input, result);
   return result;
@@ -235,7 +245,8 @@ export async function settlePosOrder(tx: Executor, actor: Identity, orderId: str
   const now = new Date();
   const receiptNumber = `RCP-${Date.now()}-${orderId.slice(0, 4)}`;
   await tx.insert(posReceipts).values({ id: randomUUID(), orderId, branchId: order.branchId, receiptNumber });
-  await tx.update(posOrders).set({ revision: (order.revision ?? 1) + 1, tenderType, tenderCurrencyCode: payment.tenderCurrencyCode, fxRateToInr: payment.fxRateToInr, tenderCurrencyAmount: payment.tenderCurrencyAmount, status: "PAID", settledAt: now, shiftRunId }).where(eq(posOrders.id, orderId));
+  const [settled] = await tx.update(posOrders).set({ revision: (order.revision ?? 1) + 1, tenderType, tenderCurrencyCode: payment.tenderCurrencyCode, fxRateToInr: payment.fxRateToInr, tenderCurrencyAmount: payment.tenderCurrencyAmount, status: "PAID", settledAt: now, shiftRunId }).where(and(eq(posOrders.id, orderId), eq(posOrders.revision, order.revision), eq(posOrders.status, "OPEN"))).returning({ id: posOrders.id });
+  if (!settled) throw new HttpError(409, "Order changed concurrently; reload and retry");
   const receiptLines = savedLines.map(({ nameSnapshot, productCodeSnapshot, ...line }) => ({ ...line, name: nameSnapshot ?? line.name, productCode: productCodeSnapshot ?? line.productCode, vatRatePercent: line.vatRatePercent ?? branch.vatRatePercent ?? "18.00" }));
   const receiptResult = { receiptNumber, ...receipt(receiptLines, order.subtotal, order.taxAmount, order.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
   const final = await issueFinalPosDocument(tx, actor, orderId);

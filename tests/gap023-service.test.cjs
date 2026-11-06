@@ -52,7 +52,10 @@ function harness() {
       return query;
     } }),
     insert: table => ({ values: async values => { state[table.name].push(...(Array.isArray(values) ? values : [values]).map(row => ({ ...row }))); } }),
-    update: table => ({ set: values => ({ where: async predicate => { for (const row of state[table.name].filter(predicate)) Object.assign(row, values); } }) }),
+    update: table => ({ set: values => ({ where: predicate => {
+      const run = () => { const rows = state[table.name].filter(predicate); for (const row of rows) Object.assign(row, values); return rows; };
+      return { returning: async () => run(), then: (resolve, reject) => Promise.resolve(run()).then(resolve, reject) };
+    } }) }),
   };
   const service = load('pos-orders');
   const actor = { id: 'cashier', role: 'CASHIER', branchId: 'b', moduleAccess: ['POS_CASHIER'], status: 'Active' };

@@ -4,6 +4,7 @@ import { aggregatorOrders, ledgerAccounts, journalEntries, pettyCashEntries } fr
 import { branches } from "@/db/schema/platform";
 import type { Executor } from "./auth";
 import { assertModule, branchScope, HttpError, type Identity } from "./permissions";
+import { businessDateRange, businessDateString } from "./business-calendar";
 
 // ---------------------------------------------------------------------------
 // Petty Cash Book / Aggregator Recon / Balance Sheet — real DB-backed routes
@@ -265,6 +266,38 @@ export async function postPosSaleJournal(tx: Executor, actor: Identity, order: {
   }
 }
 
+/** Nov 2026: exact reversing entry for a voided POS sale (voidPosOrder —
+ * see pos-order-reversals.ts), posted once per order id at the moment of
+ * void. The original postPosSaleJournal legs are never edited/deleted
+ * (immutable audit trail, same convention as postExpenseVoidJournal) —
+ * this posts the exact debit/credit-swapped counterpart under a DIFFERENT
+ * referenceType ("POS_SALE_VOID") so it can never collide with or be
+ * mistaken for the original "POS_SALE" rows, and the two net to exactly
+ * zero across both legs: Debit Sales Revenue / Credit Cash-or-Bank for the
+ * subtotal, Debit VAT Payable / Credit Cash-or-Bank for the tax. Without
+ * this, a voided sale would permanently overstate Sales Revenue, VAT
+ * Payable and Cash/Bank on the Balance Sheet forever.
+ *
+ * Same SWIGGY/ZOMATO skip and fail-safe try/catch convention as
+ * postPosSaleJournal (a void must never be blocked by a General Ledger
+ * concern — the void itself, restock/waste and the reversal audit record
+ * always complete regardless; a swallowed failure here is logged, not
+ * silently invisible). */
+export async function postPosSaleVoidJournal(tx: Executor, actor: Identity, order: { id: string; branchId: string; tenderType: string; subtotal: string; taxAmount: string }) {
+  if (order.tenderType === "SWIGGY" || order.tenderType === "ZOMATO") return null;
+  try {
+    const byCode = await accountsByCode(tx);
+    const cashOrBank = requireAccount(byCode, order.tenderType === "CASH" ? "1000" : "1020");
+    const revenue = requireAccount(byCode, "4000"), vatPayable = requireAccount(byCode, "2100");
+    const net = await postJournalLeg(tx, { branchId: order.branchId, description: "POS sale reversed (void)", debitAccountId: revenue, creditAccountId: cashOrBank, amount: order.subtotal, referenceType: "POS_SALE_VOID", referenceId: order.id, leg: 0, createdById: actor.id });
+    const vat = await postJournalLeg(tx, { branchId: order.branchId, description: "POS sale VAT reversed (void)", debitAccountId: vatPayable, creditAccountId: cashOrBank, amount: order.taxAmount, referenceType: "POS_SALE_VOID", referenceId: order.id, leg: 1, createdById: actor.id });
+    return { net, vat };
+  } catch (err) {
+    console.error(`postPosSaleVoidJournal skipped for order ${order.id}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 /** Aggregator settlement (manual, server-computed netPayout): Debit Bank for
  * the netPayout actually due to be received (not Accounts Receivable — the
  * aggregator order record here IS the settlement itself, server-computed
@@ -324,6 +357,20 @@ export async function postPettyCashEntry(tx: Executor, actor: Identity, rawInput
   const delta = paise(input.amount);
   const newBalance = input.entryType === "IN" ? prevBalance + delta : prevBalance - delta;
   if (newBalance < 0n) throw new HttpError(400, "Petty cash balance cannot go negative");
+  // Nov 2026: dailyCapInr was stored and displayed on every row but never
+  // actually enforced — a cosmetic control that implied a limit existed
+  // when it didn't. Enforce it here for OUT entries: sum today's (Tanzania
+  // EAT business day) OUT entries for this branch and reject if this entry
+  // would push the total above the branch's own most-recent dailyCapInr
+  // (falls back to the schema default "2000.00" if no prior row exists —
+  // same value the column itself defaults new rows to).
+  if (input.entryType === "OUT") {
+    const { start, end } = businessDateRange(businessDateString());
+    const [latest] = await tx.select({ cap: pettyCashEntries.dailyCapInr }).from(pettyCashEntries).where(eq(pettyCashEntries.branchId, branchId)).orderBy(sql`${pettyCashEntries.entryDate} desc`).limit(1);
+    const cap = paise(latest?.cap ?? "2000.00");
+    const [todayOut] = await tx.select({ total: sql<string>`coalesce(sum(${pettyCashEntries.amount}), 0)` }).from(pettyCashEntries).where(and(eq(pettyCashEntries.branchId, branchId), eq(pettyCashEntries.entryType, "OUT"), gte(pettyCashEntries.entryDate, start), lt(pettyCashEntries.entryDate, end)));
+    if (paise(todayOut.total) + delta > cap) throw new HttpError(400, `Daily petty cash OUT cap (${decimal(cap)}) exceeded for today`);
+  }
   const [row] = await tx.insert(pettyCashEntries).values({
     id: randomUUID(), branchId, loggedById: actor.id, entryType: input.entryType,
     amount: input.amount, description: input.description, photoUrl: input.photoUrl,

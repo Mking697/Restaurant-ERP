@@ -5,7 +5,7 @@ import { rawMaterials } from "@/db/schema/menu";
 import { users } from "@/db/schema/auth";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, string } from "@/lib/server/http";
-import { assertModule, HttpError } from "@/lib/server/permissions";
+import { assertModule, assertCentralStoreAccess, HttpError } from "@/lib/server/permissions";
 import { fields } from "@/lib/server/batch-policy";
 import { recordCentralGrnQuality } from "@/lib/server/central-purchase";
 
@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return api(async () => {
     const actor = await requireIdentity(request);
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
     const warehouseId = new URL(request.url).searchParams.get("warehouseId");
     const rows = await db

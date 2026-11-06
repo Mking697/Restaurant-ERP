@@ -3,7 +3,7 @@ import { db } from "@/db/client";
 import { centralPurchaseOrders } from "@/db/schema/central-purchase";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, json } from "@/lib/server/http";
-import { assertModule, HttpError } from "@/lib/server/permissions";
+import { assertModule, assertCentralStoreAccess, HttpError } from "@/lib/server/permissions";
 import { assertCentralPoNotBilled } from "@/lib/server/central-purchase";
 import {
   billDocumentPathname, deletePurchaseDocument, MAX_DOCUMENT_BYTES,
@@ -40,6 +40,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const buffer = Buffer.from(await file.arrayBuffer());
     const doc = await validatePurchaseDocument(buffer);
 
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
     const po = await loadCentralPo(id);
     assertCentralPoNotBilled(po.billUploadedAt);
@@ -48,6 +49,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const stored = await uploadPurchaseDocument(pathname, buffer, doc.contentType);
     try {
       const result = await mutate(request, async (tx, mutateActor) => {
+        assertCentralStoreAccess(mutateActor);
         assertModule(mutateActor, "PURCHASE_ORDER");
         const current = await loadCentralPo(id);
         assertCentralPoNotBilled(current.billUploadedAt);
@@ -67,6 +69,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   return api(async () => {
     const { id } = await context.params;
     const actor = await requireIdentity(request);
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
     const po = await loadCentralPo(id);
     if (!po.billBlobPathname) throw new HttpError(404, "No bill file uploaded for this purchase order");

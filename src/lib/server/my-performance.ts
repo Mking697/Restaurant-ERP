@@ -74,8 +74,16 @@ export async function getMyPerformance(
     let outcome: TaskOutcome;
     if (row.status === "DONE") {
       outcome = row.completedAt && row.completedAt.getTime() <= row.dueAt.getTime() ? "ON_TIME" : "DELAYED";
-    } else if (row.status === "OVERDUE" || row.status === "ESCALATED" || row.status === "SKIPPED") {
+    } else if (row.status === "OVERDUE" || row.status === "ESCALATED") {
       outcome = "NOT_DONE";
+    } else if (row.status === "SKIPPED") {
+      // Nov 2026 fix: a correctly-cancelled/skipped task is NOT a failure —
+      // matches the branch-level MIS engine (src/app/api/mis/_shared.ts)
+      // and the dashboard/reports KPI, both of which deliberately exclude
+      // SKIPPED from any penalty/denominator. This card used to count it
+      // as NOT_DONE (penalized), inconsistent with every other scoring
+      // surface in the app.
+      outcome = "OPEN";
     } else if (row.dueAt.getTime() < now) {
       // Still PENDING/IN_PROGRESS past its own due time — the 30-min
       // overdue cron may not have flagged it yet, but it is late now.

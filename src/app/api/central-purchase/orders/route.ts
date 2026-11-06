@@ -4,7 +4,7 @@ import { centralPurchaseOrders, centralPurchaseOrderLines } from "@/db/schema/ce
 import { vendors } from "@/db/schema/vendors";
 import { mutate, requireIdentity } from "@/lib/server/auth";
 import { api, body, json, string } from "@/lib/server/http";
-import { assertModule } from "@/lib/server/permissions";
+import { assertModule, assertCentralStoreAccess } from "@/lib/server/permissions";
 import { allowedFields } from "@/lib/server/purchase";
 import { createCentralPurchaseOrder, parseCentralLines } from "@/lib/server/central-purchase";
 import { ensureRawMaterial, ensureVendor } from "../../purchase/_shared";
@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return api(async () => {
     const actor = await requireIdentity(request);
+    assertCentralStoreAccess(actor);
     assertModule(actor, "PURCHASE_ORDER");
     const warehouseId = new URL(request.url).searchParams.get("warehouseId");
     const rows = await db

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { centralPurchaseRequests, centralPurchaseOrders, centralPurchaseOrderLines, centralGrns, centralGrnLines, centralVendorInvoices, centralThreeWayMatch } from "../../db/schema/central-purchase";
 import type { Executor } from "./auth";
-import { assertModule, assertOwner, HttpError, type Identity } from "./permissions";
+import { assertCentralStoreAccess, assertModule, assertOwner, HttpError, type Identity } from "./permissions";
 import { assertCentralWarehouse, creditWarehouseStock } from "./warehouse-stock";
 import { creditLocatedBatch } from "./stock-batches";
 import { parseBatchInput } from "./batch-policy";
@@ -65,6 +65,7 @@ function linesEqual(a: CentralLineInput[], b: CentralLineInput[]): boolean {
 // --- Step 0: Central Purchase Request (Owner value-threshold gate) --------
 
 export async function submitCentralPurchaseRequest(tx: Executor, actor: Identity, warehouseId: string, vendorId: string, lines: CentralLineInput[], thresholdTsh: string | null) {
+  assertCentralStoreAccess(actor);
   const valueTsh = computeCentralPurchaseValueTsh(lines);
   const gated = appliesCentralValueGate(valueTsh, thresholdTsh);
   const id = randomUUID();
@@ -110,6 +111,7 @@ async function assertRequestConsumable(tx: Executor, requestId: string, warehous
 // --- Step 1: Buy (create the Central PO from an APPROVED request) ---------
 
 export async function createCentralPurchaseOrder(tx: Executor, actor: Identity, warehouseId: string, vendorId: string, requestId: string, lines: CentralLineInput[]) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "PURCHASE_ORDER");
   await assertCentralWarehouse(tx, warehouseId);
   const valueTsh = computeCentralPurchaseValueTsh(lines);
@@ -133,6 +135,7 @@ export function assertCentralPoNotReceived(materialReceivedAt: Date | null) {
 // --- Step 3: Material Receive (creates a GRN, no stock posted yet) --------
 
 export async function receiveCentralPo(tx: Executor, actor: Identity, poId: string) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "PURCHASE_ORDER");
   const [po] = await tx.select().from(centralPurchaseOrders).where(eq(centralPurchaseOrders.id, poId)).limit(1);
   if (!po) throw new HttpError(404, "Central purchase order not found");
@@ -154,6 +157,7 @@ export async function receiveCentralPo(tx: Executor, actor: Identity, poId: stri
 
 export interface CentralQualityLineInput { lineId: string; qtyFailed: string }
 export async function recordCentralGrnQuality(tx: Executor, actor: Identity, grnId: string, result: "PASS" | "FAIL" | "PARTIAL", note: string, failedLines: CentralQualityLineInput[]) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "PURCHASE_ORDER");
   assertModule(actor, "INVENTORY");
   const [grn] = await tx.select().from(centralGrns).where(eq(centralGrns.id, grnId)).limit(1);
@@ -190,6 +194,7 @@ export async function recordCentralGrnQuality(tx: Executor, actor: Identity, grn
 
 export interface CreateCentralInvoiceDocument { blobPathname: string; contentType: string }
 export async function createCentralVendorInvoice(tx: Executor, actor: Identity, poId: string, input: Record<string, unknown>, document: CreateCentralInvoiceDocument) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "PURCHASE_ORDER");
   const [po] = await tx.select().from(centralPurchaseOrders).where(eq(centralPurchaseOrders.id, poId)).limit(1);
   if (!po) throw new HttpError(404, "Central purchase order not found");
@@ -230,6 +235,7 @@ export async function readCentralPoInvoice(tx: Executor, poId: string) {
 }
 
 export async function approveCentralThreeWayPayment(tx: Executor, actor: Identity, poId: string) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "ACCOUNTS_EXPENSES");
   const [row] = await tx.select().from(centralThreeWayMatch).where(eq(centralThreeWayMatch.poId, poId)).limit(1);
   if (!row) throw new HttpError(404, "No invoice/3-way match recorded for this purchase order");
@@ -244,6 +250,7 @@ export async function approveCentralThreeWayPayment(tx: Executor, actor: Identit
 // v1 — see the schema file's comment on why this is simpler than GAP-017's
 // vendor-payments.ts). Owner/Accounts can extend to full evidence later.
 export async function markCentralThreeWayPaid(tx: Executor, actor: Identity, poId: string) {
+  assertCentralStoreAccess(actor);
   assertModule(actor, "ACCOUNTS_EXPENSES");
   const [row] = await tx.select().from(centralThreeWayMatch).where(eq(centralThreeWayMatch.poId, poId)).limit(1);
   if (!row) throw new HttpError(404, "No invoice/3-way match recorded for this purchase order");
