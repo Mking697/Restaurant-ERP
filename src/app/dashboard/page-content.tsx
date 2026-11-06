@@ -12,6 +12,7 @@ import { useSelectedBranchId } from "@/lib/current-branch";
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { formatInr, formatPercent } from "@/lib/utils";
 import { TrendingUp, TrendingDown, AlertTriangle, Trophy, Boxes, BookOpenCheck, ArrowRight, Activity } from "lucide-react";
+import { MyPerformanceCard } from "@/components/my-performance-card";
 
 interface BranchKpi {
   branchId: string; branchName: string;
@@ -276,6 +277,8 @@ function DashboardContent() {
           )}
         </CardContent>
       </Card>
+
+      <MyPerformanceCard />
     </AppShell>
   );
 }
