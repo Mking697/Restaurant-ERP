@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RequestJsonError, requestJson } from "@/lib/current-user";
 import { useUiCopy } from "@/lib/ui-copy";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
 
 type Branch = { id: string; code: string; name: string };
 type Review = { id: string; subjectType: "GRN" | "EOD_STOCK"; sourceId: string; sourceRevision: number; branchId: string; exception: boolean; summaryJson: Record<string, unknown>; submittedAt: string; acknowledged: boolean; eventCount: number; latestEvent: null | { actionKey: string; action: string; reason: string; actorName: string; createdAt: string } };
@@ -23,6 +25,8 @@ export default function HoStockReviewPage() {
   const [message, setMessage] = React.useState("");
   const [reasons, setReasons] = React.useState<Record<string, string>>({});
   const [uncertainId, setUncertainId] = React.useState("");
+  const { confirm, ConfirmHost } = useConfirm();
+  const { notify, notifyError, ToastHost } = useToast();
   const inFlight = React.useRef(false);
   const intents = React.useRef(new Map<string, { action: "ACKNOWLEDGE" | "ESCALATE"; actionKey: string; reason: string }>());
 
@@ -57,6 +61,15 @@ export default function HoStockReviewPage() {
 
   async function act(row: Review, action: "ACKNOWLEDGE" | "ESCALATE", replay = false) {
     if (inFlight.current || (uncertainId && (!replay || uncertainId !== row.id))) return;
+    if (action === "ESCALATE" && !replay) {
+      const ok = await confirm({
+        title: t("Escalate this subject?"),
+        description: t("This cannot be undone."),
+        confirmLabel: t("Escalate"),
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     let intent = intents.current.get(row.id);
     const reason = action === "ESCALATE" ? (reasons[row.id] ?? "").trim() : "";
     if (replay && !intent) return;
@@ -70,16 +83,22 @@ export default function HoStockReviewPage() {
     try {
       const result = await requestJson<{ replayed: boolean }>(`/api/ho-stock-review/${encodeURIComponent(row.id)}/action`, { method: "POST", body: JSON.stringify(intent) });
       actionConfirmed = true;
-      setMessage(result.replayed ? t("The saved HO action was confirmed; no duplicate event was created.") : t("HO action saved with actor and time."));
+      const successMessage = result.replayed ? t("The saved HO action was confirmed; no duplicate event was created.") : t("HO action saved with actor and time.");
+      setMessage(successMessage);
+      notify(successMessage);
       intents.current.delete(row.id); setUncertainId("");
       const data = await requestJson<{ reviews: Review[] }>(`/api/ho-stock-review?branchId=${encodeURIComponent(branchId)}&unresolved=${unresolvedOnly}`); setRows(data.reviews);
     } catch (err) {
       if (!actionConfirmed && err instanceof RequestJsonError && err.outcome === "unknown") setUncertainId(row.id);
-      setError(err instanceof Error ? err.message : replay ? "Could not confirm replay." : "Could not save HO action.");
+      const failMessage = err instanceof Error ? err.message : replay ? "Could not confirm replay." : "Could not save HO action.";
+      setError(failMessage);
+      notifyError(failMessage);
     } finally { inFlight.current = false; setBusy(false); }
   }
 
   return <AppShell activeHref="/ho-stock-review"><PageHeader title={t("HO stock review")} description={t("Audited cross-branch queue for finalized GRNs/shortages and explicitly submitted EOD report revisions. Up to 300 subjects are loaded; resolve and reload to work through older unresolved subjects.")} />
+    <ConfirmHost />
+    <ToastHost />
     <PendingWorkWidget />
     <div className="mb-4 flex flex-wrap items-end gap-3"><label className="text-sm">{t("Branch")}<select disabled={busy || Boolean(uncertainId)} className="ml-2 rounded border bg-card p-2" value={branchId} onChange={e => { setBranchId(e.target.value); setRows([]); }}><option value="">{t("Select branch")}</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.code} — {branch.name}</option>)}</select></label><label className="text-sm"><input type="checkbox" disabled={busy || Boolean(uncertainId)} checked={unresolvedOnly} onChange={e => { setUnresolvedOnly(e.target.checked); setRows([]); }} /> {t("Unresolved only")}</label><Button disabled={busy || !branchId} onClick={load}>{busy ? t("Working…") : t("Load queue")}</Button></div>
     {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}{message && <p role="status" className="mb-3 text-sm">{message}</p>}

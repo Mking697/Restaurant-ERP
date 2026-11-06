@@ -39,7 +39,8 @@ async function pageHarness(options = {}) {
       if (url === '/api/purchase/grns') return { grns: [] };
       return { indents: [] };
     } },
-    '@/components/toast': { useToast: () => ({ notify: () => {}, ToastHost: 'ToastHost' }) },
+    '@/components/toast': { useToast: () => ({ notify: () => {}, notifyError: () => {}, ToastHost: 'ToastHost' }) },
+    '@/components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmHost: 'ConfirmHost' }) },
     '@/lib/utils': { formatInr: String },
     'lucide-react': Object.fromEntries(['Plus', 'Check', 'X', 'Upload', 'PackageCheck', 'FlaskConical', 'Trash2'].map(k => [k, k])),
   };

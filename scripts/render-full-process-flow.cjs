@@ -286,7 +286,7 @@ card('Daily Summary - Including Raw Low Stock',[
   'Vercel daily-summary schedule is 02:30 UTC. Bearer-authenticated cron claims branch + IST date once before best-effort staff messages.',
   'Active Owner and branch-manager destinations receive completed-sale count, overdue tasks, pending handover and raw items with minStockLevel > 0 and qtyOnHand < minStockLevel. Equality and unconfigured zero thresholds do not count.',
   'Non-Owner/shared destinations get restricted sale counts. The summary is not an immediate stock-crossing push. Real production delivery is provider-dependent and was not force-triggered during this release.'
-],['src/lib/server/daily-summary.ts','src/lib/server/task-notifications.ts','vercel.json'],'message');
+],['src/lib/server/daily-summary.ts','src/lib/server/task-notifications.ts'],'message');
 card('Private Evidence + Purchase Documents',[
   'Task evidence supports private photo storage and protected retrieval using the task workflow. Legacy text references remain distinct from uploaded photos.',
   'Purchase bills/vendor invoices accept supported image/PDF uploads through private Vercel Blob and signed viewing URLs. Application upload validation is not a claim of malware scanning, legal invoice approval or guaranteed full platform upload-size acceptance.'

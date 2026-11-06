@@ -14,6 +14,8 @@ import { useSelectedBranchId } from "@/lib/current-branch";
 import { useShiftStatus, ShiftHandoverGate, useShiftWriteGuard } from "@/lib/shift-gate";
 import { ShiftSummaryPanel } from "./shift-summary-panel";
 import { HoCashDispatchPanel } from "./ho-cash-dispatch-panel";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
 
 const DENOMS = [10000, 5000, 2000, 1000, 500] as const;
 
@@ -47,6 +49,8 @@ function ScopedCashDrop() {
   const [openingFloat, setOpeningFloat] = React.useState("");
   const [openingFloatReference, setOpeningFloatReference] = React.useState("");
 
+  const { confirm, ConfirmHost } = useConfirm();
+  const { notify, notifyError, ToastHost } = useToast();
   const writeGuard = useShiftWriteGuard(`${actor.id}:${branchId}`);
   const [summaryToken, setSummaryToken] = React.useState(0);
   const countRun = React.useRef<string | null>(null);
@@ -79,6 +83,8 @@ function ScopedCashDrop() {
   async function endShift() {
     if (!canWrite || !shiftStatus.run || countRun.current !== shiftStatus.run.id) return;
     if (!DENOMS.every((d) => Number.isSafeInteger(counts[d]) && counts[d] >= 0) || !Number.isFinite(coins) || coins < 0) { setError("Enter whole non-negative note counts and a valid coin amount."); return; }
+    const ok = await confirm({ title: "End shift & handover?", description: "This commits the counted cash as final and hands the shortage/excess over to the next shift. This cannot be undone.", confirmLabel: "End shift", destructive: true });
+    if (!ok) return;
     const url = `/api/shift-runs/${encodeURIComponent(shiftStatus.run.id)}/end`;
     const payload = { branchId, note10000Count: counts[10000], note5000Count: counts[5000], note2000Count: counts[2000], note1000Count: counts[1000], note500Count: counts[500], coinsInr: coins };
     if (!writeGuard.begin(url, payload)) return;
@@ -92,9 +98,12 @@ function ScopedCashDrop() {
       setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0);
       setSummaryToken(v => v + 1);
       await shiftStatus.reload();
+      notify("Shift ended and handed over.");
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
-      setError(err instanceof Error ? err.message : "Could not confirm shift closure. Verify saved records before continuing.");
+      const message = err instanceof Error ? err.message : "Could not confirm shift closure. Verify saved records before continuing.";
+      setError(message);
+      notifyError(message);
     }
     finally { setBusy(false); }
   }
@@ -104,6 +113,8 @@ function ScopedCashDrop() {
   async function dispatchToHo() {
     if (!canWrite || !shiftStatus.run || countRun.current !== shiftStatus.run.id) return;
     if (!DENOMS.every((d) => Number.isSafeInteger(counts[d]) && counts[d] >= 0) || !Number.isFinite(coins) || coins < 0) { setError("Enter whole non-negative note counts and a valid coin amount."); return; }
+    const ok = await confirm({ title: "Dispatch to Head Office?", description: "This ends the shift and sends the counted cash to Head Office. No new shift will open. This cannot be undone.", confirmLabel: "Dispatch", destructive: true });
+    if (!ok) return;
     const url = `/api/shift-runs/${encodeURIComponent(shiftStatus.run.id)}/dispatch-ho`;
     const payload = { branchId, note10000Count: counts[10000], note5000Count: counts[5000], note2000Count: counts[2000], note1000Count: counts[1000], note500Count: counts[500], coinsInr: coins, retainedFloatInr: retainedFloat.trim() || undefined };
     if (!writeGuard.begin(url, payload)) return;
@@ -116,15 +127,20 @@ function ScopedCashDrop() {
       setCounts({ 10000: 0, 5000: 0, 2000: 0, 1000: 0, 500: 0 }); setCoins(0); setRetainedFloat("");
       setSummaryToken(v => v + 1);
       await shiftStatus.reload();
+      notify("Shift ended and cash dispatched to Head Office.");
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected") writeGuard.finish();
-      setError(err instanceof Error ? err.message : "Could not confirm Head Office dispatch. Verify saved records before continuing.");
+      const message = err instanceof Error ? err.message : "Could not confirm Head Office dispatch. Verify saved records before continuing.";
+      setError(message);
+      notifyError(message);
     }
     finally { setBusy(false); }
   }
 
   return (
     <AppShell activeHref="/cash-drop">
+      <ConfirmHost />
+      <ToastHost />
       <PageHeader
         title={uiText("Blind Cash Drop")}
         description={uiText("Expected cash stays hidden until submission. Count the denominations, then end this shift manually to hand over cash, card and UPI totals to the next shift.", "Expected cash submit tak hidden hai. Denominations gino, phir shift manually end karke agli shift ko cash, card aur UPI totals handover karo.")}
@@ -219,7 +235,7 @@ function ScopedCashDrop() {
                     <p className="text-sm font-medium">{uiText("Or: this is the final shift of the day — dispatch to Head Office", "Ya: aaj ki aakhri shift hai — Head Office ko dispatch karo")}</p>
                     <p className="text-xs text-muted-foreground">{uiText("No new shift opens. Enter how much cash stays at the branch (optional) — the rest is dispatched to HO for acceptance.", "Koi nayi shift nahi khulegi. Branch mein kitna cash rakhna hai likho (optional) — baaki HO ko dispatch hoga, jo wahan accept hoga.")}</p>
                     <input type="number" min={0} step="0.01" placeholder={uiText("Retained float for tomorrow (TSh, optional)")} value={retainedFloat} onChange={(e) => setRetainedFloat(e.target.value)} disabled={!canWrite} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
-                    <Button variant="outline" className="w-full" disabled={!canWrite} onClick={dispatchToHo}>{busy ? uiText("Dispatching…") : uiText("Dispatch to Head Office", "Head Office ko dispatch karo")}</Button>
+                    <Button variant="destructive" className="w-full" disabled={!canWrite} onClick={dispatchToHo}>{busy ? uiText("Dispatching…") : uiText("Dispatch to Head Office", "Head Office ko dispatch karo")}</Button>
                   </div>}
                 </CardContent>
               </Card>

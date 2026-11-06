@@ -8,6 +8,7 @@ import { ReorderSuggestionsPanel } from "./reorder-suggestions-panel";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { PendingWorkWidget } from "@/components/pending-work-widget";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,7 +69,7 @@ export default function InventoryPage() {
     <PendingWorkWidget />
     {!allowed ? <p role="alert">{uiText("Inventory permission is required.")}</p> : <>
       {(error || branchError) && <p role="alert" className="mb-4 text-destructive">{uiText(error || branchError)}</p>}{message && <p role="status" className="mb-4">{uiText(message)}</p>}
-      <Card><CardContent className="pt-5">{loading ? <p>{uiText("Loading inventory…")}</p> : <Table><TableHeader><TableRow><TableHead>{uiText("Item")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Qty on hand")}</TableHead><TableHead>{uiText("Min / Max")}</TableHead><TableHead>{uiText("Flags")}</TableHead></TableRow></TableHeader><TableBody>
+      <Card><CardContent className="pt-5">{loading ? <TableSkeleton cols={5} /> : <Table><TableHeader><TableRow><TableHead>{uiText("Item")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Qty on hand")}</TableHead><TableHead>{uiText("Min / Max")}</TableHead><TableHead>{uiText("Flags")}</TableHead></TableRow></TableHeader><TableBody>
         {visibleRows.map(row => <TableRow key={row.id}><TableCell>{row.name}</TableCell><TableCell>{branches.find(branch => branch.id === row.branchId)?.name ?? uiText("Own branch")}</TableCell><TableCell>{row.qtyOnHand} {row.unit}</TableCell><TableCell>{row.minStockLevel} / {row.maxStockLevel} {row.unit}</TableCell><TableCell className="flex flex-wrap gap-1">{Number(row.qtyOnHand) < Number(row.minStockLevel) && <Badge variant="destructive">{uiText("Low stock")}</Badge>}{Number(row.maxStockLevel) > 0 && Number(row.qtyOnHand) > Number(row.maxStockLevel) && <Badge variant="warning">{uiText("Overstock")}</Badge>}{row.isHighValue && <Badge variant="outline">{uiText("High value")}</Badge>}</TableCell></TableRow>)}
       </TableBody></Table>}{!loading && !error && !visibleRows.length && <p>{uiText("No inventory in this scope.")}</p>}</CardContent></Card>
       <BatchPanel branchId={selected} refreshToken={batchRefresh} />

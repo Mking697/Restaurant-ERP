@@ -20,6 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/toast";
+import { useConfirm } from "@/components/confirm-dialog";
 import { formatInr } from "@/lib/utils";
 import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
 import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
@@ -98,7 +99,8 @@ export default function PurchasePage() {
   const [pos, setPos] = React.useState<PurchaseOrderRow[]>([]);
   const [grnRefresh, setGrnRefresh] = React.useState(0);
   const [loadError, setLoadError] = React.useState("");
-  const { notify, ToastHost } = useToast();
+  const { notify, notifyError, ToastHost } = useToast();
+  const { confirm, ConfirmHost } = useConfirm();
 
   const loadIndents = React.useCallback(() => {
     requestJson<{ indents: IndentRow[] }>("/api/purchase/indents").then((data) => setIndents(data.indents)).catch((err) => setLoadError(errMsg(err, "Could not load indents")));
@@ -198,13 +200,20 @@ export default function PurchasePage() {
     }
   }
   async function rejectIndent(id: string) {
+    const ok = await confirm({
+      title: uiText("Reject this indent?", "Yeh indent reject karein?"),
+      description: uiText("This cannot be undone.", "Isse undo nahi kiya ja sakta."),
+      confirmLabel: uiText("Reject"),
+      destructive: true,
+    });
+    if (!ok) return;
     setRowBusyId(id);
     try {
       await requestJson(`/api/purchase/indents/${id}/reject`, { method: "POST", body: JSON.stringify({}) });
       notify(uiText("Indent rejected.", "Indent reject hui."));
       loadIndents();
     } catch (err) {
-      notify(uiText(errMsg(err, "Could not reject indent.")));
+      notifyError(uiText(errMsg(err, "Could not reject indent.")));
     } finally {
       setRowBusyId(null);
     }
@@ -653,6 +662,7 @@ export default function PurchasePage() {
       </Tabs>
 
       <ToastHost />
+      <ConfirmHost />
     </AppShell>
   );
 }

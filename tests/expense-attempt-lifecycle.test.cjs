@@ -26,6 +26,7 @@ function environment(storage = memoryStorage()) {
       useResource:()=>({data:{expenses:rows,totals:{}},loading:false,error:'',reload:async()=>({expenses:rows,totals:{}})}),
       useAction:()=>({busy:false,error:'',message:'',run:async operation=>{try {await operation();return true;} catch{return false;}}}),
       post:async (url,body)=>{sends.push(JSON.parse(JSON.stringify(body)));return send(url,body);}},
+    '@/components/toast': { useToast: () => ({ notify: () => {}, notifyError: () => {}, ToastHost: () => null }) },
   };
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename).exports;

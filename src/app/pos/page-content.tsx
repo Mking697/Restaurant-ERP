@@ -20,6 +20,8 @@ import { PosPaymentsPanel } from "./payments-panel";
 import { PosVoidPanel } from "./void-panel";
 import { MenuTilePicker } from "./menu-tile-picker";
 import { PwaInstall } from "@/components/pwa-install";
+import { useToast } from "@/components/toast";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import type { Document } from "@/lib/pos-documents";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
@@ -74,6 +76,7 @@ export default function PosPage() {
 function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange, pendingLifecycle: outerPending, pendingDocuments: outerDocuments, mutationLock: outerLock }: { selectedScope?: string; documentIntentReady?: boolean; onPendingChange?: (pending: boolean) => void; pendingLifecycle?: React.MutableRefObject<LifecyclePending | null>; pendingDocuments?: React.MutableRefObject<DocumentPending | null>; mutationLock?: React.MutableRefObject<MutationLock> } = {}) {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
+  const { notify, notifyError, ToastHost } = useToast();
   const identity = JSON.stringify([actor.id, actor.role, actor.branchId, actor.authenticated, actor.moduleAccess]);
   const localPending = React.useRef<LifecyclePending | null>(null);
   const localDocuments = React.useRef<DocumentPending | null>(null);
@@ -193,17 +196,18 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       if (!mounted.current) return;
       if (data.order?.id !== target.id || data.order.ownerOnly !== ownerOnly || typeof data.changed !== "boolean") throw new Error("Unverified visibility acknowledgment");
       refreshLifecycle(value => value + 1); refreshDocuments(value => value + 1); refreshPayments(value => value + 1);
-      setVisibilityTarget(null); setVisibilityReason("");
-      setVisibilityMessage(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
+      setVisibilityTarget(null); setVisibilityReason(""); setVisibilityMessage(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
+      notify(data.changed ? "Visibility change confirmed." : "Visibility already matched; no change needed.");
       // A confirmed PATCH stays confirmed even when this separate GET fails.
       const refreshed = await reloadOrders();
       if (mounted.current && !refreshed) setVisibilityMessage("Visibility change confirmed. Could not reload orders; reload the list, do not submit again.");
     } catch (err) {
       if (!mounted.current) return;
-      if (err instanceof RequestJsonError && err.outcome === "rejected") setVisibilityMessage(err.message);
+      if (err instanceof RequestJsonError && err.outcome === "rejected") { setVisibilityMessage(err.message); notifyError(err.message); }
       else {
         setVisibilityUnknown(true); setOrders([]); setSalesSummary(null); setResult(null);
         setVisibilityMessage("Visibility outcome unknown. The change may already be saved. Reload orders to check before making another change; do not retry blindly.");
+        notifyError("Visibility outcome unknown. Reload orders before trying again.");
       }
     } finally { visibilityInFlight.current = false; if (mounted.current) setVisibilityBusy(false); }
   }
@@ -252,10 +256,12 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       setResult(data); setOpen(false);
       setLines([]); setTableNo(""); setCustomerPhone(""); setCustomerName(""); setTenderCurrencyCode("INR");
       if (!await reloadOrders(data)) setError("Order confirmed. Could not reload the order list; do not submit it again.");
+      notify(`Order ${data.order.orderNumber} confirmed.`);
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected" && !orderAttempt.current?.hadUnknown) orderAttempt.current = null;
       else if (orderAttempt.current) orderAttempt.current.hadUnknown = true;
-      setError(orderAttempt.current ? "Order outcome unknown. Replay exact request with the same key; do not create a new order." : err instanceof Error ? err.message : "Order failed");
+      const message = orderAttempt.current ? "Order outcome unknown. Replay exact request with the same key; do not create a new order." : err instanceof Error ? err.message : "Order failed";
+      setError(message); notifyError(message);
     }
     finally { orderInFlight.current = false; setBusy(false); if (!orderAttempt.current) { releaseMutation("legacy"); onPendingChange?.(false); } }
   }
@@ -281,14 +287,17 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
         const settlement = data as unknown as OrderResult;
         const settlementResult = { ...settlement, order: { ...settlement.order, flow: "PRODUCTION_FIRST" as const }, kot: [], whatsapp: { attempted: false, sent: false } };
         if (!await reloadOrders(settlementResult)) setError("Settlement confirmed. Could not reload the order list; do not submit it again.");
+        notify("Order settled.");
       } else {
         const dispatchResult = { ...(data as unknown as OrderResult), kot: [], receipt: null, whatsapp: { attempted: false, sent: false } };
         if (!await reloadOrders(dispatchResult)) setError("Items confirmed. Could not reload the order list; do not submit them again.");
+        notify("Items added to order.");
       }
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected" && !openOrderAttempt.current?.hadUnknown) openOrderAttempt.current = null;
       else if (openOrderAttempt.current) openOrderAttempt.current.hadUnknown = true;
-      setError(openOrderAttempt.current ? "Open-order outcome unknown. Replay exact request with the same key; do not start another mutation." : err instanceof Error ? err.message : "Order update failed");
+      const message = openOrderAttempt.current ? "Open-order outcome unknown. Replay exact request with the same key; do not start another mutation." : err instanceof Error ? err.message : "Order update failed";
+      setError(message); notifyError(message);
     } finally { orderInFlight.current = false; setBusy(false); if (!openOrderAttempt.current) { releaseMutation("legacy"); onPendingChange?.(false); } }
   }
 
@@ -306,7 +315,8 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
     try {
       const data = await requestJson<{ targeted: number; sent: number; failed: number }>("/api/whatsapp/offer-alert", { method: "POST", body: JSON.stringify({ branchId: orderBranchId || undefined, offerText, validUntil: offerValidUntil }) });
       setOfferResult(data);
-    } catch (err) { setError(err instanceof Error ? err.message : "Offer send failed"); }
+      notify(`Offer sent to ${data.sent} / ${data.targeted} customers.`);
+    } catch (err) { const message = err instanceof Error ? err.message : "Offer send failed"; setError(message); notifyError(message); }
     finally { setOfferBusy(false); }
   }
 
@@ -318,12 +328,14 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
       const data = await requestJson<{ currencyRates: CurrencyRateRow[] }>("/api/currency-rates");
       setCurrencyRates(data.currencyRates);
       setNewRate("");
-    } catch (err) { setError(err instanceof Error ? err.message : "Save failed"); }
+      notify("Rate saved.");
+    } catch (err) { const message = err instanceof Error ? err.message : "Save failed"; setError(message); notifyError(message); }
     finally { setRateBusy(false); }
   }
 
   return (
     <AppShell activeHref="/pos">
+      <ToastHost />
       <PageHeader title={uiText("POS / Cashier")} description={uiText("Fast-food and non-dine-in orders are paid first. Conventional dine-in validates and posts stock when KOT/BOT tickets are dispatched, then creates the receipt when payment is settled.")}>
         <div className="flex flex-wrap gap-2">
         <PwaInstall scope="/pos/" />
@@ -467,7 +479,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
         </Dialog>
         <Card>
           <CardContent className="pt-5">
-            {loading ? <p>{uiText("Loading today's orders…")}</p> : ordersError || visibilityUnknown ? <p>{uiText("Order list unavailable. Reload orders to verify current access.")}</p> : <Table>
+            {loading ? <TableSkeleton cols={6} /> : ordersError || visibilityUnknown ? <p>{uiText("Order list unavailable. Reload orders to verify current access.")}</p> : <Table>
               <TableHeader><TableRow><TableHead>{uiText("Order #")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Channel")}</TableHead><TableHead>{uiText("Counter")}</TableHead><TableHead>{uiText("Table")}</TableHead><TableHead>{uiText("Amount")}</TableHead><TableHead>{uiText("Tender")}</TableHead><TableHead>{uiText("Time")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Actions")}</TableHead>{isOwner && <TableHead>{uiText("Visibility")}</TableHead>}</TableRow></TableHeader>
               <TableBody>
                 {orders.map((o) => <TableRow key={o.id}>

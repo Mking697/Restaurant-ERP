@@ -20,7 +20,7 @@ function harness() {
     '@/lib/current-user': { useCurrentUser: () => actor, requestJson: (url, init) => new Promise((resolve,reject) => requests.push({ url, init, resolve, reject })) },
     '@/lib/current-branch': { useBranches: () => branchState, notifyBranchesChanged() {} },
   };
-  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogHeader','DialogTitle'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
+  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/skeleton': ['TableSkeleton','Skeleton'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogHeader','DialogTitle'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
   const module = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/admin/branches/page-content.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, require: name => { assert.ok(deps[name], name); return deps[name]; }, AbortController, Error, Set });
   function expand(node, path = 'root') {

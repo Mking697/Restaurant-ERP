@@ -6,6 +6,7 @@ import { PosTicketPreview, type PosTicket, type TicketAction } from "@/component
 import { hasCurrentModule, requestJson, RequestJsonError, useCurrentUser } from "@/lib/current-user";
 import { useSelectedBranchId } from "@/lib/current-branch";
 import { PwaInstall } from "@/components/pwa-install";
+import { useToast } from "@/components/toast";
 
 interface Queue { tickets: PosTicket[]; limit: number; truncated: boolean; capabilities: { canPrepare: boolean; canCashier: boolean; canCancel: boolean } }
 interface Intent { ticketId: string; ticketNumber: string; branchId: string; action: TicketAction; expectedRevision: number; requestKey: string; hadUnknown?: boolean }
@@ -30,6 +31,7 @@ export default function KitchenPage() {
 function KitchenQueue({ selected, requestedSelection, onPendingChange }: { selected: string; requestedSelection: string; onPendingChange: (pending: boolean) => void }) {
   const actor = useCurrentUser();
   const allowed = hasCurrentModule(actor, "POS_KITCHEN", "POS_CASHIER");
+  const { notify, notifyError, ToastHost } = useToast();
   const [station, setStation] = React.useState("ALL");
   const [includeServed, setIncludeServed] = React.useState(false);
   const [queue, setQueue] = React.useState<Queue | null>(null);
@@ -86,20 +88,24 @@ function KitchenQueue({ selected, requestedSelection, onPendingChange }: { selec
       const refreshed = await reload(true);
       if (!mounted.current) return;
       setMessage(refreshed ? "Action confirmed. Queue refreshed." : "Action confirmed. Queue reload failed; use Refresh. Do not submit the action again.");
+      notify(`${actionLabel[attempt.action]} confirmed.`);
       onPendingChange(false);
     } catch (err) {
       if (!mounted.current) return;
       if (err instanceof RequestJsonError && err.outcome === "rejected" && !attempt.hadUnknown) {
         intent.current = null; setPending(null); onPendingChange(false);
         setMessage(`Action rejected: ${err.message}`);
+        notifyError(err.message);
       } else {
         attempt.hadUnknown = true;
         setMessage("Action outcome unknown. It may already be saved. Replay only the exact request below; conflicting actions and filters are locked.");
+        notifyError("Action outcome unknown. Replay the exact request before trying again.");
       }
     } finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   }
   return <AppShell activeHref="/kitchen">
     <div className="space-y-5">
+      <ToastHost />
       <header><h1 className="text-2xl font-semibold">Kitchen / bar preparation</h1><p className="text-sm text-muted-foreground">Saved preparation tickets only. Financial and preparation status are separate.</p><div className="pt-2"><PwaInstall scope="/kitchen/" /></div></header>
       <PendingWorkWidget />
       {!allowed ? <p role="alert">Kitchen or cashier access is required.</p> : <>

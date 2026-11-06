@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { requestJson, useCurrentUser } from "@/lib/current-user";
 import { notifyBranchesChanged, useBranches, type BranchRecord } from "@/lib/current-branch";
@@ -57,7 +58,7 @@ export default function BranchesAdminPage() {
     </PageHeader>
     {(error || loadError) && <p role="alert" className="mb-4 text-destructive">{error || loadError}</p>}
     {message && <p role="status" className="mb-4">{uiText(message)}</p>}
-    <Card><CardContent className="pt-5">{loading ? <p>{uiText("Loading branches…")}</p> : <Table><TableHeader><TableRow><TableHead>{uiText("Code")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Operating concept")}</TableHead><TableHead>{uiText("Address")}</TableHead><TableHead>{uiText("Coordinates")}</TableHead><TableHead>{uiText("Geofence")}</TableHead><TableHead>{uiText("VAT rate", "VAT rate")}</TableHead><TableHead>{uiText("Action")}</TableHead></TableRow></TableHeader><TableBody>
+    <Card><CardContent className="pt-5">{loading ? <TableSkeleton cols={8} /> : <Table><TableHeader><TableRow><TableHead>{uiText("Code")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Operating concept")}</TableHead><TableHead>{uiText("Address")}</TableHead><TableHead>{uiText("Coordinates")}</TableHead><TableHead>{uiText("Geofence")}</TableHead><TableHead>{uiText("VAT rate", "VAT rate")}</TableHead><TableHead>{uiText("Action")}</TableHead></TableRow></TableHeader><TableBody>
       {branches.map(branch => <TableRow key={branch.id}><TableCell>{branch.code}</TableCell><TableCell>{branch.name}</TableCell><TableCell>{branch.operatingConcept === "CONVENTIONAL" ? uiText("Conventional") : uiText("Fast food")}</TableCell><TableCell>{branch.address || "—"}</TableCell><TableCell>{branch.lat}, {branch.lng}</TableCell><TableCell>{branch.geofenceRadiusM} {uiText(" m")}</TableCell><TableCell>{branch.vatRatePercent ? `${branch.vatRatePercent}%` : uiText("Default (18%)", "Default (18%)")}</TableCell><TableCell>{allowed && <Button size="sm" variant="ghost" onClick={() => { setError(""); setMessage(""); setLogo(undefined); setEditing({ ...branch }); }}>{uiText("Edit")}</Button>}</TableCell></TableRow>)}
     </TableBody></Table>}{!loading && !loadError && !branches.length && <p>{uiText("No branches yet.")}</p>}</CardContent></Card>
     <Dialog open={!!editing && allowed} onOpenChange={open => { if (!open && !busy) setEditing(null); }}><DialogContent><DialogHeader><DialogTitle>{editing?.id ? uiText("Edit Branch") : uiText("New Branch")}</DialogTitle><DialogDescription>{uiText("Changes are saved to PostgreSQL. New branches start empty.")}</DialogDescription></DialogHeader>

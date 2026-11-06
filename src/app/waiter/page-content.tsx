@@ -11,6 +11,7 @@ import { formatInr } from "@/lib/utils";
 import { useShiftStatus, ShiftHandoverGate } from "@/lib/shift-gate";
 import { MenuTilePicker } from "@/app/pos/menu-tile-picker";
 import { PwaInstall } from "@/components/pwa-install";
+import { useToast } from "@/components/toast";
 
 interface MenuItemRow { id: string; branchId: string; name: string; price: string; category?: string; isActive: boolean; isSellable: boolean; imageUrl?: string | null; }
 interface OrderRow { id: string; branchId: string; orderNumber: string; channel: string; operatingConcept: "FAST_FOOD" | "CONVENTIONAL"; tableNo: string; status: string; totalAmount: string; createdAt: string; }
@@ -28,6 +29,7 @@ export default function WaiterPage() {
 function WaiterScreen() {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
+  const { notify, notifyError, ToastHost } = useToast();
   const selected = useSelectedBranchId();
   const { branches } = useBranches();
   const allowed = hasCurrentModule(actor, "POS_WAITER", "POS_CASHIER");
@@ -95,14 +97,17 @@ function WaiterScreen() {
       setResult({ order: { orderNumber: data.order.orderNumber, tableNo: isAdd ? openOrders.find(o => o.id === targetOrderId)?.tableNo : tableNo.trim(), status: data.order.status }, tickets: data.tickets, kot: data.kot });
       setLines([]); setTableNo(""); setTargetOrderId("");
       await reloadOpenOrders();
+      notify(uiText("Sent to kitchen.", "Kitchen ko bhej diya."));
     } catch (err) {
       if (err instanceof RequestJsonError && err.outcome === "rejected" && !attempt.current?.hadUnknown) attempt.current = null;
       else if (attempt.current) attempt.current.hadUnknown = true;
-      setError(attempt.current ? uiText("Send outcome unknown. Replay the exact request below; do not send again.", "Send ka result pata nahi. Neeche wahi exact request replay karo; dobara mat bhejna.") : err instanceof Error ? err.message : "Send failed");
+      const message = attempt.current ? uiText("Send outcome unknown. Replay the exact request below; do not send again.", "Send ka result pata nahi. Neeche wahi exact request replay karo; dobara mat bhejna.") : err instanceof Error ? err.message : "Send failed";
+      setError(message); notifyError(message);
     } finally { setBusy(false); }
   }
 
   return <AppShell activeHref="/waiter">
+    <ToastHost />
     <PageHeader title={uiText("Waiter — Take Order", "Waiter — Order Lo")} description={uiText("Pick a table, add items, send straight to the kitchen. No payment here — the Cashier settles at POS.", "Table pakdo, items add karo, kitchen ko bhej do. Yahan payment nahi — Cashier POS par settle karega.")}>
       <PwaInstall scope="/waiter/" />
     </PageHeader>

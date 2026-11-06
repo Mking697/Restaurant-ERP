@@ -10,6 +10,8 @@ import { useSelectedBranchId } from "@/lib/current-branch";
 import { useTranslation } from "@/lib/i18n";
 import { Plus, Trash2 } from "lucide-react";
 import { useShiftWriteGuard } from "@/lib/shift-gate";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
 
 interface ShiftRow { id: string; branchId: string; label: string; startTime: string; endTime: string; sortOrder: number }
 interface ShiftRun { id: string; branchId: string; shiftDefinitionId: string; label: string; status: string; startedAt: string; endedAt: string | null }
@@ -38,6 +40,8 @@ function ScopedShiftsSettings() {
   const [busy, setBusy] = React.useState(false);
 
   const writeGuard = useShiftWriteGuard(`${actor.id}:${branchId}`);
+  const { confirm, ConfirmHost } = useConfirm();
+  const { notify, ToastHost } = useToast();
   const generation = React.useRef(0);
   const mounted = React.useRef(true);
   React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current++; }; }, []);
@@ -66,7 +70,18 @@ function ScopedShiftsSettings() {
     setDraft((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
   function addRow() { setDraft((prev) => [...prev, { label: `Shift ${String.fromCharCode(65 + prev.length)}`, startTime: "00:00", endTime: "00:00" }]); }
-  function removeRow(i: number) { if (draft.length > 1) setDraft((prev) => prev.filter((_, idx) => idx !== i)); }
+  async function removeRow(i: number) {
+    if (draft.length <= 1) return;
+    const ok = await confirm({
+      title: t("Remove this shift window?", "Yeh shift window hatayein?"),
+      description: t("Its label and times will be discarded. This is not saved until you click Save Shifts, but the row itself cannot be recovered after removal.", "Iska label aur time discard ho jayega. Jab tak Save Shifts nahi dabaya, yeh save nahi hota — lekin row hatane ke baad wapas nahi aayega."),
+      confirmLabel: t("Remove", "Hatao"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDraft((prev) => prev.filter((_, idx) => idx !== i));
+    notify(t("Shift window removed.", "Shift window hata diya."));
+  }
 
   async function save() {
     const payload = { branchId, shifts: draft };
@@ -102,6 +117,8 @@ function ScopedShiftsSettings() {
 
   return (
     <AppShell activeHref="/admin/settings/shifts">
+      <ConfirmHost />
+      <ToastHost />
       <PageHeader
         title={t("Shift Management", "Shift Management")}
         description={t("Configure this branch's shift windows (must tile a full 24h day, no gaps). Changing times only affects future shifts — past runs keep their real recorded times.", "Is branch ke shift windows set karo (pura 24 ghante cover karein, koi gap nahi). Time change karne se sirf future shifts asar hoti hain — purane runs apna real time rakhte hain.")}
@@ -147,7 +164,7 @@ function ScopedShiftsSettings() {
                   <label className="col-span-2 min-w-0 space-y-1 text-xs font-medium xl:col-span-1"><span>{t("Label", "Label")}</span><input className={inputClass} maxLength={40} value={row.label} onChange={(e) => updateDraft(i, { label: e.target.value })} /></label>
                   <label className="min-w-0 space-y-1 text-xs font-medium"><span>{t("Start", "Start")}</span><input type="time" className={inputClass} value={row.startTime} onChange={(e) => updateDraft(i, { startTime: e.target.value })} /></label>
                   <label className="min-w-0 space-y-1 text-xs font-medium"><span>{t("End", "End")}</span><input type="time" className={inputClass} value={row.endTime} onChange={(e) => updateDraft(i, { endTime: e.target.value })} /></label>
-                  <Button type="button" aria-label={t("Remove shift", "Shift hatao")} variant="outline" size="sm" disabled={draft.length <= 1} onClick={() => removeRow(i)}><Trash2 className="size-4" /></Button>
+                  <Button type="button" aria-label={t("Remove shift", "Shift hatao")} variant="outline" size="sm" disabled={draft.length <= 1} onClick={() => void removeRow(i)}><Trash2 className="size-4" /></Button>
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" disabled={draft.length >= 12} onClick={addRow}><Plus className="size-4" /> {t("Add Shift", "Shift Add Karo")}</Button>

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { MODULE_KEYS, type ModuleKey } from "@/lib/moduleAccess";
 import { refreshCurrentUser, requestJson, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
@@ -67,7 +68,7 @@ export default function UsersAdminPage() {
       {message && <p role="status" className="mb-4">{uiText(message)}</p>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="min-w-0"><CardContent className="pt-5">
-          {loading ? <p>{uiText("Loading users…")}</p> : <Table><TableHeader><TableRow><TableHead>{uiText("Name")}</TableHead><TableHead>{t("Email", "Email")}</TableHead><TableHead>{uiText("Role")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Grants")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Action")}</TableHead></TableRow></TableHeader><TableBody>
+          {loading ? <TableSkeleton cols={7} /> : <Table><TableHeader><TableRow><TableHead>{uiText("Name")}</TableHead><TableHead>{t("Email", "Email")}</TableHead><TableHead>{uiText("Role")}</TableHead><TableHead>{uiText("Branch")}</TableHead><TableHead>{uiText("Grants")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Action")}</TableHead></TableRow></TableHeader><TableBody>
             {(loadedScope === scopeKey ? users : []).map(user => <TableRow key={user.id}><TableCell>{user.name}</TableCell><TableCell>{user.email}</TableCell><TableCell>{user.role.replace(/_/g, " ")}</TableCell><TableCell>{branches.find(branch => branch.id === user.branchId)?.name ?? (user.branchId ? uiText("Own branch") : uiText("HQ"))}</TableCell><TableCell>{user.moduleAccess.length}</TableCell><TableCell>{user.status}</TableCell><TableCell><Button size="sm" variant="ghost" disabled={!canEdit(user) || busy} onClick={() => open(user)}>{uiText("Edit")}</Button></TableCell></TableRow>)}
           </TableBody></Table>}
           {!loading && !error && !users.length && <p>{uiText("No users in this scope.")}</p>}

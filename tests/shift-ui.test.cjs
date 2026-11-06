@@ -40,7 +40,9 @@ function load(file, extra='', overrides={}) {
   '@/lib/i18n':{useTranslation:()=>({t:text=>text})}, '@/lib/ui-copy':{useUiCopy:()=>text=>text},
   '@/lib/current-branch':{useSelectedBranchId:()=>selected,useBranches:()=>({branches:[]})},
   '@/lib/utils':{formatInr:n=>'INR '+n},
-  '@/lib/shift-gate':shiftModule && {...shiftModule,useShiftStatus:()=>status}, ...overrides
+  '@/lib/shift-gate':shiftModule && {...shiftModule,useShiftStatus:()=>status},
+  '@/components/confirm-dialog':{useConfirm:()=>({confirm:async()=>true,ConfirmHost:()=>null})},
+  '@/components/toast':{useToast:()=>({notify:()=>{},notifyError:()=>{},ToastHost:()=>null})}, ...overrides
  };
  vm.runInNewContext(code,{exports,require:name=>mocks[name] ?? new Proxy({}, {get:(_,key)=>key==='__esModule'?true:String(key)}),sessionStorage,Date,Intl,Error,Number,JSON,setInterval:()=>1,clearInterval:()=>{}},{filename:file});
  return exports;

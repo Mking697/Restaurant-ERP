@@ -17,6 +17,7 @@ import LegacyAccountsDemo from "./legacy-demos";
 import { createExpenseAttempt } from "@/lib/expense-attempt";
 import { formatCurrency } from "@/lib/utils";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
+import { useToast } from "@/components/toast";
 
 type Category = "RENT" | "UTILITIES" | "MARKETING" | "OTHER";
 const categories: Category[] = ["RENT", "UTILITIES", "MARKETING", "OTHER"];
@@ -55,6 +56,7 @@ function AccountsScope({ selected }: { selected: string }) {
 }
 function ExpensePanel({ branchId, month }: { branchId: string; month: string }) {
   const { t } = useTranslation(); const resource = useResource<Expenses>(`/api/accounts/expenses?${query(branchId, {month})}`); const action = useAction();
+  const { notify, notifyError, ToastHost } = useToast();
   const blank = () => ({ date: month === monthNow() ? today() : `${month}-01`, category: "OTHER" as Category, subcategory: "", amount: "", description: "", reference: "", paymentMethod: "" as "" | "CASH" | "NON_CASH" });
   const actor = useCurrentUser();
   const [attempt] = React.useState(() => createExpenseAttempt(() => window.sessionStorage, { actorId: actor.id, branchId, month }));
@@ -76,7 +78,17 @@ function ExpensePanel({ branchId, month }: { branchId: string; month: string }) 
       await resource.reload();
     }, t("Expense saved and reloaded from database.", "Expense save hua aur database se reload hua."));
   }
-  return <div className="space-y-4"><Panel><h2 className="font-semibold">{t("Post expense", "Kharcha save karo")}</h2><p className="text-sm text-muted-foreground">{t("Posted entries cannot be edited. Void with a reason to exclude an incorrect entry; the original audit record remains.", "Saved entry edit nahi hoti. Galat entry ko reason ke saath void karo; original audit record rahega.")}</p>
+  async function voidExpense(e: React.FormEvent) {
+    e.preventDefault();
+    let failure = "";
+    const ok = await action.run(async () => {
+      try { await post(`/api/accounts/expenses/${encodeURIComponent(voidId)}/void`, {reason}); await resource.reload(); }
+      catch (err) { failure = err instanceof Error ? err.message : t("Could not void expense.", "Expense void nahi hua."); throw err; }
+    }, t("Expense voided and reloaded.", "Expense void hua aur reload hua."));
+    if (ok) { notify(t("Expense voided and reloaded.", "Expense void hua aur reload hua.")); setVoidId(""); setReason(""); }
+    else { notifyError(failure || t("Could not void expense.", "Expense void nahi hua.")); }
+  }
+  return <div className="space-y-4"><ToastHost /><Panel><h2 className="font-semibold">{t("Post expense", "Kharcha save karo")}</h2><p className="text-sm text-muted-foreground">{t("Posted entries cannot be edited. Void with a reason to exclude an incorrect entry; the original audit record remains.", "Saved entry edit nahi hoti. Galat entry ko reason ke saath void karo; original audit record rahega.")}</p>
     {storageError && <p role="alert" className="text-destructive">{storageError}</p>}
     <form onSubmit={save}><fieldset disabled={action.busy || !ready || !!storageError} className="grid gap-3 sm:grid-cols-2">
       <Field label={t("Date", "Tareekh")}><input className={inputClass} required type="date" min={`${month}-01`} max={monthEnd(month)} value={entry.date} readOnly={attempted} onChange={e => change("date",e.target.value)} /></Field>
@@ -92,7 +104,7 @@ function ExpensePanel({ branchId, month }: { branchId: string; month: string }) 
     </fieldset></form><ActionState action={action} /></Panel>
     <Panel><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{t("Saved expenses", "Saved kharche")}</h2><Button variant="outline" disabled={resource.loading || action.busy} onClick={() => void resource.reload().catch(() => {})}>{t("Reload", "Reload karo")}</Button></div><LoadState {...resource} empty={!resource.data?.expenses.length} />
       {resource.data && <><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{categories.map(c => <p key={c}>{categoryLabel(c,t)}: <strong>{money(resource.data!.totals[c])}</strong></p>)}</div><DataTable headers={[t("Date", "Tareekh"), t("Category", "Category"), t("Description / reference", "Vivaran / reference"), t("Amount", "Amount"), t("Payment", "Payment"), t("Status", "Status"), t("Action", "Action")]}>{resource.data.expenses.map(row => <tr key={row.id}><td>{row.date}</td><td>{categoryLabel(row.category,t)}<p>{row.subcategory}</p></td><td className="min-w-40">{row.description}<p className="text-muted-foreground">{row.reference}</p></td><td className="whitespace-nowrap">{money(row.amount)}</td><td>{row.paymentMethod === "CASH" ? t("Shift drawer cash", "Shift drawer cash") : row.paymentMethod === "NON_CASH" ? t("Bank/Card/Other", "Bank/Card/Other") : t("Not specified", "Specify nahi")}</td><td>{row.status}{row.voidReason && <p>{row.voidReason}</p>}</td><td>{row.status === "POSTED" && <Button variant="outline" disabled={action.busy} onClick={() => {setVoidId(row.id); setReason("");}}>{t("Void", "Void karo")}</Button>}</td></tr>)}</DataTable></>}
-      {voidId && <form className="space-y-3 rounded-md border p-3" onSubmit={async e => {e.preventDefault(); if (await action.run(async () => { await post(`/api/accounts/expenses/${encodeURIComponent(voidId)}/void`, {reason}); await resource.reload(); }, t("Expense voided and reloaded.", "Expense void hua aur reload hua."))) {setVoidId(""); setReason("");} }}><fieldset disabled={action.busy} className="space-y-3"><p>{t("Void retains the original audit record and cannot be undone.", "Void mein original audit record rahega; ise undo nahi kar sakte.")}</p><Field label={t("Void reason", "Void ka reason")}><input className={inputClass} required minLength={3} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></Field><div className="flex gap-2"><Button type="submit" variant="destructive">{t("Confirm void", "Void confirm karo")}</Button><Button type="button" variant="outline" onClick={() => setVoidId("")}>{t("Cancel", "Cancel karo")}</Button></div></fieldset></form>}
+      {voidId && <form className="space-y-3 rounded-md border p-3" onSubmit={voidExpense}><fieldset disabled={action.busy} className="space-y-3"><p>{t("Void retains the original audit record and cannot be undone.", "Void mein original audit record rahega; ise undo nahi kar sakte.")}</p><Field label={t("Void reason", "Void ka reason")}><input className={inputClass} required minLength={3} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></Field><div className="flex gap-2"><Button type="submit" variant="destructive">{t("Confirm void", "Void confirm karo")}</Button><Button type="button" variant="outline" onClick={() => setVoidId("")}>{t("Cancel", "Cancel karo")}</Button></div></fieldset></form>}
     </Panel></div>;
 }
 function ProfitLossPanel({ branchId, month }: {branchId:string;month:string}) {

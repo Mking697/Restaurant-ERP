@@ -3,6 +3,7 @@ import { useUiCopy } from "@/lib/ui-copy";
 import * as React from "react";
 import { CentralStockPanel } from "./central-stock-panel";
 import { CentralPurchasePanel } from "./central-purchase-panel";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { PendingWorkWidget } from "@/components/pending-work-widget";
@@ -171,7 +172,7 @@ export default function WarehousePage() {
 
         <TabsContent value="transfers">
           <Card><CardContent className="pt-5">
-            {loading ? <p>{uiText("Loading transfers…")}</p> : <Table><TableHeader><TableRow><TableHead>{uiText("Material")}</TableHead><TableHead>{uiText("From")}</TableHead><TableHead>{uiText("To")}</TableHead><TableHead>{uiText("Dispatched")}</TableHead><TableHead>{uiText("Received")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
+            {loading ? <TableSkeleton cols={7} /> : <Table><TableHeader><TableRow><TableHead>{uiText("Material")}</TableHead><TableHead>{uiText("From")}</TableHead><TableHead>{uiText("To")}</TableHead><TableHead>{uiText("Dispatched")}</TableHead><TableHead>{uiText("Received")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
               {transfers.map((t) => <TableRow key={t.id}>
                 <TableCell>{materialLabel(t.rawMaterialId)}</TableCell>
                 <TableCell>{warehouseLabel(t.fromWarehouseId)}</TableCell>

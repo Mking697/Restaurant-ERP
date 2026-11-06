@@ -36,7 +36,7 @@ async function harness(options = {}) {
       if (url === '/api/raw-materials') return { rawMaterials: [] };
       if (url === '/api/purchase/vendors') return { vendors: [] };
       return { indents: [] };
-    } }, '@/components/toast': { useToast: () => ({ notify: v => notices.push(v), ToastHost: 'ToastHost' }) }, '@/lib/utils': { formatInr: String },
+    } }, '@/components/toast': { useToast: () => ({ notify: v => notices.push(v), notifyError: v => notices.push(v), ToastHost: 'ToastHost' }) }, '@/components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmHost: 'ConfirmHost' }) }, '@/lib/utils': { formatInr: String },
     'lucide-react': Object.fromEntries(['Plus','Check','X','Upload','PackageCheck','FlaskConical','Trash2'].map(k => [k,k])),
   };
   for (const [path, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/badge': ['Badge'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogFooter','DialogHeader','DialogTitle','DialogTrigger'] })) deps[path] = Object.fromEntries(names.map(k => [k,k]));
