@@ -243,6 +243,51 @@ export async function postVendorPaymentJournal(tx: Executor, actor: Identity, pa
     return null;
   }
 }
+/** Nov 2026 (Owner-requested) — the real fix for Central/HQ purchase cost
+ * having zero General Ledger presence, WITHOUT the schema change a
+ * warehouse-scoped posting would need (journalEntries.branchId is a NOT
+ * NULL FK to branches, and a central warehouse is not owned by any single
+ * branch — see warehouses.ts's CENTRAL/BRANCH type).
+ *
+ * Central purchase cost is deliberately NOT posted at central-GRN-accepted
+ * time (central-purchase.ts's recordCentralGrnQuality) — that stock just
+ * sits in the CENTRAL warehouse's own inventory, owned by no branch yet,
+ * so there is still no real branch-scoped event to post. The real
+ * cost-incurred moment, matching this app's existing fully branch-scoped
+ * GL architecture (see computeBalanceSheet's own note: "journal entries
+ * are always branch-scoped"), is when a BRANCH actually RECEIVES that
+ * stock via a stock transfer FROM a CENTRAL warehouse (stock-transfers/
+ * [id]/receive route) — exactly the same real-world moment the branch's
+ * own books should recognize the cost. A transfer between two BRANCH
+ * warehouses is NOT posted here (that stock's cost was already posted to
+ * the ORIGINATING branch when it was first purchased via a normal
+ * branch-level GRN — posting again at the destination would double-count
+ * the same physical goods).
+ *
+ * Debit Purchases/COGS (5000) for the accepted quantity's frozen
+ * unitCostTsh (GAP-010 — frozen at dispatch time, never re-derived),
+ * Credit Accounts Payable (2000) for the receiving branch. Accounts
+ * Payable is a deliberate simplification: the branch does not owe the
+ * vendor directly (HQ does), but the approved 14-account chart has no
+ * separate "Due to HQ" account, and this still correctly recognizes the
+ * branch's own expense — same approximation already accepted for every
+ * other internally-allocated cost in this chart.
+ *
+ * A fully-zero-cost receipt (unitCostTsh never recorded on the dispatched
+ * lot) posts nothing: postJournalLeg already skips a zero-amount leg.
+ * Fail-safe by design, same as postPurchaseGrnJournal — stock receiving's
+ * primary job is crediting real physical stock; it must never be blocked
+ * by a General Ledger concern. */
+export async function postCentralStockReceiveJournal(tx: Executor, actor: Identity, transfer: { id: string; branchId: string }, acceptedValueTsh: string) {
+  try {
+    const byCode = await accountsByCode(tx);
+    const cogs = requireAccount(byCode, "5000"), payable = requireAccount(byCode, "2000");
+    return await postJournalLeg(tx, { branchId: transfer.branchId, description: "Central warehouse stock received (purchase cost)", debitAccountId: cogs, creditAccountId: payable, amount: acceptedValueTsh, referenceType: "CENTRAL_STOCK_RECEIVE", referenceId: transfer.id, createdById: actor.id });
+  } catch (err) {
+    console.error(`postCentralStockReceiveJournal skipped for transfer ${transfer.id}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
 /** Finalized (FINAL, immutable) payroll run: Debit Salary Expense, Credit
  * Accounts Payable for the exact finalized total — payroll not yet
  * disbursed is a real liability, not cash paid out yet. Posted once per
