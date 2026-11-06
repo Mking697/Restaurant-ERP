@@ -74,7 +74,7 @@ export async function liveShiftSummary(tx: Executor, actor: Identity, branchId: 
   for (const row of tenders) {
     const cents = toCents(row.totalAmount);
     if (row.tenderType === "CASH") cashCents += cents;
-    else if (row.tenderType === "CARD") cardCents += cents;
+    else if (row.tenderType === "CARD" || row.tenderType === "CREDIT_CARD" || row.tenderType === "DEBIT_CARD") cardCents += cents;
     else if (row.tenderType === "UPI") upiCents += cents;
     else otherCents += cents;
   }

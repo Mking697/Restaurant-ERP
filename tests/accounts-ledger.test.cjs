@@ -98,10 +98,10 @@ test('postAggregatorOrder always computes netPayout server-side, ignoring any cl
   const deniedTx = { select: () => ({ from: () => ({ where: () => chain([{ id: 'branch-a' }]) }) }), insert: () => ({ values: (v) => ({ returning: () => Promise.resolve([{ ...v }]) }) }) };
   await assert.rejects(() => postAggregatorOrder(deniedTx, denied, aggInput()), { status: 403 });
 });
-test('seedLedgerAccounts is HQ-level (branchId null) and documents exactly 13 accounts (FINANCE-1 approved 12 + legacy Petty Cash)', () => {
+test('seedLedgerAccounts is HQ-level (branchId null) and documents exactly 14 accounts (FINANCE-1 approved 12 + legacy Petty Cash + Accounts Receivable)', () => {
   const { SEED_LEDGER_ACCOUNTS } = load();
-  assert.equal(SEED_LEDGER_ACCOUNTS.length, 13);
-  assert.deepEqual(SEED_LEDGER_ACCOUNTS.map(a => a.code).sort(), ['1000', '1010', '1020', '2000', '2100', '3000', '4000', '5000', '5100', '5200', '5300', '5400', '5500']);
+  assert.equal(SEED_LEDGER_ACCOUNTS.length, 14);
+  assert.deepEqual(SEED_LEDGER_ACCOUNTS.map(a => a.code).sort(), ['1000', '1010', '1020', '1100', '2000', '2100', '3000', '4000', '5000', '5100', '5200', '5300', '5400', '5500']);
   assert.deepEqual(new Set(SEED_LEDGER_ACCOUNTS.map(a => a.type)), new Set(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']));
 });
 test('postJournalLeg is idempotent per (referenceType, referenceId, leg) and skips a zero amount', async () => {

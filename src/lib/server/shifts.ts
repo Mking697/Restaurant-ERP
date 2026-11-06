@@ -172,7 +172,7 @@ async function computeExpectedCashCents(tx: Executor, branchId: string, run: typ
   for (const row of tenders) {
     const amountCents = toCents(row.totalAmount);
     if (row.tenderType === "CASH") cashExpectedCents += amountCents;
-    else if (row.tenderType === "CARD") cardCents += amountCents;
+    else if (row.tenderType === "CARD" || row.tenderType === "CREDIT_CARD" || row.tenderType === "DEBIT_CARD") cardCents += amountCents;
     else if (row.tenderType === "UPI") upiCents += amountCents;
     else otherCents += amountCents;
   }

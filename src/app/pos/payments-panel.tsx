@@ -20,7 +20,7 @@ function validOrder(order: PaymentOrderSummary, branchId: string) {
   if (order.coverage !== "CAPTURED" || !sameMoney(order.collectedAmount, order.totalAmount) || !sameMoney(order.outstandingAmount, "0") || order.legacyRecordedAmount !== null || order.unavailableReason !== null) return false;
   const p = order.payment, a = p?.allocation;
   return !!p && nonempty(p.id) && p.branchId === order.branchId && p.orderId === order.id && nonempty(p.receiptId) && nonempty(p.receiptNumber) && sameMoney(p.amount, order.totalAmount) &&
-    ["CASH", "UPI", "CARD"].includes(p.tenderType) && typeof p.tenderCurrencyCode === "string" && /^[A-Z]{3}$/.test(p.tenderCurrencyCode) && money(p.tenderCurrencyAmount) && typeof p.fxRateToInr === "string" && /^\d+(?:\.\d+)?$/.test(p.fxRateToInr) && Number.isFinite(Number(p.fxRateToInr)) && Number(p.fxRateToInr) > 0 &&
+    ["CASH", "UPI", "CREDIT_CARD", "DEBIT_CARD"].includes(p.tenderType) && typeof p.tenderCurrencyCode === "string" && /^[A-Z]{3}$/.test(p.tenderCurrencyCode) && money(p.tenderCurrencyAmount) && typeof p.fxRateToInr === "string" && /^\d+(?:\.\d+)?$/.test(p.fxRateToInr) && Number.isFinite(Number(p.fxRateToInr)) && Number(p.fxRateToInr) > 0 &&
     nonempty(p.collectorId) && nonempty(p.collectorName) && nonempty(p.shiftRunId) && typeof p.collectedAt === "string" && /^\d{4}-\d{2}-\d{2}T/.test(p.collectedAt) && Number.isFinite(Date.parse(p.collectedAt)) && ["CREATE", "SETTLE"].includes(p.sourceAction) &&
     ((p.finalDocumentId === null && p.finalDocumentNumber === null) || (nonempty(p.finalDocumentId) && nonempty(p.finalDocumentNumber))) &&
     !!a && nonempty(a.id) && a.orderId === order.id && a.receiptId === p.receiptId && a.finalDocumentId === p.finalDocumentId && sameMoney(a.amount, p.amount);

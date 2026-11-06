@@ -190,6 +190,32 @@ export async function postPayrollFinalizeJournal(tx: Executor, actor: Identity, 
   const salary = requireAccount(byCode, "5500"), payable = requireAccount(byCode, "2000");
   return postJournalLeg(tx, { branchId: run.branchId, description: "Payroll finalized", debitAccountId: salary, creditAccountId: payable, amount: totalAmount, referenceType: "PAYROLL_RUN", referenceId: run.id, createdById: actor.id });
 }
+
+/** Vendor refund/credit claim (material_returns, created from a FAIL/PARTIAL
+ * GRN quality decision — see src/lib/server/vendor-returns.ts): Debit
+ * Accounts Receivable for the claimed refundAmountInr, Credit Purchases/COGS
+ * (reversing the expense recognized for the quantity that failed quality
+ * and is being returned to the vendor). This money is EXPECTED, not yet
+ * received — matches the existing "Vendor refunds" tab's own description
+ * ("expected refund/credit claims, not money received"). */
+export async function postVendorReturnClaimJournal(tx: Executor, actor: Identity, claim: { id: string; branchId: string; refundAmountInr: string }) {
+  const byCode = await accountsByCode(tx);
+  const receivable = requireAccount(byCode, "1100"), cogs = requireAccount(byCode, "5000");
+  return postJournalLeg(tx, { branchId: claim.branchId, description: "Vendor refund/credit claim recorded", debitAccountId: receivable, creditAccountId: cogs, amount: claim.refundAmountInr, referenceType: "VENDOR_RETURN_CLAIM", referenceId: claim.id, createdById: actor.id });
+}
+/** Vendor refund/credit claim settled ("Mark as Settled" — the one-shot
+ * money-received/credit-note write in settleVendorReturn): Debit Cash for
+ * the settledAmountInr actually received, Credit Accounts Receivable —
+ * clearing the matching claim leg above. Posted once per claim id (the
+ * claim's own settledAt column is itself a once-only gate, so this can only
+ * ever be reached once; the journal-level idempotency key is defense in
+ * depth on top of that, same convention as postPayrollFinalizeJournal). */
+export async function postVendorReturnSettledJournal(tx: Executor, actor: Identity, claim: { id: string; branchId: string; settledAmountInr: string }) {
+  const byCode = await accountsByCode(tx);
+  const cash = requireAccount(byCode, "1000"), receivable = requireAccount(byCode, "1100");
+  return postJournalLeg(tx, { branchId: claim.branchId, description: "Vendor refund/credit claim settled", debitAccountId: cash, creditAccountId: receivable, amount: claim.settledAmountInr, referenceType: "VENDOR_RETURN_SETTLED", referenceId: claim.id, createdById: actor.id });
+}
+
 /** Aggregator settlement (manual, server-computed netPayout): Debit Bank for
  * the netPayout actually due to be received (not Accounts Receivable — the
  * aggregator order record here IS the settlement itself, server-computed
@@ -321,6 +347,11 @@ export const SEED_LEDGER_ACCOUNTS = [
   { code: "1000", name: "Cash", type: "ASSET" as const },
   { code: "1010", name: "Petty Cash", type: "ASSET" as const }, // legacy sub-asset row, kept but unused by journal postings below (see FINANCE-1 notes)
   { code: "1020", name: "Bank", type: "ASSET" as const },
+  // Nov 2026 (Owner-requested): real Accounts Receivable line for vendor
+  // refund/credit claims (material_returns — see postVendorReturnClaimJournal
+  // below), which previously only existed as a separate tracked table with
+  // no General Ledger presence.
+  { code: "1100", name: "Accounts Receivable", type: "ASSET" as const },
   { code: "2000", name: "Accounts Payable", type: "LIABILITY" as const },
   { code: "2100", name: "VAT Payable", type: "LIABILITY" as const }, // 18% Tanzania VAT, not GST/GSTR
   { code: "3000", name: "Owner's Equity", type: "EQUITY" as const },
@@ -332,15 +363,17 @@ export const SEED_LEDGER_ACCOUNTS = [
   { code: "5400", name: "Other Expense", type: "EXPENSE" as const },
   { code: "5500", name: "Salary Expense", type: "EXPENSE" as const },
 ];
-/** Idempotent: inserts the 13 standard HQ-level accounts only if their code
+/** Idempotent: inserts the 14 standard HQ-level accounts only if their code
  * doesn't already exist (onConflictDoNothing on the unique `code` column).
- * 12 of these are the user-approved FINANCE-1 chart of accounts (Cash, Bank,
- * Sales Revenue, Purchases/COGS, VAT Payable, Accounts Payable, Rent/
- * Utilities/Marketing/Other/Salary Expense, Owner's Equity); "1010 Petty
+ * 12 of these are the original user-approved FINANCE-1 chart of accounts
+ * (Cash, Bank, Sales Revenue, Purchases/COGS, VAT Payable, Accounts Payable,
+ * Rent/Utilities/Marketing/Other/Salary Expense, Owner's Equity); "1010 Petty
  * Cash" is an earlier, separate sub-asset row kept for backward compatibility
  * but deliberately NOT used by any of the real journal postings added in
  * FINANCE-1 — those always debit/credit "1000 Cash" for petty cash events,
- * matching the approved chart (see postPettyCashJournal). */
+ * matching the approved chart (see postPettyCashJournal). "1100 Accounts
+ * Receivable" was added later (Nov 2026) for vendor refund/credit claims —
+ * see postVendorReturnClaimJournal/postVendorReturnSettledJournal. */
 export async function seedLedgerAccounts(tx: Executor) {
   const inserted = await tx.insert(ledgerAccounts)
     .values(SEED_LEDGER_ACCOUNTS.map(a => ({ id: randomUUID(), code: a.code, name: a.name, type: a.type, branchId: null })))

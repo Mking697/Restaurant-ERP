@@ -63,7 +63,7 @@ async function draftPayload(tx: Executor, branchId: string, value: unknown) {
   if (input.counterNo !== undefined && (typeof input.counterNo !== "string" || !["COUNTER_1", "COUNTER_2"].includes(input.counterNo))) throw new HttpError(400, "Invalid counterNo");
   if (input.customerName !== undefined && (typeof input.customerName !== "string" || input.customerName.length > 80)) throw new HttpError(400, "Invalid customerName");
   validOptionalPhone(input.customerPhone);
-  if (input.tenderType !== undefined && (typeof input.tenderType !== "string" || !["CASH", "UPI", "CARD", "SWIGGY", "ZOMATO"].includes(input.tenderType))) throw new HttpError(400, "Invalid tenderType");
+  if (input.tenderType !== undefined && (typeof input.tenderType !== "string" || !["CASH", "UPI", "CREDIT_CARD", "DEBIT_CARD", "SWIGGY", "ZOMATO"].includes(input.tenderType))) throw new HttpError(400, "Invalid tenderType");
   if (input.tenderCurrencyCode !== undefined && (typeof input.tenderCurrencyCode !== "string" || !/^[A-Za-z]{3}$/.test(input.tenderCurrencyCode.trim()))) throw new HttpError(400, "Invalid tenderCurrencyCode");
   const lines = parsePolicyLines(input.lines);
   const ids = [...new Set(lines.map(line => line.menuItemId))];

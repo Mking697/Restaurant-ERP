@@ -17,7 +17,7 @@ import { vatInvoiceSummary } from "./vat";
 import { validOptionalPhone } from "./whatsapp-triggers";
 import { assertAllowedFields, idempotencyKey, orderFlow, parsePolicyLines, productionTickets, sameReplayPayload, tableNumber, type BranchConcept, type OrderChannel, type ProductionStation } from "./pos-order-policy";
 
-const TENDERS = ["CASH", "UPI", "CARD", "SWIGGY", "ZOMATO"] as const;
+const TENDERS = ["CASH", "UPI", "CREDIT_CARD", "DEBIT_CARD", "SWIGGY", "ZOMATO"] as const;
 const POS_COUNTERS = ["COUNTER_1", "COUNTER_2"] as const;
 type Action = "CREATE" | "ADD_LINES" | "SETTLE";
 type InputLine = { menuItemId: string; qty: number };

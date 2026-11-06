@@ -9,6 +9,7 @@ import { assertModule, branchScope, HttpError, type Identity } from "./permissio
 import { qualityReceiptId, qualityReceiptState } from "./grn-quality-policy";
 import { returnPlan, returnReceiptId, validReturnReceipt, RETURN_ACTION, type ReturnSource } from "./vendor-return-policy";
 import { allowedFields, assertReturnNotSettled, parseSettleInput } from "./purchase";
+import { postVendorReturnClaimJournal, postVendorReturnSettledJournal } from "./accounts-ledger";
 
 async function loadSource(tx: Executor, actor: Identity, id: string): Promise<ReturnSource> {
   const [grn] = await tx.select().from(grns).where(eq(grns.id,id)).limit(1);
@@ -39,8 +40,9 @@ export async function recordVendorReturns(tx: Executor, actor: Identity, id: str
     return {returns:await readVendorReturns(tx,actor,{grnId:id},"purchase"),replayed:true};
   }
   if (saved.rows.length) throw new HttpError(409,"Legacy or partial vendor claims require reconciliation");
-  await tx.insert(materialReturns).values(plan.map(line=>({...line,grnId:id,submittedToAccountsAt:new Date()})));
+  const inserted = await tx.insert(materialReturns).values(plan.map(line=>({...line,grnId:id,submittedToAccountsAt:new Date()}))).returning();
   await tx.insert(auditLog).values({id:returnReceiptId(id),userId:actor.id,action:RETURN_ACTION,entityType:"GRN",entityId:id,metadataJson:{version:1,branchId:source.branchId,poId:source.poId,vendorId:source.vendorId,claims:plan}});
+  for (const row of inserted) await postVendorReturnClaimJournal(tx, actor, { id: row.id, branchId: row.branchId, refundAmountInr: row.refundAmountInr });
   const confirmed=await savedBatch(tx,source);
   if (!validReturnReceipt(source,confirmed.rows,confirmed.receipt)) throw new HttpError(409,"Vendor claim readback inconsistent; transaction rolled back");
   return {returns:await readVendorReturns(tx,actor,{grnId:id},"purchase"),replayed:false};
@@ -98,6 +100,7 @@ export async function settleVendorReturn(tx: Executor, actor: Identity, id: stri
     .update(materialReturns)
     .set({ settledAmountInr: parsed.settledAmountInr, settledAt: new Date(), settledById: actor.id, settledNote: parsed.settledNote })
     .where(and(eq(materialReturns.id, id), eq(materialReturns.branchId, row.branchId)));
+  await postVendorReturnSettledJournal(tx, actor, { id: row.id, branchId: row.branchId, settledAmountInr: parsed.settledAmountInr });
   const [updated] = await tx.select().from(materialReturns).where(eq(materialReturns.id, id));
   return { return: updated };
 }
