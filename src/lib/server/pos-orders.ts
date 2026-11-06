@@ -15,6 +15,7 @@ import { requireOperableShift } from "./shifts";
 import { allocatePickupToken } from "./pos-tokens";
 import { vatInvoiceSummary } from "./vat";
 import { validOptionalPhone } from "./whatsapp-triggers";
+import { postPosSaleJournal } from "./accounts-ledger";
 import { assertAllowedFields, idempotencyKey, orderFlow, parsePolicyLines, productionTickets, sameReplayPayload, tableNumber, type BranchConcept, type OrderChannel, type ProductionStation } from "./pos-order-policy";
 
 const TENDERS = ["CASH", "UPI", "CREDIT_CARD", "DEBIT_CARD", "SWIGGY", "ZOMATO"] as const;
@@ -176,6 +177,7 @@ export async function createPosOrder(tx: Executor, actor: Identity, branchId: st
   }
   const final = flow === "PAYMENT_FIRST" ? await issueFinalPosDocument(tx, actor, orderId, documentContext) : null;
   const collection = flow === "PAYMENT_FIRST" ? await capturePosPayment(tx, actor, orderId, "CREATE") : {};
+  if (flow === "PAYMENT_FIRST") await postPosSaleJournal(tx, actor, { id: orderId, branchId, tenderType, subtotal: billing.subtotal, taxAmount: billing.taxAmount });
   const result = { order: { id: orderId, orderNumber, pickupToken, branchId, branchName: branch.name, channel, tableNo, status: flow === "PRODUCTION_FIRST" ? "OPEN" : "PAID", flow, customerPhone, customerName }, tickets: tickets.map(ticket => ({ ...ticket, pickupToken })), kot: tickets.flatMap(ticket => ticket.lines), receipt: receiptResult, ...(final ? { finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}) } : {}), inventoryDeducted: deductions.inventoryDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })), semiFgDeducted: deductions.semiFgDeducted.map(row => ({ ...row, qtyDeducted: Number(row.qtyDeducted) })) };
   Object.assign(result, collection);
   await saveAttempt(tx, branchId, orderId, actor.id, "CREATE", key, input, result);
@@ -238,6 +240,7 @@ export async function settlePosOrder(tx: Executor, actor: Identity, orderId: str
   const receiptResult = { receiptNumber, ...receipt(receiptLines, order.subtotal, order.taxAmount, order.totalAmount, payment.tenderCurrencyCode, payment.fxRateToInr, payment.tenderCurrencyAmount) };
   const final = await issueFinalPosDocument(tx, actor, orderId);
   const collection = await capturePosPayment(tx, actor, orderId, "SETTLE");
+  await postPosSaleJournal(tx, actor, { id: orderId, branchId: order.branchId, tenderType, subtotal: order.subtotal, taxAmount: order.taxAmount });
   const result = { order: { id: orderId, orderNumber: order.orderNumber, status: "PAID", tenderType }, receipt: receiptResult, finalDocument: final.document, ...(final.unavailableReason ? { documentUnavailableReason: final.unavailableReason } : {}), inventoryDeducted: [], semiFgDeducted: [] };
   Object.assign(result, collection);
   await saveAttempt(tx, order.branchId, orderId, actor.id, "SETTLE", key, input, result);

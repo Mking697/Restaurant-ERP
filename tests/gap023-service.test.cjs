@@ -21,6 +21,7 @@ function harness() {
     './production': { lockRecipeStock: async () => {}, readStockRecipe: async () => [], deductStock: async (_tx, branchId, required, reference) => { state.deductions.push({ branchId, required, reference }); return { inventoryDeducted: [], semiFgDeducted: [] }; } },
     './production-quantity': { directRequirements: (_branch, _recipes, lines) => lines },
     './shifts': { requireOperableShift: async () => ({ shiftRunId: state.shift }) },
+    './accounts-ledger': { postPosSaleJournal: async () => null },
     // GAP-025 documents are isolated here; its real service runs in gap025-service.
     './pos-documents': { issueFinalPosDocument: async () => ({ document: null, unavailableReason: 'Isolated legacy harness' }) },
     // GAP-026 payment capture is isolated here; its real service runs in gap026-service.

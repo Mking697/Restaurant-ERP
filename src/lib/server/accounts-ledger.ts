@@ -216,6 +216,55 @@ export async function postVendorReturnSettledJournal(tx: Executor, actor: Identi
   return postJournalLeg(tx, { branchId: claim.branchId, description: "Vendor refund/credit claim settled", debitAccountId: cash, creditAccountId: receivable, amount: claim.settledAmountInr, referenceType: "VENDOR_RETURN_SETTLED", referenceId: claim.id, createdById: actor.id });
 }
 
+/** Nov 2026 (Owner-requested): real revenue posting for a confirmed POS
+ * sale (dine-in/takeaway, tendered CASH/UPI/CREDIT_CARD/DEBIT_CARD) — the
+ * money a customer actually pays at the counter. Previously this never
+ * touched the General Ledger at all (Sales Revenue/Cash/Bank were only ever
+ * posted to by the separate, manually-entered Aggregator Recon tab for
+ * Swiggy/Zomato), so the Balance Sheet silently excluded all dine-in/
+ * takeaway income. Posted once per order id, at the exact moment the order
+ * becomes PAID (createPosOrder's PAYMENT_FIRST flow, or settlePosOrder) —
+ * see pos-orders.ts.
+ *
+ * Deliberately SKIPPED for tenderType SWIGGY/ZOMATO: those orders' real
+ * revenue (net of commission/ads/refund penalty) is already booked by
+ * postAggregatorJournal when Accounts manually reconciles the aggregator
+ * settlement — posting here too would double-count the same sale.
+ *
+ * Two legs: leg 0 is Debit Cash-or-Bank / Credit Sales Revenue for the
+ * tax-exclusive subtotal; leg 1 is Debit Cash-or-Bank / Credit VAT Payable
+ * for the tax collected (postJournalLeg already skips a zero-amount leg,
+ * so a VAT-exempt/zero-tax order simply posts leg 0 only). CASH tenders
+ * debit the Cash account (1000); UPI/CREDIT_CARD/DEBIT_CARD debit Bank
+ * (1020) since those settle electronically, never through the physical
+ * drawer — matching the existing shift cash-reconciliation convention
+ * (shifts.ts/shift-summary.ts only ever expect CASH tenders in the
+ * drawer). */
+export async function postPosSaleJournal(tx: Executor, actor: Identity, order: { id: string; branchId: string; tenderType: string; subtotal: string; taxAmount: string }) {
+  if (order.tenderType === "SWIGGY" || order.tenderType === "ZOMATO") return null;
+  // Fail-safe by design, unlike every other posting function in this file:
+  // a POS sale happens dozens of times a minute from Cashier/Waiter devices
+  // and must NEVER be blocked by a General Ledger concern (e.g. the chart
+  // of accounts not yet seeded on a fresh branch/environment, or any other
+  // transient posting error). The whole body is one try/catch — on any
+  // failure this silently skips the posting (logging it server-side) and
+  // the sale itself (stock deduction, receipt, payment capture) still
+  // completes untouched. Once Owner seeds the chart (POST
+  // /api/accounts/balance-sheet), only FUTURE sales post; nothing retries
+  // retroactively for sales made before seeding or during an outage.
+  try {
+    const byCode = await accountsByCode(tx);
+    const debit = requireAccount(byCode, order.tenderType === "CASH" ? "1000" : "1020");
+    const revenue = requireAccount(byCode, "4000"), vatPayable = requireAccount(byCode, "2100");
+    const net = await postJournalLeg(tx, { branchId: order.branchId, description: "POS sale revenue", debitAccountId: debit, creditAccountId: revenue, amount: order.subtotal, referenceType: "POS_SALE", referenceId: order.id, leg: 0, createdById: actor.id });
+    const vat = await postJournalLeg(tx, { branchId: order.branchId, description: "POS sale VAT collected", debitAccountId: debit, creditAccountId: vatPayable, amount: order.taxAmount, referenceType: "POS_SALE", referenceId: order.id, leg: 1, createdById: actor.id });
+    return { net, vat };
+  } catch (err) {
+    console.error(`postPosSaleJournal skipped for order ${order.id}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 /** Aggregator settlement (manual, server-computed netPayout): Debit Bank for
  * the netPayout actually due to be received (not Accounts Receivable — the
  * aggregator order record here IS the settlement itself, server-computed
