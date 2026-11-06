@@ -15,7 +15,8 @@ import { downloadCsv } from "@/lib/csv-export";
 import { Download, Calculator } from "lucide-react";
 import { hasCurrentModule, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
-import { ActionState, Field, inputClass, LoadState, Panel, post, useAction, useResource } from "../workforce/live-ui";
+import { ActionState, Field, LoadState, Panel, post, useAction, useResource } from "../workforce/live-ui";
+import { Input } from "@/components/ui/input";
 
 interface MisScoreRow {
   id: string; branchId: string; branchName: string; periodStart: string; periodEnd: string;
@@ -119,10 +120,10 @@ function PerformanceScope({ selected }: { selected: string }) {
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
           <Field label={uiText("Period start (IST, inclusive)")}>
-            <input type="date" disabled={action.busy} className={inputClass} value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} max={periodEnd} />
+            <Input type="date" disabled={action.busy} value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} max={periodEnd} />
           </Field>
           <Field label={uiText("Period end (IST, inclusive)")}>
-            <input type="date" disabled={action.busy} className={inputClass} value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} min={periodStart} max={today} />
+            <Input type="date" disabled={action.busy} value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} min={periodStart} max={today} />
           </Field>
           {canCompute && (
             <Button size="sm" disabled={action.busy || !validPeriod} onClick={() => void computeNow()}>

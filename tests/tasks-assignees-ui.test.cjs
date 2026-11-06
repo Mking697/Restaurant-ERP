@@ -30,7 +30,7 @@ function harness() {
     'lucide-react': Object.fromEntries(['Plus','Repeat','UserCheck','Paperclip','CheckCircle2'].map(name => [name,name])),
     '@/lib/utils': require('../src/lib/utils.ts'),
   };
-  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/button': ['Button'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogFooter','DialogHeader','DialogTitle','DialogTrigger'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
+  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/button': ['Button'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogFooter','DialogHeader','DialogTitle','DialogTrigger'], '@/components/ui/input': ['Input'], '@/components/ui/select': ['Select'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
   function load(file) {
     const module = { exports: {} };
     vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, require: name => { assert.ok(name in deps, name); return deps[name]; }, URLSearchParams, Date, Error });
@@ -52,7 +52,7 @@ function harness() {
   const dialogs = () => find(n => n.type === 'Dialog' && nodes(n,x => x.type === 'form').length);
   const open = index => dialogs()[index].props.onOpenChange(true);
   const fields = index => nodes(dialogs()[index],n => n.type === 'label');
-  const field = (index,label) => { const match = fields(index).find(n => text(n).startsWith(label)); assert.ok(match, label); return nodes(match,n => ['select','input'].includes(n.type))[0]; };
+  const field = (index,label) => { const match = fields(index).find(n => text(n).startsWith(label)); assert.ok(match, label); return nodes(match,n => ['select','input','Select','Input'].includes(n.type))[0]; };
   const submit = index => nodes(dialogs()[index],n => n.type === 'form')[0].props.onSubmit({ preventDefault() {} });
   const flush = async () => { for (let i=0;i<3;i++) { render(); while (effects.length) effects.shift()(); await tick(); } };
   return { render, find, text, open, field, submit, requests, posts, flush, dialogs, setUser: value => { user = { ...user,...value }; }, select: value => { selected = value; } };
@@ -64,7 +64,7 @@ for (const index of [0,1]) test(`dialog ${index} lazily loads branch-bound assig
   h.field(index,'Branch').props.onChange({ target: { value: 'a' } }); await h.flush();
   assert.equal(h.requests.length,1); assert.equal(h.requests[0].url,'/api/tasks/assignees?branchId=a');
   const doer = h.field(index,index === 0 ? 'Assigned to' : 'Assign to');
-  assert.equal(doer.type,'select'); assert.equal(doer.props.disabled,true);
+  assert.equal(doer.type,'Select'); assert.equal(doer.props.disabled,true);
   await h.submit(index); assert.equal(h.posts.length,0);
   h.requests[0].resolve({ branchId:'a', assignees:[{ id:'u-a', name:'Alice' }] }); await h.flush();
   h.field(index,index === 0 ? 'Assigned to' : 'Assign to').props.onChange({ target: { value:'u-a' } });

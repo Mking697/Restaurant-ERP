@@ -12,12 +12,13 @@ import { useShiftStatus, ShiftHandoverGate } from "@/lib/shift-gate";
 import { MenuTilePicker } from "@/app/pos/menu-tile-picker";
 import { PwaInstall } from "@/components/pwa-install";
 import { useToast } from "@/components/toast";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 interface MenuItemRow { id: string; branchId: string; name: string; price: string; category?: string; isActive: boolean; isSellable: boolean; imageUrl?: string | null; }
 interface OrderRow { id: string; branchId: string; orderNumber: string; channel: string; operatingConcept: "FAST_FOOD" | "CONVENTIONAL"; tableNo: string; status: string; totalAmount: string; createdAt: string; }
 interface SendResult { order: { orderNumber: string; tableNo?: string; status?: string }; tickets?: { ticketNumber: string; ticketType: "KOT" | "BOT"; lines: { name: string; qty: number }[] }[]; kot?: { name: string; qty: number }[]; }
 
-const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 const newKey = () => `wtr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export default function WaiterPage() {
@@ -126,13 +127,13 @@ function WaiterScreen() {
       <Card className="mb-4"><CardContent className="pt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1 text-xs font-medium"><span>{uiText("Open table (add items)", "Khula table (items add karo)")}</span>
-            <select className={inputClass} value={targetOrderId} disabled={busy || !!attempt.current} onChange={e => { setTargetOrderId(e.target.value); setLines([]); setResult(null); setError(""); }}>
+            <Select value={targetOrderId} disabled={busy || !!attempt.current} onChange={e => { setTargetOrderId(e.target.value); setLines([]); setResult(null); setError(""); }}>
               <option value="">{uiText("— New table —", "— Naya table —")}</option>
               {openOrders.map(o => <option key={o.id} value={o.id}>{uiText("Table", "Table")} {o.tableNo || o.orderNumber}</option>)}
-            </select>
+            </Select>
           </label>
           {!targetOrderId && <label className="block space-y-1 text-xs font-medium"><span>{uiText("Table no.", "Table no.")}</span>
-            <input className={inputClass} value={tableNo} disabled={busy || !!attempt.current} onChange={e => setTableNo(e.target.value)} placeholder="T-12" />
+            <Input value={tableNo} disabled={busy || !!attempt.current} onChange={e => setTableNo(e.target.value)} placeholder="T-12" />
           </label>}
         </div>
         <MenuTilePicker items={menuOptions} lines={lines} setLines={setLines} disabled={busy || !!attempt.current || !menuOptions.length} view={view} onViewChange={setView} />

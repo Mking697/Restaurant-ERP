@@ -44,7 +44,7 @@ async function harness(options = {}) {
   const panel = load(panelPath); dependencies['@/components/vendor-returns-panel'] = panel;
   let root = panel.VendorReturnsPanel;
   if (options.page === 'accounts') {
-    for (const [path, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'] })) dependencies[path] = Object.fromEntries(names.map(k => [k,k]));
+    for (const [path, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/pending-work-widget': ['PendingWorkWidget'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/tabs': ['Tabs','TabsContent','TabsList','TabsTrigger'], '@/components/ui/input': ['Input'], '@/components/ui/select': ['Select'] })) dependencies[path] = Object.fromEntries(names.map(k => [k,k]));
     dependencies['../workforce/live-ui'] = { monthNow: () => '2026-10', Panel: 'Panel' };
     dependencies['./legacy-demos'] = { default: 'LegacyAccountsDemo' }; dependencies['@/lib/expense-attempt'] = {}; dependencies['@/lib/csv-export'] = {}; dependencies['lucide-react'] = {}; dependencies['@/lib/utils'] = { formatCurrency: (v) => `TSh ${v}` };
     dependencies['@/components/toast'] = { useToast: () => ({ notify: () => {}, notifyError: () => {}, ToastHost: () => null }) };

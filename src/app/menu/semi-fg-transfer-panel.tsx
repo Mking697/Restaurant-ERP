@@ -1,6 +1,8 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { requestJson } from "@/lib/current-user";
 import { useUiCopy } from "@/lib/ui-copy";
 import { Field, inputClass } from "./recipe-builder";
@@ -65,9 +67,9 @@ export function SemiFgTransferPanel({ branchId, items, branches }: { branchId: s
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{message && <p role="status" className="text-sm">{message}</p>}
 
     <form onSubmit={dispatch}><fieldset disabled={busy} className="flex flex-wrap items-end gap-2">
-      <div className="min-w-[180px]"><Field label={uiText("Prepared item (this branch)", "Prepared item (yeh branch)")}><select required className={inputClass} value={sourceMenuItemId} onChange={(e) => setSourceMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field></div>
-      <div className="min-w-[180px]"><Field label={uiText("To branch", "Kis branch ko")}><select required className={inputClass} value={toBranchId} onChange={(e) => setToBranchId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{branches.filter((b) => b.id !== branchId).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Field></div>
-      <div className="w-32"><Field label={uiText("Qty", "Qty")}><input required type="number" min="0.001" step="0.001" className={inputClass} value={qty} onChange={(e) => setQty(e.target.value)} /></Field></div>
+      <div className="min-w-[180px]"><Field label={uiText("Prepared item (this branch)", "Prepared item (yeh branch)")}><Select required value={sourceMenuItemId} onChange={(e) => setSourceMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field></div>
+      <div className="min-w-[180px]"><Field label={uiText("To branch", "Kis branch ko")}><Select required value={toBranchId} onChange={(e) => setToBranchId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{branches.filter((b) => b.id !== branchId).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field></div>
+      <div className="w-32"><Field label={uiText("Qty", "Qty")}><Input required type="number" min="0.001" step="0.001" value={qty} onChange={(e) => setQty(e.target.value)} /></Field></div>
       <Button type="submit" disabled={busy}>{uiText("Dispatch", "Dispatch karein")}</Button>
     </fieldset></form>
 

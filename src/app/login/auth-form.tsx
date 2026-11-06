@@ -2,6 +2,7 @@
 import { RestaurantBrand } from "@/components/branding-provider";
 import { BrandingFields, useBrandingError, type LogoUpload } from "@/components/branding-fields";
 import { PasswordField } from "@/components/password-field";
+import { Input } from "@/components/ui/input";
 import { useUiCopy } from "@/lib/ui-copy";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -29,7 +30,6 @@ export function AuthForm({ setup = false }: { setup?: boolean }) {
       window.location.assign("/guide");
     } catch (error) { setError(error instanceof Error ? error.message : "Request failed"); setBusy(false); }
   }
-  const inputClass = "w-full rounded-md border bg-background px-3 py-2 text-base";
   return <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4"><section className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
     <PreferencesControls className="mb-5" />
     <div className="mb-3"><RestaurantBrand /></div><h1 className="text-2xl font-semibold">{setup ? uiText("Create the first owner") : uiText("Sign in")}</h1>
@@ -37,8 +37,8 @@ export function AuthForm({ setup = false }: { setup?: boolean }) {
     {error && <p role="alert" className="mt-4 rounded-md border border-destructive p-3 text-sm text-destructive">{brandingError(uiText(error))}</p>}
     {setup && setupRequired === false ? <p className="mt-6">{uiText("Setup is already complete. ")}<Link className="underline" href="/login">{uiText("Sign in")}</Link></p> : <form onSubmit={submit} className="mt-6 space-y-4">
       {setup && <BrandingFields name={restaurantName} onName={setRestaurantName} logo={logo} onLogo={setLogo} onBusy={setReadingLogo} disabled={busy} />}
-      {setup && <label className="block space-y-1"><span className="text-sm">{uiText("Owner name")}</span><input className={inputClass} name="name" autoComplete="name" maxLength={200} required /></label>}
-      <label className="block space-y-1"><span className="text-sm">{t("Email", "Email")}</span><input className={inputClass} name="email" type="email" autoComplete="username" placeholder="owner@example.com" maxLength={254} required /></label>
+      {setup && <label className="block space-y-1"><span className="text-sm">{uiText("Owner name")}</span><Input name="name" autoComplete="name" maxLength={200} required /></label>}
+      <label className="block space-y-1"><span className="text-sm">{t("Email", "Email")}</span><Input name="email" type="email" autoComplete="username" placeholder="owner@example.com" maxLength={254} required /></label>
       <label className="block space-y-1"><span className="text-sm">{uiText("Password")}{setup ? uiText(" (at least 12 characters)") : ""}</span><PasswordField name="password" autoComplete={setup ? "new-password" : "current-password"} minLength={setup ? 12 : undefined} maxLength={256} required /></label>
       {setup && <label className="block space-y-1"><span className="text-sm">{uiText("Confirm password")}</span><PasswordField name="confirmPassword" autoComplete="new-password" minLength={12} maxLength={256} required /></label>}
       <button className="w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50" disabled={busy || readingLogo || (setup && setupRequired !== true)}>{busy ? uiText("Please wait…") : setup ? uiText("Create owner & sign in") : uiText("Sign in")}</button>

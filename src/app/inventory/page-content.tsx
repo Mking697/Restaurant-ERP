@@ -14,12 +14,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { hasCurrentModule, requestJson, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 interface StockRow { id: string; branchId: string; rawMaterialId: string; name: string; unit: string; qtyOnHand: string; minStockLevel: string; maxStockLevel: string; isHighValue: boolean; }
 const UNITS = ["kg", "g", "ltr", "ml", "pcs", "box", "pack"];
 const blank = { name: "", branchId: "", unit: "kg", qtyOnHand: "0", minStockLevel: "0", maxStockLevel: "0", batchNo: "", expiryDate: "", nonExpiring: false, evidence: "" };
-const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 export default function InventoryPage() {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
@@ -78,14 +79,14 @@ export default function InventoryPage() {
       <Dialog open={open && current() && loadedScope === scopeKey} onOpenChange={value => { if (!busy) setOpen(value); }}><DialogContent><DialogHeader><DialogTitle>{uiText("Add Inventory Item")}</DialogTitle><DialogDescription>{uiText("Creates stock for one branch. Existing catalog names reuse the same material and unit; this does not create a purchase indent.")}</DialogDescription></DialogHeader>
         <form onSubmit={save}><fieldset disabled={busy} className="space-y-3">
           {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
-          <Field label={uiText("Item name")}><input required className={inputClass} value={item.name} onChange={event => setItem({ ...item, name: event.target.value })} /></Field>
-          <Field label={uiText("Branch")}><select required disabled={actor.role !== "SUPER_ADMIN"} className={inputClass} value={actor.role === "SUPER_ADMIN" ? item.branchId : actor.branchId ?? ""} onChange={event => setItem({ ...item, branchId: event.target.value })}><option value="">{uiText("Select branch (required)")}</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.code} — {branch.name}</option>)}</select></Field>
-          <Field label={uiText("Unit")}><select className={inputClass} value={item.unit} onChange={event => setItem({ ...item, unit: event.target.value })}>{UNITS.map(unit => <option key={unit}>{unit}</option>)}</select></Field>
-          {([ ["qtyOnHand", "Opening quantity"], ["minStockLevel", "Minimum stock"], ["maxStockLevel", "Maximum stock (0 = no upper alert)"] ] as const).map(([key, label]) => <Field key={key} label={uiText(label)}><input required type="number" min="0" step="0.001" className={inputClass} value={item[key]} onChange={event => setItem({ ...item, [key]: event.target.value })} /></Field>)}
-          <Field label={uiText("Batch reference (supplier label)")}><input aria-label="Opening batch reference" className={inputClass} value={item.batchNo} onChange={e => setItem({ ...item, batchNo: e.target.value })} /></Field>
-          <Field label={uiText("Expiry date")}><input type="date" disabled={item.nonExpiring} aria-label="Opening expiry date" className={inputClass} value={item.expiryDate} onChange={e => setItem({ ...item, expiryDate: e.target.value })} /></Field>
+          <Field label={uiText("Item name")}><Input required value={item.name} onChange={event => setItem({ ...item, name: event.target.value })} /></Field>
+          <Field label={uiText("Branch")}><Select required disabled={actor.role !== "SUPER_ADMIN"} value={actor.role === "SUPER_ADMIN" ? item.branchId : actor.branchId ?? ""} onChange={event => setItem({ ...item, branchId: event.target.value })}><option value="">{uiText("Select branch (required)")}</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.code} — {branch.name}</option>)}</Select></Field>
+          <Field label={uiText("Unit")}><Select value={item.unit} onChange={event => setItem({ ...item, unit: event.target.value })}>{UNITS.map(unit => <option key={unit}>{unit}</option>)}</Select></Field>
+          {([ ["qtyOnHand", "Opening quantity"], ["minStockLevel", "Minimum stock"], ["maxStockLevel", "Maximum stock (0 = no upper alert)"] ] as const).map(([key, label]) => <Field key={key} label={uiText(label)}><Input required type="number" min="0" step="0.001" value={item[key]} onChange={event => setItem({ ...item, [key]: event.target.value })} /></Field>)}
+          <Field label={uiText("Batch reference (supplier label)")}><Input aria-label="Opening batch reference" value={item.batchNo} onChange={e => setItem({ ...item, batchNo: e.target.value })} /></Field>
+          <Field label={uiText("Expiry date")}><Input type="date" disabled={item.nonExpiring} aria-label="Opening expiry date" value={item.expiryDate} onChange={e => setItem({ ...item, expiryDate: e.target.value })} /></Field>
           <p className="text-xs">{uiText("No expiry: opening stock remains HELD until Owner verification; never infinite shelf life.")}</p>
-          {actor.role === "SUPER_ADMIN" && <><label><input type="checkbox" checked={item.nonExpiring} onChange={e => setItem({ ...item, nonExpiring: e.target.checked })} /> {uiText("Owner verified non-expiring")}</label><Field label={uiText("Verification evidence")}><input required={item.nonExpiring} value={item.evidence} onChange={e => setItem({ ...item, evidence: e.target.value })} className={inputClass} /></Field></>}
+          {actor.role === "SUPER_ADMIN" && <><label><input type="checkbox" checked={item.nonExpiring} onChange={e => setItem({ ...item, nonExpiring: e.target.checked })} /> {uiText("Owner verified non-expiring")}</label><Field label={uiText("Verification evidence")}><Input required={item.nonExpiring} value={item.evidence} onChange={e => setItem({ ...item, evidence: e.target.value })} /></Field></>}
           <div className="flex gap-2"><Button type="submit" disabled={actor.role === "SUPER_ADMIN" && !item.branchId}>{busy ? uiText("Saving…") : uiText("Add Item")}</Button><Button type="button" variant="outline" onClick={() => setOpen(false)}>{uiText("Cancel")}</Button></div>
         </fieldset></form>
       </DialogContent></Dialog>

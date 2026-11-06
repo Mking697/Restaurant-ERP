@@ -1,9 +1,11 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { requestJson, useCurrentUser } from "@/lib/current-user";
 import { useUiCopy } from "@/lib/ui-copy";
-import { Field, inputClass } from "./recipe-builder";
+import { Field } from "./recipe-builder";
 import type { MenuItemRow } from "./menu-ui-helpers";
 
 interface Standard { id: string; menuItemId: string; minYieldPercent: string; maxYieldPercent: string; }
@@ -68,10 +70,10 @@ export function YieldStandardsPanel({ branchId, items }: { branchId: string; ite
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{message && <p role="status" className="text-sm">{message}</p>}
 
     {owner && <form onSubmit={setStandard}><fieldset disabled={busy} className="space-y-3">
-      <Field label={uiText("Semi-FG item", "Semi-FG item")}><select required className={inputClass} value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label={uiText("Semi-FG item", "Semi-FG item")}><Select required value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
       {menuItemId && <p className="text-xs text-muted-foreground">{current ? uiText(`Current: ${current.minYieldPercent}% - ${current.maxYieldPercent}%`, `Current: ${current.minYieldPercent}% - ${current.maxYieldPercent}%`) : uiText("No standard set yet for this item.", "Is item ke liye abhi koi standard set nahi hai.")}</p>}
-      <Field label={uiText("Min yield %", "Min yield %")}><input required type="number" min="0" max="100" step="0.01" className={inputClass} value={minYield} onChange={(e) => setMinYield(e.target.value)} /></Field>
-      <Field label={uiText("Max yield %", "Max yield %")}><input required type="number" min="0" max="100" step="0.01" className={inputClass} value={maxYield} onChange={(e) => setMaxYield(e.target.value)} /></Field>
+      <Field label={uiText("Min yield %", "Min yield %")}><Input required type="number" min="0" max="100" step="0.01" value={minYield} onChange={(e) => setMinYield(e.target.value)} /></Field>
+      <Field label={uiText("Max yield %", "Max yield %")}><Input required type="number" min="0" max="100" step="0.01" value={maxYield} onChange={(e) => setMaxYield(e.target.value)} /></Field>
       <Button type="submit" disabled={busy || !menuItemId}>{uiText("Set standard", "Standard set karein")}</Button>
     </fieldset></form>}
 
@@ -79,7 +81,7 @@ export function YieldStandardsPanel({ branchId, items }: { branchId: string; ite
       {!deviations.length && <p className="text-xs text-muted-foreground">{uiText("No unreviewed deviations.", "Koi unreviewed deviation nahi hai.")}</p>}
       {deviations.map((row) => <div key={row.id} className="rounded border p-2 text-xs space-y-1">
         <p className="font-medium">{row.menuItemName} — {uiText("yield", "yield")} {row.yieldPercent}% ({uiText("approved", "approved")} {row.minYieldPercentAtEvaluation}%-{row.maxYieldPercentAtEvaluation}%)</p>
-        {owner && <div className="flex gap-2"><input aria-label={`Review reason for ${row.id}`} className={inputClass} placeholder={uiText("Review reason", "Review reason")} value={reviewReasons[row.id] ?? ""} onChange={(e) => setReviewReasons((prev) => ({ ...prev, [row.id]: e.target.value }))} /><Button type="button" disabled={busy} onClick={() => review(row.id)}>{uiText("Mark reviewed", "Reviewed mark karein")}</Button></div>}
+        {owner && <div className="flex gap-2"><Input aria-label={`Review reason for ${row.id}`} placeholder={uiText("Review reason", "Review reason")} value={reviewReasons[row.id] ?? ""} onChange={(e) => setReviewReasons((prev) => ({ ...prev, [row.id]: e.target.value }))} /><Button type="button" disabled={busy} onClick={() => review(row.id)}>{uiText("Mark reviewed", "Reviewed mark karein")}</Button></div>}
       </div>)}
     </div>
   </section>;

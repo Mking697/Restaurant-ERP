@@ -1,10 +1,11 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { requestJson, useCurrentUser } from "@/lib/current-user";
 import { useUiCopy } from "@/lib/ui-copy";
 
-const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block space-y-1 text-xs font-medium"><span>{label}</span>{children}</label>; }
 
 interface RawOption { rawMaterialId: string; name: string; unit: string; }
@@ -85,9 +86,9 @@ export function RequisitionPanel({ branchId }: { branchId: string }) {
 
     <form onSubmit={submit}><fieldset disabled={busy} className="space-y-2">
       {drafts.map((draft, i) => <div key={i} className="flex flex-wrap items-end gap-2">
-        <div className="w-28"><Field label={uiText("Type", "Type")}><select className={inputClass} value={draft.lineType} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, lineType: e.target.value as Draft["lineType"], refId: "" } : d))}><option value="RAW">{uiText("Raw", "Raw")}</option><option value="PREPARED">{uiText("Prepared", "Prepared")}</option></select></Field></div>
-        <div className="min-w-[160px]"><Field label={uiText("Item", "Item")}><select required className={inputClass} value={draft.refId} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, refId: e.target.value } : d))}><option value="">{uiText("Select", "Chunein")}</option>{(draft.lineType === "RAW" ? rawOptions.map((o) => ({ id: o.rawMaterialId, label: `${o.name} (${o.unit})` })) : preparedOptions.map((o) => ({ id: o.id, label: `${o.name} (${o.outputUnit})` }))).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Field></div>
-        <div className="w-28"><Field label={uiText("Qty", "Qty")}><input required type="number" min="0.001" step="0.001" className={inputClass} value={draft.qty} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, qty: e.target.value } : d))} /></Field></div>
+        <div className="w-28"><Field label={uiText("Type", "Type")}><Select value={draft.lineType} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, lineType: e.target.value as Draft["lineType"], refId: "" } : d))}><option value="RAW">{uiText("Raw", "Raw")}</option><option value="PREPARED">{uiText("Prepared", "Prepared")}</option></Select></Field></div>
+        <div className="min-w-[160px]"><Field label={uiText("Item", "Item")}><Select required value={draft.refId} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, refId: e.target.value } : d))}><option value="">{uiText("Select", "Chunein")}</option>{(draft.lineType === "RAW" ? rawOptions.map((o) => ({ id: o.rawMaterialId, label: `${o.name} (${o.unit})` })) : preparedOptions.map((o) => ({ id: o.id, label: `${o.name} (${o.outputUnit})` }))).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</Select></Field></div>
+        <div className="w-28"><Field label={uiText("Qty", "Qty")}><Input required type="number" min="0.001" step="0.001" value={draft.qty} onChange={(e) => setDrafts((prev) => prev.map((d, n) => n === i ? { ...d, qty: e.target.value } : d))} /></Field></div>
         <Button type="button" variant="outline" disabled={drafts.length === 1} onClick={() => setDrafts((prev) => prev.filter((_, n) => n !== i))}>{uiText("Remove", "Remove")}</Button>
       </div>)}
       <Button type="button" variant="outline" onClick={() => setDrafts((prev) => [...prev, blankDraft()])}>{uiText("Add line", "Line add karein")}</Button>
@@ -99,7 +100,7 @@ export function RequisitionPanel({ branchId }: { branchId: string }) {
         <p className="font-medium">{req.status} — {new Date(req.createdAt).toLocaleDateString()}</p>
         {req.lines.map((line) => <div key={line.id} className="flex items-center justify-between gap-2">
           <span>{line.lineType} {refName(line)} — {uiText("requested", "requested")} {line.qtyRequested}{line.qtyApproved !== null ? `, ${uiText("approved", "approved")} ${line.qtyApproved}` : ""} ({line.status}) {uiText("issued", "issued")} {line.qtyIssued} {uiText("received", "received")} {line.qtyReceived}</span>
-          {req.status === "SUBMITTED" && owner && <input aria-label={`Approve qty for ${line.id}`} className={`${inputClass} w-20`} placeholder={line.qtyRequested} onChange={(e) => setApprovals((prev) => ({ ...prev, [req.id]: { ...(prev[req.id] ?? {}), [line.id]: e.target.value } }))} />}
+          {req.status === "SUBMITTED" && owner && <Input aria-label={`Approve qty for ${line.id}`} className="w-20" placeholder={line.qtyRequested} onChange={(e) => setApprovals((prev) => ({ ...prev, [req.id]: { ...(prev[req.id] ?? {}), [line.id]: e.target.value } }))} />}
           {line.status === "APPROVED" && <Button type="button" variant="outline" disabled={busy} onClick={() => cancelLine(line.id)}>{uiText("Cancel remaining", "Baaki cancel karein")}</Button>}
         </div>)}
         {req.status === "SUBMITTED" && owner && <Button type="button" disabled={busy} onClick={() => approve(req)}>{uiText("Approve requisition", "Requisition approve karein")}</Button>}

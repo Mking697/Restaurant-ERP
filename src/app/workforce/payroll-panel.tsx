@@ -2,11 +2,12 @@
 import * as React from "react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { ActionState, DataTable, Field, inputClass, LoadState, money, monthNow, Panel, post, query, useAction, useResource } from "./live-ui";
+import { ActionState, DataTable, Field, LoadState, money, monthNow, Panel, post, query, useAction, useResource } from "./live-ui";
 import type { Payroll } from "./types";
+import { Input } from "@/components/ui/input";
 export default function PayrollPanel({branchId}:{branchId:string}) {
   const {t} = useTranslation(); const [month,setMonth] = React.useState(monthNow);
-  return <div className="space-y-4"><div className="max-w-xs"><Field label={t("Payroll month", "Payroll ka mahina")}><input className={inputClass} type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>{month && <PayrollMonth key={month} branchId={branchId} month={month} />}</div>;
+  return <div className="space-y-4"><div className="max-w-xs"><Field label={t("Payroll month", "Payroll ka mahina")}><Input type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>{month && <PayrollMonth key={month} branchId={branchId} month={month} />}</div>;
 }
 function PayrollMonth({branchId,month}:{branchId:string;month:string}) {
   const {t} = useTranslation(); const resource = useResource<Payroll>(`/api/workforce/payroll?${query(branchId,{month})}`); const action = useAction(); const [confirmed,setConfirmed] = React.useState(false);

@@ -2,11 +2,13 @@
 import * as React from "react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { ActionState, DataTable, Field, inputClass, LoadState, Panel, post, query, today, useAction, useResource } from "./live-ui";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { ActionState, DataTable, Field, LoadState, Panel, post, query, today, useAction, useResource } from "./live-ui";
 import type { Attendance } from "./types";
 export default function AttendancePanel({branchId}:{branchId:string}) {
   const {t} = useTranslation(); const [date,setDate] = React.useState(today);
-  return <div className="space-y-4"><div className="max-w-xs"><Field label={t("Attendance date", "Attendance ki tareekh")}><input className={inputClass} required type="date" max={today()} value={date} onChange={e => setDate(e.target.value)} /></Field></div>{date && <AttendanceDay key={date} branchId={branchId} date={date} />}</div>;
+  return <div className="space-y-4"><div className="max-w-xs"><Field label={t("Attendance date", "Attendance ki tareekh")}><Input required type="date" max={today()} value={date} onChange={e => setDate(e.target.value)} /></Field></div>{date && <AttendanceDay key={date} branchId={branchId} date={date} />}</div>;
 }
 function AttendanceDay({branchId,date}:{branchId:string;date:string}) {
   const {t} = useTranslation(); const resource = useResource<Attendance>(`/api/workforce/attendance?${query(branchId,{date})}`); const action = useAction();
@@ -19,6 +21,6 @@ function AttendanceDay({branchId,date}:{branchId:string;date:string}) {
 }
 function MarkForm({employeeId,employeeName,date,initial,disabled,save}:{employeeId:string;employeeName:string;date:string;initial:string;disabled:boolean;save:(status:string)=>Promise<void>}) {
   const {t} = useTranslation(); const [status,setStatus] = React.useState(initial);
-  return <form className="flex min-w-60 items-center gap-2" onSubmit={e => {e.preventDefault();void save(status);}}><select className={inputClass} aria-label={`${t("Attendance", "Attendance")} ${employeeName} ${date}`} id={`attendance-${employeeId}`} required disabled={disabled} value={status} onChange={e => setStatus(e.target.value)}><option value="">{t("Select status", "Status chuno")}</option>{(["PRESENT","HALF_DAY","ABSENT"] as const).map(value => <option key={value} value={value}>{statusLabel(value,t)}</option>)}</select><Button type="submit" disabled={disabled || !status}>{t("Save", "Save karo")}</Button></form>;
+  return <form className="flex min-w-60 items-center gap-2" onSubmit={e => {e.preventDefault();void save(status);}}><Select aria-label={`${t("Attendance", "Attendance")} ${employeeName} ${date}`} id={`attendance-${employeeId}`} required disabled={disabled} value={status} onChange={e => setStatus(e.target.value)}><option value="">{t("Select status", "Status chuno")}</option>{(["PRESENT","HALF_DAY","ABSENT"] as const).map(value => <option key={value} value={value}>{statusLabel(value,t)}</option>)}</Select><Button type="submit" disabled={disabled || !status}>{t("Save", "Save karo")}</Button></form>;
 }
 function statusLabel(status:string,t:(en:string,hi?:string)=>string) {return status === "PRESENT" ? t("Present", "Present") : status === "HALF_DAY" ? t("Half-day", "Aadha din") : t("Absent", "Absent");}

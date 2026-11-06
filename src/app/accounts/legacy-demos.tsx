@@ -8,7 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
 import { useCurrentUser } from "@/lib/current-user";
-import { Field, inputClass, money, monthEnd, monthNow, Panel, post, query, today, useAction, useResource } from "../workforce/live-ui";
+import { Field, money, monthEnd, monthNow, Panel, post, query, today, useAction, useResource } from "../workforce/live-ui";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 // Real DB-backed replacement for the old mock-data.ts tabs: Petty Cash Book,
 // Aggregator Recon, Balance Sheet. Wired onto /api/accounts/petty-cash,
@@ -45,10 +47,10 @@ export default function LegacyAccountsDemo({ petty, recon, balance }: { petty: b
       {actor.role === "SUPER_ADMIN" && (
         <div className="grid max-w-sm gap-3">
           <Field label={uiText("Branch", "Branch")}>
-            <select className={inputClass} value={validBranch ? branchId : ""} disabled={selected !== "all"} onChange={e => setChoice(e.target.value)}>
+            <Select value={validBranch ? branchId : ""} disabled={selected !== "all"} onChange={e => setChoice(e.target.value)}>
               <option value="">{uiText("Select one branch", "Ek branch chuno")}</option>
               {branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
       )}
@@ -78,7 +80,7 @@ export default function LegacyAccountsDemo({ petty, recon, balance }: { petty: b
 
 function MonthField({ month, setMonth }: { month: string; setMonth: (value: string) => void }) {
   const uiText = useUiCopy();
-  return <Field label={uiText("Month", "Mahina")}><input className={inputClass} type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field>;
+  return <Field label={uiText("Month", "Mahina")}><Input type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field>;
 }
 
 function PettyCashPanel({ branchId, month, setMonth }: { branchId: string; month: string; setMonth: (value: string) => void }) {
@@ -105,16 +107,16 @@ function PettyCashPanel({ branchId, month, setMonth }: { branchId: string; month
           <fieldset disabled={action.busy} className="col-span-full grid gap-3 sm:grid-cols-2">
             <MonthField month={month} setMonth={setMonth} />
             <Field label={uiText("Type", "Type")}>
-              <select className={inputClass} value={entry.entryType} onChange={e => setEntry({ ...entry, entryType: e.target.value as "IN" | "OUT" })}>
+              <Select value={entry.entryType} onChange={e => setEntry({ ...entry, entryType: e.target.value as "IN" | "OUT" })}>
                 <option value="OUT">{uiText("OUT (expense)", "OUT (expense)")}</option>
                 <option value="IN">{uiText("IN (top-up / refund)", "IN (top-up / refund)")}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={uiText("Amount (TSh)", "Amount (TSh)")}>
-              <input className={inputClass} type="number" min="0.01" step="0.01" required value={entry.amount} onChange={e => setEntry({ ...entry, amount: e.target.value })} />
+              <Input type="number" min="0.01" step="0.01" required value={entry.amount} onChange={e => setEntry({ ...entry, amount: e.target.value })} />
             </Field>
             <Field label={uiText("Description", "Vivaran")}>
-              <input className={inputClass} required minLength={2} maxLength={500} value={entry.description} onChange={e => setEntry({ ...entry, description: e.target.value })} placeholder={uiText("Milk, cleaning supplies, refund...")} />
+              <Input required minLength={2} maxLength={500} value={entry.description} onChange={e => setEntry({ ...entry, description: e.target.value })} placeholder={uiText("Milk, cleaning supplies, refund...")} />
             </Field>
           </fieldset>
           <Button type="submit" disabled={action.busy || !entry.amount.trim() || !entry.description.trim()}>
@@ -186,18 +188,18 @@ function AggregatorPanel({ branchId, month, setMonth }: { branchId: string; mont
           <fieldset disabled={action.busy} className="col-span-full grid gap-3 sm:grid-cols-2">
             <MonthField month={month} setMonth={setMonth} />
             <Field label={uiText("Order date", "Order date")}>
-              <input className={inputClass} type="date" required min={`${month}-01`} max={monthEnd(month)} value={entry.orderDate} onChange={e => setEntry({ ...entry, orderDate: e.target.value })} />
+              <Input type="date" required min={`${month}-01`} max={monthEnd(month)} value={entry.orderDate} onChange={e => setEntry({ ...entry, orderDate: e.target.value })} />
             </Field>
             <Field label={uiText("Channel", "Channel")}>
-              <select className={inputClass} value={entry.channel} onChange={e => setEntry({ ...entry, channel: e.target.value as "SWIGGY" | "ZOMATO" })}>
+              <Select value={entry.channel} onChange={e => setEntry({ ...entry, channel: e.target.value as "SWIGGY" | "ZOMATO" })}>
                 <option value="SWIGGY">SWIGGY</option>
                 <option value="ZOMATO">ZOMATO</option>
-              </select>
+              </Select>
             </Field>
-            <Field label={uiText("Order value (TSh)", "Order value (TSh)")}><input className={inputClass} type="number" min="0.01" step="0.01" required value={entry.orderValue} onChange={e => setEntry({ ...entry, orderValue: e.target.value })} /></Field>
-            <Field label={uiText("Commission (TSh)", "Commission (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.commissionAmount} onChange={e => setEntry({ ...entry, commissionAmount: e.target.value })} /></Field>
-            <Field label={uiText("Ads (TSh)", "Ads (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.adsAmount} onChange={e => setEntry({ ...entry, adsAmount: e.target.value })} /></Field>
-            <Field label={uiText("Refund / penalty (TSh)", "Refund / penalty (TSh)")}><input className={inputClass} type="number" min="0" step="0.01" value={entry.refundPenalty} onChange={e => setEntry({ ...entry, refundPenalty: e.target.value })} /></Field>
+            <Field label={uiText("Order value (TSh)", "Order value (TSh)")}><Input type="number" min="0.01" step="0.01" required value={entry.orderValue} onChange={e => setEntry({ ...entry, orderValue: e.target.value })} /></Field>
+            <Field label={uiText("Commission (TSh)", "Commission (TSh)")}><Input type="number" min="0" step="0.01" value={entry.commissionAmount} onChange={e => setEntry({ ...entry, commissionAmount: e.target.value })} /></Field>
+            <Field label={uiText("Ads (TSh)", "Ads (TSh)")}><Input type="number" min="0" step="0.01" value={entry.adsAmount} onChange={e => setEntry({ ...entry, adsAmount: e.target.value })} /></Field>
+            <Field label={uiText("Refund / penalty (TSh)", "Refund / penalty (TSh)")}><Input type="number" min="0" step="0.01" value={entry.refundPenalty} onChange={e => setEntry({ ...entry, refundPenalty: e.target.value })} /></Field>
           </fieldset>
           <Button type="submit" disabled={action.busy || !entry.orderValue.trim()}>
             {action.busy ? uiText("Saving…", "Save ho raha hai…") : uiText("Log settlement", "Settlement log karo")}

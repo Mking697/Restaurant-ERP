@@ -20,7 +20,7 @@ function harness() {
     '@/lib/current-user': { useCurrentUser: () => actor, requestJson: (url, init) => new Promise((resolve,reject) => requests.push({ url, init, resolve, reject })) },
     '@/lib/current-branch': { useBranches: () => branchState, notifyBranchesChanged() {} },
   };
-  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/skeleton': ['TableSkeleton','Skeleton'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogHeader','DialogTitle'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
+  for (const [file, names] of Object.entries({ '@/components/app-shell': ['AppShell'], '@/components/page-header': ['PageHeader'], '@/components/ui/button': ['Button'], '@/components/ui/card': ['Card','CardContent'], '@/components/ui/table': ['Table','TableBody','TableCell','TableHead','TableHeader','TableRow'], '@/components/ui/skeleton': ['TableSkeleton','Skeleton'], '@/components/ui/dialog': ['Dialog','DialogContent','DialogDescription','DialogHeader','DialogTitle'], '@/components/ui/input': ['Input'], '@/components/ui/select': ['Select'] })) deps[file] = Object.fromEntries(names.map(name => [name,name]));
   const module = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/admin/branches/page-content.tsx','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText, { module, exports: module.exports, require: name => { assert.ok(deps[name], name); return deps[name]; }, AbortController, Error, Set });
   function expand(node, path = 'root') {
@@ -36,8 +36,8 @@ function harness() {
   const text = node => Array.isArray(node) ? node.map(text).join(' ') : node && typeof node === 'object' ? text(node.props.children) : String(node ?? '');
   const find = predicate => nodes(render(),predicate);
   const button = label => find(n => n.type === 'Button' && text(n) === label)[0];
-  const cloneDialog = () => find(n => n.type === 'Dialog' && nodes(n, x => x.type === 'select').length)[0];
-  const field = label => { const dialog = cloneDialog(); const match = nodes(dialog, n => n.type === 'label').find(n => text(n).startsWith(label)); assert.ok(match, label); return nodes(match, n => ['select','input'].includes(n.type))[0]; };
+  const cloneDialog = () => find(n => n.type === 'Dialog' && nodes(n, x => x.type === 'select' || x.type === 'Select').length)[0];
+  const field = label => { const dialog = cloneDialog(); const match = nodes(dialog, n => n.type === 'label').find(n => text(n).startsWith(label)); assert.ok(match, label); return nodes(match, n => ['select','input','Select','Input'].includes(n.type))[0]; };
   const submit = () => nodes(cloneDialog(), n => n.type === 'form')[0].props.onSubmit({ preventDefault() {} });
   const flush = async () => { for (let i=0;i<3;i++) { render(); while (effects.length) effects.shift()(); await tick(); } };
   return { render, find, text, button, cloneDialog, field, submit, flush, requests, setActor: value => { actor = {...actor,...value}; }, setBranches: value => { branchState = {...branchState,...value}; }, hi: () => { language = 'hi'; } };
