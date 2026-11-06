@@ -13,6 +13,8 @@ import { notifyBranchesChanged, useBranches, type BranchRecord } from "@/lib/cur
 import { type LogoUpload } from "@/components/branding-fields";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { useConfirm } from "@/components/confirm-dialog";
+import { Trash2 } from "lucide-react";
 export default function BranchesAdminPage() {
   const uiText = useUiCopy();
   const actor = useCurrentUser();
@@ -28,9 +30,32 @@ export default function BranchesAdminPage() {
   const [cloning, setCloning] = React.useState<{ sourceBranchId: string; code: string; name: string; address: string; lat: string; lng: string; geofenceRadiusM: number; operatingConcept: "FAST_FOOD" | "CONVENTIONAL" } | null>(null);
   const [cloneError, setCloneError] = React.useState("");
   const [cloneBusy, setCloneBusy] = React.useState(false);
+  const [deleteBusy, setDeleteBusy] = React.useState(false);
+  const { confirm, ConfirmHost } = useConfirm();
   React.useEffect(() => { setEditing(null); setMessage(""); setCloning(null); setCloneError(""); }, [actor.id, actor.role, actor.branchId]);
   function create() { setError(""); setMessage(""); setLogo(undefined); setEditing({ id: "", code: "", name: "", address: "", lat: "0", lng: "0", geofenceRadiusM: 50, vatRatePercent: null, operatingConcept: "FAST_FOOD", brandName: null, brandLogoUrl: null }); }
   function openClone() { setMessage(""); setCloneError(""); setCloning({ sourceBranchId: "", code: "", name: "", address: "", lat: "0", lng: "0", geofenceRadiusM: 50, operatingConcept: "FAST_FOOD" }); }
+  async function deleteBranch(branch: BranchRecord) {
+    if (!owner || deleteBusy) return;
+    setDeleteBusy(true); setError(""); setMessage("");
+    try {
+      const check = await requestJson<{ canDelete: boolean; dependencies: { group: string; count: number }[] }>(`/api/branches/${encodeURIComponent(branch.id)}/deletion-check`);
+      if (!check.canDelete) {
+        setError(uiText("Cannot delete: ") + check.dependencies.map(d => `${d.group} (${d.count})`).join(", ") + uiText(" still reference this branch. Nothing was deleted.", " ab bhi is branch se jude hain. Kuch delete nahi hua."));
+        return;
+      }
+      const ok = await confirm({
+        title: uiText(`Delete branch "${branch.name}"?`),
+        description: uiText("This cannot be undone. No linked records were found, so this delete is safe.", "Ise undo nahi kar sakte. Koi linked records nahi mile, isliye yeh delete safe hai."),
+        confirmLabel: uiText("Delete"),
+        destructive: true,
+      });
+      if (!ok) return;
+      await requestJson(`/api/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
+      notifyBranchesChanged(); setEditing(null); setMessage(uiText("Branch deleted."));
+    } catch (err) { setError(err instanceof Error ? err.message : "Delete failed"); }
+    finally { setDeleteBusy(false); }
+  }
   async function saveClone(event: React.FormEvent) {
     event.preventDefault(); if (!cloning || !allowed || !owner) return;
     setCloneBusy(true); setCloneError("");
@@ -54,6 +79,7 @@ export default function BranchesAdminPage() {
     finally { setBusy(false); }
   }
   return <AppShell activeHref="/admin/branches">
+    <ConfirmHost />
     <PageHeader title={uiText("Branches")} description={uiText("Owner creates branches; Branch Admin maintains own branch details. Clone Branch copies menu, recipes and branch checklists from an existing branch into a new one — stock, users, vendor rates, recurring tasks and historical/transactional data are never copied.", "Owner branch banata hai; Branch Admin apni branch ki details badalta hai. Clone Branch kisi existing branch ka menu, recipes aur branch checklists nayi branch mein copy karta hai — stock, users, vendor rates, recurring tasks aur historical/transactional data kabhi copy nahi hote.")}>
       {allowed && owner && <Button variant="outline" size="sm" onClick={openClone}>{uiText("Clone Branch", "Branch clone karein")}</Button>}{allowed && owner && <Button size="sm" onClick={create}>{uiText("New Branch")}</Button>}
     </PageHeader>
@@ -84,6 +110,7 @@ export default function BranchesAdminPage() {
           }} className="block w-full min-w-0 text-sm" /></label>}
         {owner && (() => { const preview = logo ? `data:${logo.type};base64,${logo.data}` : logo === null ? null : editing.brandLogoUrl; return preview ? <div className="flex items-center gap-3"><img src={preview} alt={uiText("Logo preview", "Logo ka preview")} className="size-16 rounded border object-contain" /><button type="button" disabled={logoReading} className="text-sm underline" onClick={() => setLogo(null)}>{uiText("Remove override (use global logo)", "Override hatayein (global logo use hoga)")}</button></div> : null; })()}
         {allowed && owner && editing.id && !loading && !loadError && branches.some(branch => branch.id === editing.id) && <DeletionReadiness key={JSON.stringify([actor.id, actor.role, actor.branchId, actor.moduleAccess, editing.id])} branchId={editing.id} />}
+        {owner && editing.id && <Button type="button" variant="destructive" disabled={busy || deleteBusy} onClick={() => deleteBranch(editing)}><Trash2 className="size-4" /> {deleteBusy ? uiText("Deleting…") : uiText("Delete branch")}</Button>}
         <div className="flex gap-2"><Button type="submit">{busy ? uiText("Saving…") : uiText("Save")}</Button><Button type="button" variant="outline" onClick={() => setEditing(null)}>{uiText("Cancel")}</Button></div>
       </fieldset></form>}
     </DialogContent></Dialog>

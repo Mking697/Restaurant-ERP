@@ -15,9 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { useConfirm } from "@/components/confirm-dialog";
 import { hasCurrentModule, requestJson, useCurrentUser } from "@/lib/current-user";
 import { useBranches, useSelectedBranchId } from "@/lib/current-branch";
-import { Truck, Warehouse as WarehouseIcon, PackageCheck } from "lucide-react";
+import { Truck, Warehouse as WarehouseIcon, PackageCheck, Trash2 } from "lucide-react";
 
 interface WarehouseRow { id: string; type: "CENTRAL" | "BRANCH"; branchId: string | null; name: string; createdAt: string; }
 interface Allocation { id: string; batchNo: string; expiryDate: string | null; expiryStatus: string; qtyDispatched: string; qtyReceived: string | null; }
@@ -59,6 +60,8 @@ export default function WarehousePage() {
   const [lotCounts, setLotCounts] = React.useState<Record<string, string>>({});
   const [receiveBusy, setReceiveBusy] = React.useState(false);
   const [receiveResult, setReceiveResult] = React.useState<{ variance: string } | null>(null);
+  const [deleteBusyId, setDeleteBusyId] = React.useState("");
+  const { confirm, ConfirmHost } = useConfirm();
 
   const transfersUrl = "/api/stock-transfers" + (selected !== "all" ? `?branchId=${encodeURIComponent(selected)}` : "");
   const scopeKey = JSON.stringify([actor.id, actor.ready, actor.authenticated, actor.error, actor.role, actor.branchId, actor.moduleAccess, selected]);
@@ -134,7 +137,33 @@ export default function WarehousePage() {
     finally { if (current()) setReceiveBusy(false); }
   }
 
+  async function deleteWarehouse(w: WarehouseRow) {
+    if (!current() || deleteBusyId) return;
+    setDeleteBusyId(w.id); setError(""); setMessage("");
+    try {
+      const check = await requestJson<{ canDelete: boolean; dependencies: { group: string; count: number }[] }>(`/api/warehouses/${encodeURIComponent(w.id)}/deletion-check`);
+      if (!current()) return;
+      if (!check.canDelete) {
+        setError(uiText("Cannot delete: ") + check.dependencies.map(d => `${d.group} (${d.count})`).join(", ") + uiText(" still reference this warehouse. Move or clear those first.", " ab bhi is warehouse se jude hain. Pehle unhe move ya clear karo."));
+        return;
+      }
+      const ok = await confirm({
+        title: uiText(`Delete warehouse "${w.name}"?`),
+        description: uiText("This cannot be undone. No linked records were found, so this delete is safe.", "Ise undo nahi kar sakte. Koi linked records nahi mile, isliye yeh delete safe hai."),
+        confirmLabel: uiText("Delete"),
+        destructive: true,
+      });
+      if (!ok || !current()) return;
+      await requestJson(`/api/warehouses/${encodeURIComponent(w.id)}`, { method: "DELETE" });
+      if (!current()) return;
+      setMessage(uiText("Warehouse deleted."));
+      await loadAll();
+    } catch (err) { if (current()) setError(err instanceof Error ? err.message : "Delete failed"); }
+    finally { if (current()) setDeleteBusyId(""); }
+  }
+
   return <AppShell activeHref="/warehouse">
+    <ConfirmHost />
     <PageHeader title={uiText("Warehouse & Stock Transfers")} description={uiText("2-level stock: Central warehouse dispatches raw material, branch confirms receipt — central stock is reserved on FEFO dispatch; branch stock moves on receive.", "2-level stock: Central warehouse se raw material dispatch hota hai, branch receive confirm karti hai — central stock FEFO dispatch par reserve hota hai, branch stock receive par move hota hai.")}>
       <div className="flex gap-2">
         {isOwner && <Dialog open={whOpen && loadedScope === scopeKey} onOpenChange={(v) => { setWhOpen(v); if (v) { setError(""); setWhType("CENTRAL"); setWhName(""); setWhBranchId(""); } }}>
@@ -199,8 +228,8 @@ export default function WarehousePage() {
         <TabsContent value="warehouses">
           <CentralStockPanel key={scopeKey} warehouses={centralWarehouses} materials={materials} />
           <Card><CardContent className="pt-5">
-            <Table><TableHeader><TableRow><TableHead>{uiText("Name")}</TableHead><TableHead>{uiText("Type")}</TableHead><TableHead>{uiText("Branch")}</TableHead></TableRow></TableHeader><TableBody>
-              {warehouses.map((w) => <TableRow key={w.id}><TableCell>{w.name}</TableCell><TableCell><Badge variant={w.type === "CENTRAL" ? "default" : "outline"}>{w.type}</Badge></TableCell><TableCell>{branchLabel(w.branchId)}</TableCell></TableRow>)}
+            <Table><TableHeader><TableRow><TableHead>{uiText("Name")}</TableHead><TableHead>{uiText("Type")}</TableHead><TableHead>{uiText("Branch")}</TableHead>{isOwner && <TableHead>{uiText("Action")}</TableHead>}</TableRow></TableHeader><TableBody>
+              {warehouses.map((w) => <TableRow key={w.id}><TableCell>{w.name}</TableCell><TableCell><Badge variant={w.type === "CENTRAL" ? "default" : "outline"}>{w.type}</Badge></TableCell><TableCell>{branchLabel(w.branchId)}</TableCell>{isOwner && <TableCell><Button size="sm" variant="ghost" disabled={!!deleteBusyId} onClick={() => deleteWarehouse(w)}><Trash2 className="size-4" /> {deleteBusyId === w.id ? uiText("Deleting…") : uiText("Delete")}</Button></TableCell>}</TableRow>)}
             </TableBody></Table>
             {!loading && !warehouses.length && <p>{uiText("No warehouses yet — create a Central warehouse and a Branch warehouse per branch.")}</p>}
           </CardContent></Card>

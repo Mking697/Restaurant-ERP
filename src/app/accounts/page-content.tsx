@@ -41,16 +41,18 @@ function AccountsScope({ selected }: { selected: string }) {
   const pnl = hasCurrentModule(actor, "ACCOUNTS_EXPENSES", "PAYROLL");
   const vat = hasCurrentModule(actor, "OFFICIAL_SALES_REPORTS");
   const refunds = hasCurrentModule(actor, "VENDOR_REFUNDS");
+  const ledger = allowed || petty || recon;
   const any = pnl || petty || recon || vat || refunds;
   return <><PageHeader title={t("Accounts", "Accounts")} description={t("Saved expenses, finalized payroll costs and expected refund/credit claims (tracked as real Accounts Receivable, not yet money received).", "Saved expenses, final payroll costs aur expected refund/credit claims (real Accounts Receivable ke roop mein track hota hai, paisa abhi receive nahi hua).")} />
     <PendingWorkWidget />
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!any ? <p role="alert">{t("Accounts permission is required.", "Accounts permission chahiye.")}</p> : <>
       {pnl && <div className="mb-4 grid max-w-xl gap-3 sm:grid-cols-2"><Field label={t("Branch", "Branch")}><Select value={validBranch ? branchId : ""} disabled={actor.role !== "SUPER_ADMIN" || selected !== "all"} onChange={e => setChoice(e.target.value)}><option value="">{t("Select one branch", "Ek branch chuno")}</option>{branches.map(b => <option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</Select></Field><Field label={t("Month", "Mahina")}><Input type="month" required value={month} onChange={e => setMonth(e.target.value)} /></Field></div>}
-      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : vat ? "vat" : refunds ? "vendor-refunds" : "demos"}><TabsList className="h-auto flex-wrap justify-start">{refunds && <TabsTrigger value="vendor-refunds">{t("Vendor refunds", "Vendor refunds")}</TabsTrigger>}{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{vat && <TabsTrigger value="vat">{t("VAT Summary", "VAT Summary")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts", "Baaki accounts")}</TabsTrigger>}</TabsList>
+      <Tabs defaultValue={allowed ? "expenses" : pnl ? "pnl" : vat ? "vat" : refunds ? "vendor-refunds" : "demos"}><TabsList className="h-auto flex-wrap justify-start">{refunds && <TabsTrigger value="vendor-refunds">{t("Vendor refunds", "Vendor refunds")}</TabsTrigger>}{allowed && <TabsTrigger value="expenses">{t("Expenses", "Kharche")}</TabsTrigger>}{pnl && <TabsTrigger value="pnl">{t("Profit & Loss", "Profit & Loss")}</TabsTrigger>}{vat && <TabsTrigger value="vat">{t("VAT Summary", "VAT Summary")}</TabsTrigger>}{ledger && <TabsTrigger value="ledger">{t("Income & Expense", "Income & Expense")}</TabsTrigger>}{(petty || recon) && <TabsTrigger value="demos">{t("Other accounts", "Baaki accounts")}</TabsTrigger>}</TabsList>
         {allowed && <TabsContent value="expenses">{validBranch && month ? <ExpensePanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month to view or post real expenses.", "Real expenses dekhne ya save karne ke liye branch aur mahina chuno.")}</Panel>}</TabsContent>}{pnl && <TabsContent value="pnl">{validBranch && month ? <ProfitLossPanel key={`${branchId}:${month}`} branchId={branchId} month={month} /> : <Panel>{t("Select a branch and month.", "Branch aur mahina chuno.")}</Panel>}</TabsContent>}
         {refunds && <TabsContent value="vendor-refunds"><VendorReturnsPanel mode="accounts" /></TabsContent>}
         {vat && <TabsContent value="vat"><VatSummaryPanel selectedBranchId={selected} /></TabsContent>}
+        {ledger && <TabsContent value="ledger"><IncomeExpensePanel selectedBranchId={selected} /></TabsContent>}
         {(petty || recon) && <TabsContent value="demos"><LegacyAccountsDemo petty={petty} recon={recon} balance={petty || recon} /></TabsContent>}
       </Tabs>
     </>}
@@ -174,7 +176,67 @@ function VatSummaryPanel({ selectedBranchId }: { selectedBranchId: string }) {
           {data.rows.length > 0 && <TableRow className="font-semibold"><TableCell colSpan={3}>{t("Grand Total", "Grand Total")}</TableCell><TableCell>{formatCurrency(data.grandTaxableValue)}</TableCell><TableCell>{formatCurrency(data.grandTotalTax)}</TableCell><TableCell>{formatCurrency(data.grandTotalValue)}</TableCell></TableRow>}
         </TableBody></Table>
         {!data.rows.length && <p>{t("No orders in this date range/scope.", "Is date range/scope mein koi orders nahi hain.")}</p>}
-      </CardContent></Card>
-    </>}
-  </div>;
-}
+          </CardContent></Card>
+        </>}
+        </div>;
+        }
+
+        interface LedgerEntry { id: string; entryDate: string; description: string; amount: string; referenceType: string; branchId: string; branchName: string; debitAccountName: string; creditAccountName: string; incomeAmount: string; expenseAmount: string; }
+        interface LedgerResponse { entries: LedgerEntry[]; totals: { incomeInr: string; expenseInr: string; netInr: string }; from: string; to: string; }
+        function IncomeExpensePanel({ selectedBranchId }: { selectedBranchId: string }) {
+        const { t } = useTranslation();
+        const [from, setFrom] = React.useState(vatFirstOfMonth());
+        const [to, setTo] = React.useState(vatToday());
+        const [data, setData] = React.useState<LedgerResponse | null>(null);
+        const [loading, setLoading] = React.useState(false);
+        const [error, setError] = React.useState("");
+
+        async function load() {
+        setLoading(true); setError(""); setData(null);
+        try {
+          const url = `/api/accounts/ledger-export?from=${from}&to=${to}` + (selectedBranchId !== "all" ? `&branchId=${encodeURIComponent(selectedBranchId)}` : "");
+          setData(await requestJson<LedgerResponse>(url));
+        } catch (err) { setError(err instanceof Error ? err.message : "Load failed"); }
+        finally { setLoading(false); }
+        }
+        React.useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+        function exportCsv() {
+        if (!data?.entries.length) return;
+        downloadCsv(`income-expense-${from}-to-${to}.csv`, data.entries.map((r) => ({
+          Date: r.entryDate.slice(0, 10), Branch: r.branchName, Description: r.description, "Debit Account": r.debitAccountName, "Credit Account": r.creditAccountName,
+          Income: r.incomeAmount, Expense: r.expenseAmount, Reference: r.referenceType,
+        })));
+        }
+
+        const inputClassLedger = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+        return <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">{t("Every real income and expense entry in this date range, derived from the actual General Ledger — customer sales, branch expenses, payroll, vendor refunds and aggregator settlements. A voided expense nets to zero across its two entries, never still counted.", "Is date range ki har real income aur expense entry, asli General Ledger se — customer sales, branch expenses, payroll, vendor refunds aur aggregator settlements. Voided expense apni dono entries milke zero ho jaati hai, kabhi count nahi hoti.")}</p>
+          <Button size="sm" variant="outline" disabled={!data?.entries.length} onClick={exportCsv}><Download className="size-4" /> {t("Export CSV", "Export CSV")}</Button>
+        </div>
+        <Card><CardContent className="flex flex-wrap items-end gap-3 pt-5">
+          <label className="block space-y-1 text-xs font-medium"><span>{t("From", "From")}</span><input type="date" className={inputClassLedger} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label className="block space-y-1 text-xs font-medium"><span>{t("To", "To")}</span><input type="date" className={inputClassLedger} value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          <Button size="sm" disabled={loading} onClick={load}>{loading ? t("Loading…", "Load ho raha hai…") : t("Generate", "Generate")}</Button>
+        </CardContent></Card>
+
+        {error && <p role="alert" className="text-destructive">{t(error)}</p>}
+
+        {data && <>
+          <div className="grid gap-2 sm:grid-cols-3"><p>{t("Total income", "Total income")}: <strong>{formatCurrency(data.totals.incomeInr)}</strong></p><p>{t("Total expense", "Total expense")}: <strong>{formatCurrency(data.totals.expenseInr)}</strong></p><p>{t("Net", "Net")}: <strong>{formatCurrency(data.totals.netInr)}</strong></p></div>
+          <Card><CardContent className="pt-5">
+            <Table><TableHeader><TableRow><TableHead>{t("Date", "Tareekh")}</TableHead><TableHead>{t("Branch", "Branch")}</TableHead><TableHead>{t("Description", "Vivaran")}</TableHead><TableHead>{t("Income", "Income")}</TableHead><TableHead>{t("Expense", "Expense")}</TableHead></TableRow></TableHeader><TableBody>
+              {data.entries.map((r) => <TableRow key={r.id}>
+                <TableCell>{r.entryDate.slice(0, 10)}</TableCell>
+                <TableCell>{r.branchName}</TableCell>
+                <TableCell className="min-w-40">{r.description}<p className="text-muted-foreground">{r.debitAccountName} → {r.creditAccountName}</p></TableCell>
+                <TableCell className="whitespace-nowrap">{Number(r.incomeAmount) !== 0 ? formatCurrency(r.incomeAmount) : "—"}</TableCell>
+                <TableCell className="whitespace-nowrap">{Number(r.expenseAmount) !== 0 ? formatCurrency(r.expenseAmount) : "—"}</TableCell>
+              </TableRow>)}
+            </TableBody></Table>
+            {!data.entries.length && <p>{t("No income or expense entries in this date range/scope.", "Is date range/scope mein koi income ya expense entry nahi hai.")}</p>}
+          </CardContent></Card>
+        </>}
+        </div>;
+        }
