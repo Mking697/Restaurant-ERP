@@ -220,7 +220,7 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
           {orders.map((o) => <TableRow key={o.id}>
             <TableCell>{o.poNumber}</TableCell><TableCell>{o.vendor}</TableCell>
             <TableCell><Badge variant={STATUS_VARIANT[o.status] ?? "outline"}>{o.status}</Badge></TableCell>
-            <TableCell>{o.billUploadedAt ? uiText("Uploaded") : <BillUploadInline id={o.id} onDone={load} />}</TableCell>
+            <TableCell>{o.billUploadedAt ? <ViewCentralBillButton poId={o.id} /> : <BillUploadInline id={o.id} onDone={load} />}</TableCell>
             <TableCell>{o.materialReceivedAt ? uiText("Yes") : (o.billUploadedAt || true) && <Button size="sm" variant="outline" disabled={busy} onClick={() => receivePo(o.id)}>{uiText("Receive Material")}</Button>}</TableCell>
             <TableCell><InvoiceInline po={o} canPay={canPay} onApprovePayment={approvePayment} onMarkPaid={markPaid} onDone={load} busy={busy} uiText={uiText} /></TableCell>
           </TableRow>)}
@@ -254,6 +254,23 @@ function BillUploadInline({ id, onDone }: { id: string; onDone: () => void }) {
     finally { setBusy(false); }
   }
   return <label className="text-xs underline cursor-pointer">{busy ? "…" : "Upload bill"}<input type="file" accept="image/*,application/pdf" className="hidden" disabled={busy} onChange={upload} /></label>;
+}
+
+function ViewCentralBillButton({ poId }: { poId: string }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  async function view() {
+    setBusy(true); setError("");
+    try {
+      const data = await requestJson<{ url: string }>(`/api/central-purchase/orders/${poId}/bill/upload`);
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to load bill"); }
+    finally { setBusy(false); }
+  }
+  return <span className="inline-flex items-center gap-1">
+    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={view}>{busy ? "…" : "View bill"}</Button>
+    {error && <span className="text-xs text-destructive">{error}</span>}
+  </span>;
 }
 
 function InvoiceInline({ po, canPay, onApprovePayment, onMarkPaid, onDone, busy, uiText }: {

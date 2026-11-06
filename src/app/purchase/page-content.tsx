@@ -22,7 +22,7 @@ import {
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm-dialog";
 import { formatInr } from "@/lib/utils";
-import { Plus, Check, X, Upload, PackageCheck, Trash2 } from "lucide-react";
+import { Plus, Check, X, Upload, PackageCheck, Trash2, Paperclip } from "lucide-react";
 import { requestJson, RequestJsonError, useCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { useBranches } from "@/lib/current-branch";
 import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
@@ -93,6 +93,23 @@ const INDENT_VARIANT: Record<string, "secondary" | "warning" | "success" | "dest
 
 function errMsg(err: unknown, fallback: string) {
   return err instanceof RequestJsonError ? err.message : err instanceof Error ? err.message : fallback;
+}
+
+function ViewBillButton({ poId, uiText }: { poId: string; uiText: (en: string, hi?: string) => string }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  async function view() {
+    setBusy(true); setError("");
+    try {
+      const data = await requestJson<{ url: string }>(`/api/purchase/orders/${encodeURIComponent(poId)}/bill/upload`);
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) { setError(errMsg(err, "Failed to load bill")); }
+    finally { setBusy(false); }
+  }
+  return <span className="inline-flex items-center gap-1">
+    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={view}><Paperclip className="size-3.5" /> {busy ? uiText("Loading…") : uiText("View bill")}</Button>
+    {error && <span className="text-xs text-destructive">{error}</span>}
+  </span>;
 }
 
 export default function PurchasePage() {
@@ -626,7 +643,7 @@ export default function PurchasePage() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Badge variant="success">{uiText("1. Bought")}</Badge>
                             {p.billUploadedAt ? (
-                              <Badge variant="success">{uiText("2. Bill ✓")}</Badge>
+                              <><Badge variant="success">{uiText("2. Bill ✓")}</Badge><ViewBillButton poId={p.id} uiText={uiText} /></>
                             ) : (
                               <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input bg-card px-2 py-1.5 text-xs">
                                 <Upload className="size-3.5" /> {uiText("Upload Bill (optional)")}
