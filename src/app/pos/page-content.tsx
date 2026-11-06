@@ -22,6 +22,8 @@ import { MenuTilePicker } from "./menu-tile-picker";
 import { PwaInstall } from "@/components/pwa-install";
 import { useToast } from "@/components/toast";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import type { Document } from "@/lib/pos-documents";
 
 interface OrdersResponse { orders: OrderRow[]; visibilityScope: "actual" | "access-filtered"; salesSummary: { visibleTotal: string; actualTotal?: string; privateTotal?: string }; }
@@ -348,8 +350,8 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
             </TableBody></Table>
             {!currencyRates.length && <p className="text-sm text-muted-foreground">{uiText("No rates configured yet.")}</p>}
             <div className="flex items-end gap-2 pt-2">
-              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Code")}</span><input className={inputClass + " w-20 uppercase"} maxLength={3} value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="USD" /></label>
-              <label className="block flex-1 space-y-1 text-xs font-medium"><span>{uiText("Rate to TSh")}</span><input type="number" min="0.000001" step="0.000001" className={inputClass} value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="2500.00" /></label>
+              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Code")}</span><Input className="w-20 uppercase" maxLength={3} value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="USD" /></label>
+              <label className="block flex-1 space-y-1 text-xs font-medium"><span>{uiText("Rate to TSh")}</span><Input type="number" min="0.000001" step="0.000001" value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="2500.00" /></label>
               <Button disabled={rateBusy || !newCode || !newRate} onClick={saveRate}>{rateBusy ? uiText("Saving…") : uiText("Save Rate")}</Button>
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setRatesOpen(false)}>{uiText("Close")}</Button></DialogFooter>
@@ -361,7 +363,7 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
             {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
             <p className="text-sm">{uiText("Target customers:")} <strong>{offerTargetCount ?? "…"}</strong></p>
             <label className="block space-y-1 text-xs font-medium"><span>{uiText("Offer text")}</span><textarea className={inputClass} rows={3} value={offerText} onChange={(e) => setOfferText(e.target.value)} placeholder={uiText("20% off on all starters today!")} /></label>
-            <label className="block space-y-1 text-xs font-medium"><span>{uiText("Valid until (optional)")}</span><input className={inputClass} value={offerValidUntil} onChange={(e) => setOfferValidUntil(e.target.value)} placeholder="31 Oct" /></label>
+            <label className="block space-y-1 text-xs font-medium"><span>{uiText("Valid until (optional)")}</span><Input value={offerValidUntil} onChange={(e) => setOfferValidUntil(e.target.value)} placeholder="31 Oct" /></label>
             {offerResult && <p className="text-sm">{uiText("Sent:")} {offerResult.sent} / {offerResult.targeted} {offerResult.failed > 0 && <span className="text-destructive">({offerResult.failed} {uiText("failed")})</span>}</p>}
             <DialogFooter><Button type="button" variant="outline" onClick={() => setOfferOpen(false)}>{uiText("Close")}</Button><Button disabled={offerBusy || !offerText.trim() || !offerTargetCount} onClick={sendOffer}>{offerBusy ? uiText("Sending…") : uiText("Send Offer Alert")}</Button></DialogFooter>
           </DialogContent>
@@ -374,24 +376,24 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
             {!orderBranchId ? <p role="alert" className="text-destructive">{uiText("Select a branch first.")}</p> : <fieldset disabled={mutationLocked} className="space-y-3">
               {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
               <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Channel")}</span><select className={inputClass} value={channel} onChange={(e) => setChannel(e.target.value)}><option value="DINE_IN">{uiText("Dine-in")}</option><option value="TAKEAWAY">{uiText("Takeaway")}</option><option value="SWIGGY">{uiText("Swiggy")}</option><option value="ZOMATO">{uiText("Zomato")}</option></select></label>
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Table no.")}</span><input className={inputClass} value={tableNo} onChange={(e) => setTableNo(e.target.value)} placeholder="T-12" /></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Channel")}</span><Select value={channel} onChange={(e) => setChannel(e.target.value)}><option value="DINE_IN">{uiText("Dine-in")}</option><option value="TAKEAWAY">{uiText("Takeaway")}</option><option value="SWIGGY">{uiText("Swiggy")}</option><option value="ZOMATO">{uiText("Zomato")}</option></Select></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Table no.")}</span><Input value={tableNo} onChange={(e) => setTableNo(e.target.value)} placeholder="T-12" /></label>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Counter")}</span><select className={inputClass} value={counterNo} onChange={(e) => setCounterNo(e.target.value)}><option value="COUNTER_1">{uiText("Counter 1")}</option><option value="COUNTER_2">{uiText("Counter 2")}</option></select></label>
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Tender")}</span><select className={inputClass} value={tenderType} onChange={(e) => setTenderType(e.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></select></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Counter")}</span><Select value={counterNo} onChange={(e) => setCounterNo(e.target.value)}><option value="COUNTER_1">{uiText("Counter 1")}</option><option value="COUNTER_2">{uiText("Counter 2")}</option></Select></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Tender")}</span><Select value={tenderType} onChange={(e) => setTenderType(e.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></Select></label>
               </div>
-              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Payment currency")}</span><select className={inputClass} value={tenderCurrencyCode} onChange={(e) => setTenderCurrencyCode(e.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map((r) => <option key={r.id} value={r.currencyCode}>{r.currencyCode} (1 = TSh {r.rateToInr})</option>)}</select></label>
+              <label className="block space-y-1 text-xs font-medium"><span>{uiText("Payment currency")}</span><Select value={tenderCurrencyCode} onChange={(e) => setTenderCurrencyCode(e.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map((r) => <option key={r.id} value={r.currencyCode}>{r.currencyCode} (1 = TSh {r.rateToInr})</option>)}</Select></label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer name (optional)")}</span><input className={inputClass} value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder={uiText("Rahul")} /></label>
-                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer WhatsApp (optional)")}</span><input className={inputClass} value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="712 345 678" /></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer name (optional)")}</span><Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder={uiText("Rahul")} /></label>
+                <label className="block space-y-1 text-xs font-medium"><span>{uiText("Customer WhatsApp (optional)")}</span><Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="712 345 678" /></label>
               </div>
               <div className="space-y-2">
                 <MenuTilePicker items={menuOptions} lines={lines} setLines={setLines} disabled={!menuOptions.length} view={newOrderItemsView} onViewChange={setNewOrderItemsView} />
                 {newOrderItemsView === "list" && <>
                   {lines.map((line, i) => <div key={i} className="flex gap-2">
-                    <select className={inputClass} value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({formatInr(Number(m.price))})</option>)}</select>
-                    <input type="number" min={1} max={500} className={inputClass + " w-20"} value={line.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value) || 1) })} />
+                    <Select value={line.menuItemId} onChange={(e) => updateLine(i, { menuItemId: e.target.value })}>{menuOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({formatInr(Number(m.price))})</option>)}</Select>
+                    <Input type="number" min={1} max={500} className="w-20" value={line.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value) || 1) })} />
                     <Button type="button" variant="outline" size="sm" onClick={() => removeLine(i)}>{uiText("Remove")}</Button>
                   </div>)}
                   <Button type="button" variant="outline" size="sm" disabled={!menuOptions.length} onClick={addLine}>{uiText("Add Item Line")}</Button>
@@ -470,9 +472,9 @@ function ScopedPos({ selectedScope, documentIntentReady = false, onPendingChange
             {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
             <fieldset disabled={mutationLocked || !canOrder || openOrderTarget?.branchId !== orderBranchId}>
             {openOrderMode === "ADD" ? <div className="space-y-2">
-              {openOrderLines.map((line, index) => <div key={index} className="flex gap-2"><select className={inputClass} value={line.menuItemId} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, menuItemId: event.target.value } : row))}>{menuOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><input className={inputClass + " w-20"} type="number" min={1} max={500} value={line.qty} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, qty: Math.max(1, Number(event.target.value) || 1) } : row))} /><Button variant="outline" onClick={() => setOpenOrderLines(current => current.filter((_, i) => i !== index))}>{uiText("Remove")}</Button></div>)}
+              {openOrderLines.map((line, index) => <div key={index} className="flex gap-2"><Select value={line.menuItemId} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, menuItemId: event.target.value } : row))}>{menuOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select><Input className="w-20" type="number" min={1} max={500} value={line.qty} onChange={event => setOpenOrderLines(current => current.map((row, i) => i === index ? { ...row, qty: Math.max(1, Number(event.target.value) || 1) } : row))} /><Button variant="outline" onClick={() => setOpenOrderLines(current => current.filter((_, i) => i !== index))}>{uiText("Remove")}</Button></div>)}
               <Button variant="outline" disabled={!menuOptions.length} onClick={() => setOpenOrderLines(current => [...current, { menuItemId: menuOptions[0]?.id ?? "", qty: 1 }])}>{uiText("Add Item Line")}</Button>
-            </div> : <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-xs"><span>{uiText("Tender")}</span><select className={inputClass} value={tenderType} onChange={event => setTenderType(event.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></select></label><label className="space-y-1 text-xs"><span>{uiText("Payment currency")}</span><select className={inputClass} value={tenderCurrencyCode} onChange={event => setTenderCurrencyCode(event.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map(rate => <option key={rate.id} value={rate.currencyCode}>{rate.currencyCode}</option>)}</select></label></div>}
+            </div> : <div className="grid grid-cols-2 gap-3"><label className="space-y-1 text-xs"><span>{uiText("Tender")}</span><Select value={tenderType} onChange={event => setTenderType(event.target.value)}><option value="CASH">{uiText("Cash")}</option><option value="UPI">{uiText("UPI")}</option><option value="CARD">{uiText("Card")}</option></Select></label><label className="space-y-1 text-xs"><span>{uiText("Payment currency")}</span><Select value={tenderCurrencyCode} onChange={event => setTenderCurrencyCode(event.target.value)}><option value="INR">{uiText("TZS (TSh)")}</option>{currencyRates.map(rate => <option key={rate.id} value={rate.currencyCode}>{rate.currencyCode}</option>)}</Select></label></div>}
             </fieldset>
             <DialogFooter><Button variant="outline" disabled={busy || !!openOrderAttempt.current} onClick={() => { if (!orderInFlight.current && !openOrderAttempt.current) setOpenOrderTarget(null); }}>{uiText("Cancel")}</Button><Button disabled={busy || !canOrder || openOrderTarget?.branchId !== orderBranchId || (openOrderMode === "ADD" && !openOrderLines.length)} onClick={mutateOpenOrder}>{busy ? uiText("Saving…") : uiText(openOrderAttempt.current ? "Replay exact request" : openOrderMode === "ADD" ? "Add items" : "Settle order")}</Button></DialogFooter>
           </DialogContent>

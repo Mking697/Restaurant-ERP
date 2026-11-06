@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useUiCopy } from "@/lib/ui-copy";
 import { formatInr } from "@/lib/utils";
 
@@ -15,8 +16,6 @@ type Props = {
   view: "tiles" | "list";
   onViewChange: (view: "tiles" | "list") => void;
 };
-
-const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
 
 export function MenuTilePicker({ items, lines, setLines, disabled, view, onViewChange }: Props) {
   const uiText = useUiCopy();
@@ -42,7 +41,7 @@ export function MenuTilePicker({ items, lines, setLines, disabled, view, onViewC
       <Button type="button" variant="outline" size="sm" onClick={() => onViewChange(view === "tiles" ? "list" : "tiles")}>{view === "tiles" ? uiText("Switch to list view") : uiText("Switch to tile view")}</Button>
     </div>
     {view === "tiles" && <>
-      <input className={inputClass} placeholder={uiText("Search items…")} value={search} onChange={event => setSearch(event.target.value)} />
+      <Input placeholder={uiText("Search items…")} value={search} onChange={event => setSearch(event.target.value)} />
       <div className="flex flex-wrap gap-2" role="group" aria-label={uiText("Categories")}>
         {categories.map(cat => <button key={cat} type="button" aria-pressed={category === cat} className={"rounded-full border px-3 py-1 text-xs " + (category === cat ? "bg-primary text-primary-foreground" : "")} onClick={() => setCategory(cat)}>{cat === "ALL" ? uiText("All") : cat}</button>)}
       </div>

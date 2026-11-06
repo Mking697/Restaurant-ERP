@@ -3,8 +3,10 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { requestJson } from "@/lib/current-user";
 import { useUiCopy } from "@/lib/ui-copy";
-import { Field, inputClass } from "./recipe-builder";
+import { Field } from "./recipe-builder";
 import type { MenuItemRow } from "./menu-ui-helpers";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 interface PreparedStatus { id: string; menuItemId: string; menuItemName: string; outputUnit: string; qtyOnHand: string; minStockLevel: string; maxStockLevel: string; breach: "LOW" | "HIGH" | "OK" | "UNCONFIGURED"; }
 
@@ -51,9 +53,9 @@ export function PreparedStockThresholdsPanel({ branchId, items }: { branchId: st
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{message && <p role="status" className="text-sm">{message}</p>}
 
     <form onSubmit={submit}><fieldset disabled={busy} className="flex flex-wrap items-end gap-2">
-      <div className="min-w-[200px]"><Field label={uiText("Semi-FG item", "Semi-FG item")}><select required className={inputClass} value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field></div>
-      <div className="w-32"><Field label={uiText("Min", "Min")}><input required type="number" min="0" step="0.001" className={inputClass} value={minLevel} onChange={(e) => setMinLevel(e.target.value)} /></Field></div>
-      <div className="w-32"><Field label={uiText("Max", "Max")}><input required type="number" min="0" step="0.001" className={inputClass} value={maxLevel} onChange={(e) => setMaxLevel(e.target.value)} /></Field></div>
+      <div className="min-w-[200px]"><Field label={uiText("Semi-FG item", "Semi-FG item")}><Select required value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}><option value="">{uiText("Select", "Chunein")}</option>{items.filter((item) => item.isSemiFg && item.branchId === branchId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field></div>
+      <div className="w-32"><Field label={uiText("Min", "Min")}><Input required type="number" min="0" step="0.001" value={minLevel} onChange={(e) => setMinLevel(e.target.value)} /></Field></div>
+      <div className="w-32"><Field label={uiText("Max", "Max")}><Input required type="number" min="0" step="0.001" value={maxLevel} onChange={(e) => setMaxLevel(e.target.value)} /></Field></div>
       <Button type="submit" disabled={busy || !menuItemId}>{uiText("Save", "Save karein")}</Button>
     </fieldset></form>
 
