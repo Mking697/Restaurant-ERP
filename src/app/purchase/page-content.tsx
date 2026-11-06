@@ -29,6 +29,12 @@ import { VendorReturnsPanel } from "@/components/vendor-returns-panel";
 import { VendorApprovalPanel } from "@/components/vendor-approval-panel";
 import { GeneralPurchaseApprovalsPanel } from "@/components/general-purchase-approvals-panel";
 import { VendorReturnDispatchPanel } from "@/components/vendor-return-dispatch-panel";
+import { StepIndicator } from "@/components/step-indicator";
+
+const PURCHASE_PIPELINE_STEPS = [
+  { label: "Indent" }, { label: "Approval" }, { label: "PO" }, { label: "Bill" },
+  { label: "Receive" }, { label: "Quality" },
+];
 
 interface RawMaterialOption { id: string; name: string; unit: string; }
 interface VendorOption { id: string; name: string; }
@@ -519,6 +525,7 @@ export default function PurchasePage() {
         </Dialog>
       </PageHeader>
       <PendingWorkWidget />
+      <StepIndicator steps={PURCHASE_PIPELINE_STEPS} currentIndex={-1} />
 
       <Tabs defaultValue="indents">
         <TabsList>

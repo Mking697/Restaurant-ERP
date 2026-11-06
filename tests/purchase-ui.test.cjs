@@ -41,6 +41,7 @@ async function pageHarness(options = {}) {
     } },
     '@/components/toast': { useToast: () => ({ notify: () => {}, notifyError: () => {}, ToastHost: 'ToastHost' }) },
     '@/components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmHost: 'ConfirmHost' }) },
+    '@/components/step-indicator': { StepIndicator: 'StepIndicator' },
     '@/lib/utils': { formatInr: String },
     'lucide-react': Object.fromEntries(['Plus', 'Check', 'X', 'Upload', 'PackageCheck', 'FlaskConical', 'Trash2'].map(k => [k, k])),
   };
