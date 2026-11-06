@@ -6,8 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { StepIndicator } from "@/components/step-indicator";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
 
-const inputClass = "w-full rounded-md border border-input bg-card px-3 py-2 text-sm";
+const PIPELINE_STEPS = [
+  { label: "Request" }, { label: "Approval" }, { label: "PO" }, { label: "Bill" },
+  { label: "Receive" }, { label: "Quality" }, { label: "Invoice" }, { label: "Payment" },
+];
 
 interface Vendor { id: string; name: string }
 interface Material { id: string; name: string; unit: string }
@@ -29,13 +38,16 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
   const isOwner = actor.role === "SUPER_ADMIN";
   const canPay = hasCurrentModule(actor, "ACCOUNTS_EXPENSES");
 
+  const { confirm, ConfirmHost } = useConfirm();
+  const { notify, notifyError, ToastHost } = useToast();
+
   const [warehouseId, setWarehouseId] = React.useState(warehouses[0]?.id ?? "");
   const [vendors, setVendors] = React.useState<Vendor[]>([]);
   const [requests, setRequests] = React.useState<RequestRow[]>([]);
   const [orders, setOrders] = React.useState<PoRow[]>([]);
   const [grns, setGrns] = React.useState<GrnRow[]>([]);
   const [error, setError] = React.useState("");
-  const [message, setMessage] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
 
   const [vendorId, setVendorId] = React.useState("");
@@ -45,6 +57,7 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
 
   const load = React.useCallback(async () => {
     if (!allowed || !warehouseId) return;
+    setLoading(true);
     try {
       const [v, r, o, g] = await Promise.all([
         requestJson<{ vendors: Vendor[] }>("/api/purchase/vendors"),
@@ -54,9 +67,10 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
       ]);
       setVendors(v.vendors); setRequests(r.centralPurchaseRequests); setOrders(o.centralPurchaseOrders); setGrns(g.centralGrns);
     } catch (err) { setError(err instanceof Error ? err.message : "Load failed"); }
+    finally { setLoading(false); }
   }, [allowed, warehouseId]);
 
-  React.useEffect(() => { setError(""); setMessage(""); void load(); }, [load]);
+  React.useEffect(() => { setError(""); void load(); }, [load]);
 
   const materialLabel = (id: string) => { const m = materials.find((x) => x.id === id); return m ? `${m.name} (${m.unit})` : id; };
   const addLine = () => setLines((prev) => [...prev, { rawMaterialId: "", qty: "", rate: "" }]);
@@ -67,58 +81,69 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
     e.preventDefault(); if (busy || !warehouseId || !vendorId) return;
     const cleanLines = lines.filter((l) => l.rawMaterialId && l.qty && l.rate);
     if (!cleanLines.length) { setError(uiText("Add at least one line")); return; }
-    setBusy(true); setError(""); setMessage("");
+    setBusy(true); setError("");
     try {
       const result = await requestJson<{ gated: boolean }>("/api/central-purchase/requests", { method: "POST", body: JSON.stringify({ warehouseId, vendorId, lines: cleanLines }) });
-      setMessage(uiText(result.gated ? "Request sent for Owner approval." : "Request auto-approved (below threshold) — you can now create the Purchase Order."));
+      notify(uiText(result.gated ? "Request sent for Owner approval." : "Request auto-approved (below threshold) — you can now create the Purchase Order."));
       setLines([{ rawMaterialId: "", qty: "", rate: "" }]); setVendorId("");
       await load();
-    } catch (err) { setError(err instanceof Error ? err.message : "Request failed"); }
+    } catch (err) { const msg = err instanceof Error ? err.message : "Request failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function decideRequest(id: string, action: "approve" | "reject") {
-    if (busy) return; setBusy(true); setError("");
-    try { await requestJson(`/api/central-purchase/requests/${id}/${action}`, { method: "POST" }); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Action failed"); }
+    if (busy) return;
+    if (action === "reject") {
+      const ok = await confirm({ title: uiText("Reject this Central Purchase request?"), description: uiText("This cannot be undone — the requester will need to submit a fresh request."), confirmLabel: uiText("Reject"), destructive: true });
+      if (!ok) return;
+    }
+    setBusy(true); setError("");
+    try {
+      await requestJson(`/api/central-purchase/requests/${id}/${action}`, { method: "POST" });
+      notify(action === "approve" ? uiText("Request approved.") : uiText("Request rejected."));
+      await load();
+    } catch (err) { const msg = err instanceof Error ? err.message : "Action failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function createOrderFromRequest(req: RequestRow) {
-    if (busy) return; setBusy(true); setError(""); setMessage("");
+    if (busy) return; setBusy(true); setError("");
     try {
       await requestJson("/api/central-purchase/orders", { method: "POST", body: JSON.stringify({ warehouseId: req.warehouseId, vendorId: req.vendorId, requestId: req.id, lines: req.linesJson }) });
-      setMessage(uiText("Purchase Order created."));
+      notify(uiText("Purchase Order created."));
       await load();
-    } catch (err) { setError(err instanceof Error ? err.message : "Create PO failed"); }
+    } catch (err) { const msg = err instanceof Error ? err.message : "Create PO failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function receivePo(id: string) {
     if (busy) return; setBusy(true); setError("");
-    try { await requestJson(`/api/central-purchase/orders/${id}/receive`, { method: "POST" }); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Receive failed"); }
+    try { await requestJson(`/api/central-purchase/orders/${id}/receive`, { method: "POST" }); notify(uiText("Material receive recorded.")); await load(); }
+    catch (err) { const msg = err instanceof Error ? err.message : "Receive failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function recordQuality(grnId: string, result: "PASS" | "FAIL" | "PARTIAL") {
     if (busy) return; setBusy(true); setError("");
-    try { await requestJson(`/api/central-purchase/grns/${grnId}/quality`, { method: "POST", body: JSON.stringify({ result, note: result === "PASS" ? "" : "Reported by receiver", failedLines: [] }) }); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Quality decision failed"); }
+    try {
+      await requestJson(`/api/central-purchase/grns/${grnId}/quality`, { method: "POST", body: JSON.stringify({ result, note: result === "PASS" ? "" : "Reported by receiver", failedLines: [] }) });
+      notify(result === "PASS" ? uiText("Quality passed — stock credited.") : uiText("Quality result recorded."));
+      await load();
+    } catch (err) { const msg = err instanceof Error ? err.message : "Quality decision failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function approvePayment(poId: string) {
     if (busy) return; setBusy(true); setError("");
-    try { await requestJson(`/api/central-purchase/orders/${poId}/three-way/approve`, { method: "POST" }); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Approve failed"); }
+    try { await requestJson(`/api/central-purchase/orders/${poId}/three-way/approve`, { method: "POST" }); notify(uiText("Payment approved.")); await load(); }
+    catch (err) { const msg = err instanceof Error ? err.message : "Approve failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
   async function markPaid(poId: string) {
     if (busy) return; setBusy(true); setError("");
-    try { await requestJson(`/api/central-purchase/orders/${poId}/three-way/paid`, { method: "POST" }); await load(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Mark paid failed"); }
+    try { await requestJson(`/api/central-purchase/orders/${poId}/three-way/paid`, { method: "POST" }); notify(uiText("Marked paid.")); await load(); }
+    catch (err) { const msg = err instanceof Error ? err.message : "Mark paid failed"; setError(msg); notifyError(msg); }
     finally { setBusy(false); }
   }
 
@@ -135,11 +160,13 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
   const openGrns = grns.filter((g) => g.qualityResult === "PENDING");
 
   return <section className="space-y-6">
+    <ConfirmHost />
+    <ToastHost />
+    <StepIndicator steps={PIPELINE_STEPS} currentIndex={-1} />
     <label className="block max-w-sm space-y-1 text-xs font-medium"><span>{uiText("Central warehouse")}</span>
-      <select className={inputClass} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+      <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</Select>
     </label>
     {error && <p role="alert" className="text-destructive">{uiText(error)}</p>}
-    {message && <p role="status">{uiText(message)}</p>}
 
     <Card>
       <CardHeader><CardTitle>{uiText("1. Raise a Central Purchase Request")}</CardTitle></CardHeader>
@@ -147,12 +174,12 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
         <p className="mb-3 text-sm text-muted-foreground">{uiText("Above the Owner's indent value threshold, this needs Owner approval before a Purchase Order can be created. Below threshold, it auto-approves.")}</p>
         <form onSubmit={submitRequest}><fieldset disabled={busy} className="space-y-3">
           <label className="block max-w-sm space-y-1 text-xs font-medium"><span>{uiText("Vendor")}</span>
-            <select required className={inputClass} value={vendorId} onChange={(e) => setVendorId(e.target.value)}><option value="">{uiText("Select vendor")}</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
+            <Select required value={vendorId} onChange={(e) => setVendorId(e.target.value)}><option value="">{uiText("Select vendor")}</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</Select>
           </label>
           {lines.map((line, i) => <div key={i} className="grid grid-cols-[2fr_1fr_1fr_auto] gap-2">
-            <select required className={inputClass} value={line.rawMaterialId} onChange={(e) => updateLine(i, { rawMaterialId: e.target.value })}><option value="">{uiText("Material")}</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}</select>
-            <input required type="number" min="0.001" step="0.001" placeholder={uiText("Qty")} className={inputClass} value={line.qty} onChange={(e) => updateLine(i, { qty: e.target.value })} />
-            <input required type="number" min="0.01" step="0.01" placeholder={uiText("Rate (TSh)")} className={inputClass} value={line.rate} onChange={(e) => updateLine(i, { rate: e.target.value })} />
+            <Select required value={line.rawMaterialId} onChange={(e) => updateLine(i, { rawMaterialId: e.target.value })}><option value="">{uiText("Material")}</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}</Select>
+            <Input required type="number" min="0.001" step="0.001" placeholder={uiText("Qty")} value={line.qty} onChange={(e) => updateLine(i, { qty: e.target.value })} />
+            <Input required type="number" min="0.01" step="0.01" placeholder={uiText("Rate (TSh)")} value={line.rate} onChange={(e) => updateLine(i, { rate: e.target.value })} />
             <Button type="button" variant="outline" size="sm" onClick={() => removeLine(i)} disabled={lines.length === 1}>{uiText("✕")}</Button>
           </div>)}
           <Button type="button" variant="outline" size="sm" onClick={addLine}>{uiText("+ Add line")}</Button>
@@ -167,7 +194,7 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
         {pendingApproval.map((r) => <TableRow key={r.id}>
           <TableCell>{r.vendor}</TableCell><TableCell>{r.requestedBy}</TableCell><TableCell>{r.valueTsh}</TableCell>
           <TableCell>{r.linesJson.map((l) => materialLabel(l.rawMaterialId)).join(", ")}</TableCell>
-          <TableCell className="flex gap-2"><Button size="sm" disabled={busy} onClick={() => decideRequest(r.id, "approve")}>{uiText("Approve")}</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => decideRequest(r.id, "reject")}>{uiText("Reject")}</Button></TableCell>
+          <TableCell className="flex gap-2"><Button size="sm" disabled={busy} onClick={() => decideRequest(r.id, "approve")}>{uiText("Approve")}</Button><Button size="sm" variant="destructive" disabled={busy} onClick={() => decideRequest(r.id, "reject")}>{uiText("Reject")}</Button></TableCell>
         </TableRow>)}
       </TableBody></Table></CardContent>
     </Card>}
@@ -189,7 +216,7 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
     <Card>
       <CardHeader><CardTitle>{uiText("3. Purchase Orders")}</CardTitle></CardHeader>
       <CardContent>
-        <Table><TableHeader><TableRow><TableHead>{uiText("PO #")}</TableHead><TableHead>{uiText("Vendor")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Bill")}</TableHead><TableHead>{uiText("Received")}</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
+        {loading ? <TableSkeleton cols={6} /> : <Table><TableHeader><TableRow><TableHead>{uiText("PO #")}</TableHead><TableHead>{uiText("Vendor")}</TableHead><TableHead>{uiText("Status")}</TableHead><TableHead>{uiText("Bill")}</TableHead><TableHead>{uiText("Received")}</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
           {orders.map((o) => <TableRow key={o.id}>
             <TableCell>{o.poNumber}</TableCell><TableCell>{o.vendor}</TableCell>
             <TableCell><Badge variant={STATUS_VARIANT[o.status] ?? "outline"}>{o.status}</Badge></TableCell>
@@ -197,8 +224,8 @@ export function CentralPurchasePanel({ warehouses, materials }: { warehouses: { 
             <TableCell>{o.materialReceivedAt ? uiText("Yes") : (o.billUploadedAt || true) && <Button size="sm" variant="outline" disabled={busy} onClick={() => receivePo(o.id)}>{uiText("Receive Material")}</Button>}</TableCell>
             <TableCell><InvoiceInline po={o} canPay={canPay} onApprovePayment={approvePayment} onMarkPaid={markPaid} onDone={load} busy={busy} uiText={uiText} /></TableCell>
           </TableRow>)}
-        </TableBody></Table>
-        {!orders.length && <p className="text-sm text-muted-foreground">{uiText("No Central purchase orders yet.")}</p>}
+        </TableBody></Table>}
+        {!loading && !orders.length && <p className="text-sm text-muted-foreground">{uiText("No Central purchase orders yet.")}</p>}
       </CardContent>
     </Card>
 
