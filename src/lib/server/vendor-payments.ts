@@ -4,6 +4,7 @@ import { purchaseOrders, threeWayMatch, vendorPayments } from "../../db/schema/p
 import type { Executor } from "./auth";
 import { assertModule, branchScope, HttpError, type Identity } from "./permissions";
 import { string } from "./http";
+import { postVendorPaymentJournal } from "./accounts-ledger";
 
 // GAP-017. Auditable vendor payment records — replaces the old
 // markThreeWayPaid bare status flip with real payment evidence
@@ -79,6 +80,9 @@ export async function recordVendorPayment(tx: Executor, actor: Identity, poId: s
     amountTsh, paymentMethod, referenceNumber, paidAt, recordedById: actor.id, idempotencyKey,
   });
   await tx.update(threeWayMatch).set({ paymentStatus: "PAID", paidById: actor.id, paidAt: new Date() }).where(eq(threeWayMatch.id, match.id));
+  // Nov 2026 (Owner-requested): AP-clearing leg matching postPurchaseGrnJournal
+  // — see accounts-ledger.ts. Debit Accounts Payable, Credit Cash/Bank.
+  await postVendorPaymentJournal(tx, actor, { id, branchId: po.branchId, paymentMethod }, amountTsh);
   const [payment] = await tx.select().from(vendorPayments).where(eq(vendorPayments.id, id));
   const [updatedMatch] = await tx.select().from(threeWayMatch).where(eq(threeWayMatch.id, match.id));
   return { payment, match: updatedMatch, replayed: false };

@@ -11,6 +11,7 @@ import { assertModule, branchScope, HttpError, type Identity } from "./permissio
 import { decimal, MAX_QUANTITY } from "./production-quantity";
 import { lockRecipeStock } from "./production";
 import { assertVendorReturnsRecorded, recordVendorReturns } from "./vendor-returns";
+import { postPurchaseGrnJournal } from "./accounts-ledger";
 import { postStockMovement } from "./stock-ledger";
 import { creditBatch } from "./stock-batches";
 import { parseBatchInput } from "./batch-policy";
@@ -85,6 +86,21 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
   const [origin] = await tx.select().from(auditLog).where(eq(auditLog.id, qualityOriginId(id))).limit(1);
   if (!validQualityOrigin(grn, origin)) throw new HttpError(409, "Legacy GRN has no verified unposted origin; reconciliation required");
   if (grn.qualityResult !== "PENDING" || grn.status !== "PENDING" || lines.some(line => persistedQuantity(line.qtyFailed, true) !== 0n)) throw new HttpError(409, "Existing quality state has no receipt; reconciliation required");
+  const failedById = new Map(decision.failedLines.map(l => [l.id, persistedQuantity(l.qtyFailed, true)]));
+  // Nov 2026 (Owner-requested): exact accepted-value accumulation for the
+  // GRN-time purchase journal posting below — same bigint-scale discipline
+  // as computeGeneralPurchaseValueTsh/computeCentralPurchaseValueTsh (qty
+  // scale 3 x rate scale 2, summed before rounding once at the end).
+  let acceptedValueNumerator = 0n;
+  for (const line of lines) {
+    const accepted = persistedQuantity(line.qtyReceived) - (failedById.get(line.id) ?? 0n);
+    if (accepted <= 0n) continue;
+    const [whole, fraction = ""] = line.rateOrdered.split(".");
+    const rateCenti = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0").slice(0, 2));
+    acceptedValueNumerator += accepted * rateCenti;
+  }
+  const acceptedValueCenti = (acceptedValueNumerator + 500n) / 1000n;
+  const acceptedValueTsh = `${acceptedValueCenti / 100n}.${(acceptedValueCenti % 100n).toString().padStart(2, "0")}`;
   if (decision.credits.length) {
     await lockRecipeStock(tx, grn.branchId);
     const materialIds = [...new Set(lines.map(line => line.rawMaterialId!))];
@@ -117,7 +133,6 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
   // the submitter entered for that line in `request.lines` (nullable —
   // "no expiry tracked for this lot", treated as never-expiring).
   if (!po.isGeneralPurchase) {
-    const failedById = new Map(decision.failedLines.map(l => [l.id, persistedQuantity(l.qtyFailed, true)]));
     const batchesById = new Map(request.lines.map(l => [l.id, parseBatchInput(l as unknown as Record<string, unknown>, actor.role === "SUPER_ADMIN")]));
     for (const line of lines) {
       if (!line.rawMaterialId) continue;
@@ -128,6 +143,7 @@ export async function recordGrnQuality(tx: Executor, actor: Identity, id: string
   }
   await tx.update(grns).set({ qualityResult: request.result, status: request.result === "FAIL" ? "QUALITY_HOLD" : "APPROVED", qualityNote: request.note, qualityPhotoUrl: request.photoUrl }).where(eq(grns.id, id));
   await tx.insert(auditLog).values({ id: qualityReceiptId(id), userId: actor.id, action: QUALITY_ACTION, entityType: "GRN", entityId: id, metadataJson: { version: 1, branchId: grn.branchId, request, credits: decision.credits, ...(request.result !== "PASS" ? { vendorReturnsVersion: 1 } : {}) } });
+  await postPurchaseGrnJournal(tx, actor, { id, branchId: grn.branchId }, acceptedValueTsh);
   if (request.result !== "PASS") await recordVendorReturns(tx, actor, id, {});
   await ensureGrnHoReviewSubject(tx, id, actor.id);
   const [saved] = await readGrns(tx, actor, { id });

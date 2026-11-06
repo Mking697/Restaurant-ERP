@@ -178,6 +178,71 @@ export async function postExpenseVoidJournal(tx: Executor, actor: Identity, expe
   if (!original) return null;
   return postJournalLeg(tx, { branchId: original.branchId, description: "Reversal of voided branch expense", debitAccountId: original.creditAccountId, creditAccountId: original.debitAccountId, amount: original.amount, referenceType: "EXPENSE_VOID", referenceId: expense.id, leg: original.leg, createdById: actor.id });
 }
+/** Nov 2026 (Owner-requested): real GRN-time purchase posting. Until now
+ * "5000 Purchases/COGS" was only ever CREDITED (postVendorReturnClaimJournal
+ * reversing a failed-quality claim) and never DEBITED anywhere — the actual
+ * cost of goods received from a vendor never touched the General Ledger at
+ * all, silently excluding it from the Balance Sheet/P&L.
+ *
+ * Posted once per GRN id, at the exact moment quality is recorded
+ * (recordGrnQuality in grn-quality.ts, for the ACCEPTED portion only —
+ * qtyReceived minus any qtyFailed on that same decision): Debit Purchases/
+ * COGS (5000) for the accepted-line value, Credit Accounts Payable (2000)
+ * — goods received but not yet paid for is a real liability.
+ * A FAIL/fully-rejected GRN (accepted value "0.00") posts nothing:
+ * postJournalLeg already skips a zero-amount leg.
+ *
+ * Fail-safe by design, same as postPosSaleJournal: GRN quality recording's
+ * primary job is crediting real physical stock onto the shelf — it must
+ * never be blocked by a General Ledger concern (chart of accounts not yet
+ * seeded on a fresh branch/environment, or any transient posting error).
+ * On any failure this silently skips the posting (logged server-side); the
+ * stock credit, batch/quality record, and vendor-return claim all still
+ * complete untouched.
+ *
+ * Central/HQ purchase (central-purchase.ts, warehouse-scoped, no branchId)
+ * deliberately does NOT call this yet — journalEntries.branchId is a
+ * NOT NULL foreign key to branches, and central purchase has no branch to
+ * attribute the entry to. Wiring that in needs its own schema decision
+ * (nullable branchId, or a separate warehouse-level ledger) — out of scope
+ * here; central purchase cost still has zero GL presence today. */
+export async function postPurchaseGrnJournal(tx: Executor, actor: Identity, grn: { id: string; branchId: string }, acceptedValueTsh: string) {
+  try {
+    const byCode = await accountsByCode(tx);
+    const cogs = requireAccount(byCode, "5000"), payable = requireAccount(byCode, "2000");
+    return await postJournalLeg(tx, { branchId: grn.branchId, description: "Purchase GRN accepted (goods received)", debitAccountId: cogs, creditAccountId: payable, amount: acceptedValueTsh, referenceType: "PURCHASE_GRN", referenceId: grn.id, createdById: actor.id });
+  } catch (err) {
+    console.error(`postPurchaseGrnJournal skipped for GRN ${grn.id}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+/** Nov 2026 (Owner-requested): the matching Accounts-Payable-clearing leg
+ * for postPurchaseGrnJournal above — posted once per vendor payment id, at
+ * the exact moment recordVendorPayment (vendor-payments.ts) records a real
+ * payment against an approved 3-way match: Debit Accounts Payable (2000),
+ * Credit Cash (1000) or Bank (1020) depending on paymentMethod (CASH debits
+ * Cash; BANK_TRANSFER/CHEQUE/MOBILE_MONEY all settle electronically/via a
+ * bank instrument, never the physical drawer — same CASH-vs-everything-else
+ * split already used by postPosSaleJournal). Without this, Accounts
+ * Payable could only ever grow (credited by expenses/payroll/this GRN
+ * posting) and never shrink even after a vendor was actually paid.
+ *
+ * Fail-safe by design, same as postPosSaleJournal/postPurchaseGrnJournal:
+ * recording a vendor payment's primary job is durable payment evidence
+ * (amount/date/method/reference) — it must never be blocked by a General
+ * Ledger concern. On any failure this silently skips the posting (logged
+ * server-side); the payment record and match status update still complete
+ * untouched. */
+export async function postVendorPaymentJournal(tx: Executor, actor: Identity, payment: { id: string; branchId: string; paymentMethod: string }, amountTsh: string) {
+  try {
+    const byCode = await accountsByCode(tx);
+    const payable = requireAccount(byCode, "2000"), cashOrBank = requireAccount(byCode, payment.paymentMethod === "CASH" ? "1000" : "1020");
+    return await postJournalLeg(tx, { branchId: payment.branchId, description: "Vendor payment recorded", debitAccountId: payable, creditAccountId: cashOrBank, amount: amountTsh, referenceType: "VENDOR_PAYMENT", referenceId: payment.id, createdById: actor.id });
+  } catch (err) {
+    console.error(`postVendorPaymentJournal skipped for payment ${payment.id}:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
 /** Finalized (FINAL, immutable) payroll run: Debit Salary Expense, Credit
  * Accounts Payable for the exact finalized total — payroll not yet
  * disbursed is a real liability, not cash paid out yet. Posted once per
