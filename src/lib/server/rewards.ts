@@ -108,9 +108,10 @@ export async function redeemPoints(tx: Executor, actor: Identity, branchId: stri
 // earn — idempotent (a retry or an order with no earn at all is a no-op,
 // never an error) and structurally cannot double-reverse (the unique
 // index on reversesEventId rejects a second REVERSE for the same EARN).
-// NOT YET WIRED into the actual POS void/reversal flow — see the
-// verification doc's explicit limits; this is a standalone, independently
-// callable/testable primitive for that future integration.
+// Wired into the real void flow — see pos-order-reversals.ts's
+// voidPosOrder (Nov 2026 review fix); still independently
+// callable/testable as its own primitive via the manual
+// /api/customers/[id]/rewards/reverse route too.
 export async function reverseEarnForOrder(tx: Executor, actor: Identity, branchId: string, sourceOrderId: string) {
   const [earn] = await tx.select().from(rewardEvents).where(and(eq(rewardEvents.sourceOrderId, sourceOrderId), eq(rewardEvents.type, "EARN"))).limit(1);
   if (!earn) return null; // nothing was ever earned for this order — nothing to reverse

@@ -32,10 +32,6 @@ const COPY: Record<string, readonly [string, string]> = {
     "Enter the number of notes. Expected cash is revealed only after submission.",
     "Notes ki ginti bharo. Expected cash sirf submit ke baad dikhega."
   ],
-  "Submit karne ke baad yahan shortage/excess dikhega. Expected cash backend se tabhi aata hai — frontend mein kabhi pre-load nahi hota (API-layer rule, Phase 3 mein wire hoga).": [
-    "The demo records your counted total in page state only. Expected cash, shortage/excess calculation and saving to the database are not implemented.",
-    "Demo mein counted total sirf page state mein rehta hai. Expected cash, shortage/excess calculation aur database save abhi implement nahi hain."
-  ],
   "Shortage/excess calculation Phase 3 backend se aayega (expectedCashInr abhi DB mein hai, API se hidden rakha gaya hai jab tak submit na ho).": [
     "Demo submission only. No database record or shortage/excess calculation was created.",
     "Sirf demo submission hai. Database record ya shortage/excess calculation nahi bana."
@@ -87,10 +83,6 @@ const COPY: Record<string, readonly [string, string]> = {
   "MIS score timestamps se calculate hota hai. 100% sabse achha — late aur chhoote hue tasks penalty banate hain.": [
     "Illustrative MIS scores: higher is better. Late and missed tasks reduce the sample score. Live score calculation is pending.",
     "Sample MIS score mein zyada score behtar hai. Late aur missed tasks score kam karte hain. Live calculation abhi pending hai."
-  ],
-  "Billing line-item builder Phase 3 mein — abhi order header level entry.": [
-    "Demo order-header entry only. Line-item billing and database saving are not implemented.",
-    "Sirf demo order-header entry hai. Line-item billing aur database save abhi implement nahi hain."
   ],
   "Live orders across channels — dine-in, takeaway, Swiggy, Zomato.": [
     "Demo orders across dine-in, takeaway, Swiggy and Zomato. Changes reset when the page reloads.",
