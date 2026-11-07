@@ -15,6 +15,7 @@ import { decimal, directRequirements } from "./production-quantity";
 import { readStockRecipe, lockRecipeStock } from "./production";
 import { postStockMovement } from "./stock-ledger";
 import { postPosSaleVoidJournal } from "./accounts-ledger";
+import { reverseEarnForOrder } from "./rewards";
 import type { OrderReversal, OrderReversalLine } from "../pos-order-reversals";
 
 function reversalDTO(row: typeof posOrderReversals.$inferSelect): OrderReversal {
@@ -127,6 +128,14 @@ export async function voidPosOrder(tx: Executor, actor: Identity, orderId: strin
   if (!updated) throw new HttpError(409, "Order changed concurrently; reload and retry");
 
   if (order.tenderType) await postPosSaleVoidJournal(tx, actor, { id: orderId, branchId: order.branchId, tenderType: order.tenderType, subtotal: order.subtotal, taxAmount: order.taxAmount });
+  // Nov 2026 (review finding): reverseEarnForOrder already existed (GAP-039)
+  // as a standalone, independently-callable primitive with its own manual
+  // API route, but was never actually wired into the real void flow — a
+  // voided order's earned reward points stayed credited to the customer
+  // forever unless a human separately remembered to call the manual
+  // reverse endpoint. Idempotent/no-op if nothing was ever earned for this
+  // order (see reverseEarnForOrder's own doc comment) — safe to always call.
+  await reverseEarnForOrder(tx, actor, order.branchId, orderId);
 
   const [reversal] = await tx.insert(posOrderReversals).values({
     id: randomUUID(), orderId, branchId: order.branchId, reason, actorId: actor.id, actorName: actor.name,

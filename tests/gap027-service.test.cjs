@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 function harness() {
-  const names=['currencyRates','menuItems','branches','posOrderAttempts','posOrderLines','posOrders','posProductionTicketLines','posProductionTickets','posReceipts','posDrafts','posLifecycleActions','posLifecycleEvents','posDocuments','posDocumentRequests','settings','posPayments','posPaymentAllocations','posOrderReversals','inventoryStock','semiFgStock','posTokenSequences'];
+  const names=['currencyRates','menuItems','branches','posOrderAttempts','posOrderLines','posOrders','posProductionTicketLines','posProductionTickets','posReceipts','posDrafts','posLifecycleActions','posLifecycleEvents','posDocuments','posDocumentRequests','settings','posPayments','posPaymentAllocations','posOrderReversals','inventoryStock','semiFgStock','posTokenSequences','rewardEvents'];
   const tables=Object.fromEntries(names.map(name=>[name,new Proxy({name},{get:(t,k)=>k==='_table'?name:{table:name,key:k}})]));
   const state=Object.fromEntries(names.map(n=>[n,[]]));
   Object.assign(state,{branches:[{id:'b',name:'Branch',code:'B1',address:'Street',operatingConcept:'CONVENTIONAL',vatRatePercent:'0.00'}],menuItems:[{id:'dish',branchId:'b',name:'Saved dish',price:'10.00',isActive:true,isSellable:true,vatRatePercent:'0.00',productCode:'D',productionStation:'KITCHEN'}],deductions:[],stockMovements:[],recipeRows:[{menuItemId:'dish',branchId:'b',componentType:'RAW_MATERIAL',rawMaterialId:'raw-1',componentMenuItemId:null,qtyPerUnit:'1.000'}]});
